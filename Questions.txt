@@ -1,0 +1,15 @@
+Signal parameterization:
+- What processes are included?
+- Is there a cross-section & BR reader?
+- What masses are included?
+
+Mass points:
+- What categories?
+- What variables?
+
+Background model:
+- How is function chosen?
+
+Fitter:
+- Single mass point?
+- Scanning any parameter space?

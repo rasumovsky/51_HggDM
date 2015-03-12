@@ -35,11 +35,9 @@ class BRXSReader
   
   // Member objects:
   std::string directory;
-  std::map<int, std::map<std::string,double> > xSections;
-  std::map<int, std::map<std::string,double> > plusQCD;
-  std::map<int, std::map<std::string,double> > minusQCD;
-  std::map<int, std::map<std::string,double> > plusPDF;
-  std::map<int, std::map<std::string,double> > minusPDF;
+  
+  std::map<std::string,double> xSectionValues[3];
+  
   
   std::map<int, std::map<std::string,double> > branchingRatios;
 

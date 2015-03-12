@@ -22,6 +22,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
+#include "TString.h"
 
 class DMMassPoints 
 {
@@ -34,15 +35,26 @@ class DMMassPoints
   virtual ~DMMassPoints() {};
   
   // Member functions:
-  int getTotalEvents();
-  std::vector<int> getEvtPerCategory(std::string cateType);
-  RooDataSet* createDataSet(std::string cateType, int cateNum);
-  TTree* createTTree(std::string cateType, int cateNum);
+  int getNEvents(TString cateType, int cate);
+  
+  RooDataSet* createDataSet(TString cateType, int cateNum);
+  TTree* createTTree(TString cateType, int cateNum);
   
  private:
   
-  int nEvents;
+  // count passing selection at each stage:
+  int nPassing[20];
+  double nPassing_weighted[20];
+  TString cutNames[20];
+  
+  // count numbers in each category:
+  int nEvents[20];
+  double nEvents_weighted[20];
+  
   TTree *tree;
+  
+  TString jobname;
+  TString option;
     
 };
 

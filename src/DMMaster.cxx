@@ -16,8 +16,10 @@
 
 #include "DMMaster.h"
 
-int main( int argc, char **argv )
-{
+/**
+   This is the main DMMaster method:
+*/
+int main( int argc, char **argv ) {
   // Check arguments:
   if (argc < 3) {
     printf("\nUsage: %s <jobname> <option>\n\n",argv[0]);
@@ -25,62 +27,114 @@ int main( int argc, char **argv )
   }
   
   TString MasterJobName = argv[1];
-  TString option = argv[2];
+  TString MasterOption = argv[2];
   
   //--------------------------------------//
   // Set the analysis components to execute:
-  bool MakeInputs     = option.Contains("MakeInputs");
-  bool MakeSBPlots    = option.Contains("MakeSBPlots");
-  bool MakeWorkspaces = option.Contains("MakeWorkspaces");
-  bool ResubmitWSJobs = option.Contains("ResubmitWSJobs");
-  bool RunInParallel  = true;
+  bool MakeMassPoints = MasterOption.Contains("MakeMassPoints");
+  bool MakeSigParam = MasterOption.Contains("MakeSigParam");
   
   //--------------------------------------//
   // Compile all relevant executables:
-  TString exe_inputs     = "NPPV1_hf_inputs";     // "NPPV1_inputs";
-  TString exe_sbplots    = "NPPV1_sbplots";       // same
-  TString exe_yields     = "NPPV1_yields";        // same
-  TString exe_makespace  = "NPPV1_histfactory";   // "NPPV1_makespace";
-  TString exe_checkjobs  = "NPPV1_checkjobs";     // same
-  
-  if( MakeInputs     ){ MakeExe( exe_inputs ); }
-  if( MakeSBPlots    ){ MakeExe( exe_sbplots ); MakeExe( exe_yields ); }
-  if( MakeWorkspaces ){ MakeExe( exe_makespace ); }
-  if( ResubmitWSJobs ){ MakeExe( exe_makespace ); MakeExe( exe_checkjobs ); }
-   
-  //--------------------------------------//
-  // Some options for the more complicated steps:
-  TString input_options = "event_based";//"object_based";
-  TString ws_option = "muneg_noplot";//"fitasimov_muneg_noplot";
+  TString exe_MassPoints = "DMMassPoints";
+  TString exe_SigParam = "DMSigParam";
+  if (MakeMassPoints) { MakeExe( exe_MassPoints ); }
+  if (MakeSigParam) { MakeExe( exe_SigParam ); }
   
   //--------------------------------------//
-  // Step 1: Make input histograms:
-  if( MakeInputs )
-  {
-    cout << "NPPV1_Master: Step 1 - Make input histograms." << endl;
-    for( int i_l = 0; i_l < nlambda_values; i_l++ )
-    {
-      int current_lambda = lambda_values[i_l];
-      system(Form("./bin/%s %s %s %i", exe_inputs.Data(), MasterJobName.Data(), input_options.Data(), current_lambda));
-    }
+  // Step 1: Make mass points:
+  if (MakeMassPoints) {
+    cout << "DMMaster: Step 1 - Make mass points." << endl;
   }
   
   //--------------------------------------//
-  // Step 2: S&B Plots & signal yield
-  if( MakeSBPlots )
-  {
-    cout << "NPPV1_Master: Step 2 - Make plots of S&B." << endl;
-    int chosen_lambda = lambda_values[16];
-    int chosen_lifetime = ps_lifetimes[5];
-    int chosen_lambda2 = lambda_values[18];
-    int chosen_lifetime2 = ps_lifetimes[3];
-    // signal and background plots;
-    // this can be asimov1, asimov0, or data:
-    system(Form("./bin/%s %s %i %i %i %s", exe_sbplots.Data(), MasterJobName.Data(),ncategories,chosen_lambda,chosen_lifetime,sbplot_option.Data()));
-    system(Form("./bin/%s %s %i %i %i %s", exe_sbplots.Data(), MasterJobName.Data(),ncategories,chosen_lambda2,chosen_lifetime2,sbplot_option.Data()));
-    // yield plot for signal
-    system(Form("./bin/%s %s %i", exe_yields.Data(), MasterJobName.Data(), ncategories));
+  // Step 2: Make the signal parameterization:
+  if (MakeSigParam) {
+    cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
   }
   
   return 0;
+}
+
+/**
+   Compiles the executable required by the job options.
+*/
+void MakeExe(TString exename) {
+  
+  // recompile all executables before running...
+  system(Form("rm bin/%s",exename.Data()));
+  system(Form("make bin/%s",exename.Data()));
+}
+
+/**
+   Submits the workspace jobs via bsub.
+*/
+void SubmitWSViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_lambda, int executable_lifetime) {
+  
+  // Make directories for job info:
+  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s",executable_jobname.Data());
+  TString out = Form("%s/out",dir.Data());
+  TString err = Form("%s/err",dir.Data());
+  TString exe = Form("%s/exe",dir.Data());
+  system(Form("mkdir -vp %s",out.Data()));
+  system(Form("mkdir -vp %s",err.Data()));
+  system(Form("mkdir -vp %s",exe.Data()));
+  
+  // create .tar file with everything:
+  system(Form("tar zcf Cocoon.tar bin/%s",executable_name.Data()));
+  system(Form("chmod +x %s",ws_jobscript.Data()));
+  
+  //change permissions for local input files:!!!!!!!!!!!!!
+  //system(Form("chmod +x %s/%s/workspace_files/combinedWS.root",master_output.Data(),executable_jobname.Data()));
+  TString ws_input_directory = Form("%s/%s",master_output.Data(),executable_jobname.Data());
+  
+  system(Form("cp -f %s %s/ws_jobfile.sh",ws_jobscript.Data(),exe.Data()));
+  system(Form("mv Cocoon.tar %s",exe.Data()));
+  TString input_file=Form("%s/Cocoon.tar",exe.Data());
+  TString name_outfile=Form("%s/out/%s_%i_%i.out",dir.Data(),executable_jobname.Data(),executable_lambda,executable_lifetime);
+  TString name_errfile=Form("%s/err/%s_%i_%i.err",dir.Data(),executable_jobname.Data(),executable_lambda,executable_lifetime);
+  
+  // Here you define the arguments for the job script:
+  TString name_jscript=Form("%s %s %s %s %s %i %i",ws_jobscript.Data(),executable_jobname.Data(),input_file.Data(),executable_option.Data(),executable_name.Data(),executable_lambda,executable_lifetime);
+  
+  // submit the job:
+  system(Form("bsub -q wisc -o %s -e %s %s",name_outfile.Data(),name_errfile.Data(),name_jscript.Data()));
+}
+
+/**
+   Submits toy MC jobs via bsub.
+*/
+void SubmitToysViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_seed, int executable_toys_per_job, int chosen_lambda, int chosen_lifetime) {
+  
+  // Make directories for job info:
+  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s",executable_jobname.Data());
+  TString out = Form("%s/out",dir.Data());
+  TString err = Form("%s/err",dir.Data());
+  TString exe = Form("%s/exe",dir.Data());
+  system(Form("mkdir -vp %s",out.Data()));
+  system(Form("mkdir -vp %s",err.Data()));
+  system(Form("mkdir -vp %s",exe.Data()));
+  
+  // create .tar file with everything:
+  system(Form("tar zcf Cocoon.tar bin/%s",executable_name.Data()));
+  system(Form("chmod +x %s",toy_jobscript.Data()));
+  system(Form("chmod +x %s",toy_jobscriptCorr.Data()));
+  system(Form("chmod +x %s/%s/workspaces/rootfiles/workspace_NPP_%iTeV_%ips.root",master_output.Data(),executable_jobname.Data(),chosen_lambda,chosen_lifetime));
+  
+  system(Form("cp -f %s %s/toy_jobfile.sh",toy_jobscript.Data(),exe.Data()));
+  
+  system(Form("mv Cocoon.tar %s",exe.Data()));
+  TString input_file = Form("%s/Cocoon.tar",exe.Data());
+  TString name_outfile = Form("%s/out/%s_%i.out",dir.Data(),executable_jobname.Data(),executable_seed);
+  TString name_errfile = Form("%s/err/%s_%i.err",dir.Data(),executable_jobname.Data(),executable_seed);
+  
+  // Here you define the arguments for the job script:
+  TString name_jscript;
+  if( executable_option.Contains("correlation") )
+    name_jscript = Form("%s %s %s %s %s %i %i %i %i %i", toy_jobscriptCorr.Data(), executable_jobname.Data(), input_file.Data(), executable_option.Data(), executable_name.Data(), executable_seed, executable_toys_per_job, chosen_lambda, chosen_lifetime, toy_percent_timing_corr1 );
+  else
+    name_jscript = Form("%s %s %s %s %s %i %i %i %i", toy_jobscript.Data(), executable_jobname.Data(), input_file.Data(), executable_option.Data(), executable_name.Data(), executable_seed, executable_toys_per_job, chosen_lambda, chosen_lifetime );
+  
+  // submit the job:
+  system(Form("bsub -q wisc -o %s -e %s %s",name_outfile.Data(),name_errfile.Data(),name_jscript.Data()));
 }

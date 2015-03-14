@@ -22,25 +22,28 @@ class BRXSReader
   
  public:
   
-  BRXSReader(std::string inputDirectory);
+  BRXSReader(TString inputDirectory);
   ~BRXSReader();
   
   // Accessors:
-  double getXSection(int mass, std::string production, std::string value);
-  double getBranchingRatio(int mass, std::string decay, std::string value);
-    
+  float getBR(int mass, TString decay, TString value);
+  float getXS(int mass, TString production, TString value);
+  void printBR(int mass, TString decay, TString value);
+  void printXS(int mass, TString production, TString value);
+  
  private:
   
-  void loadProductionXS(std::string production);
+  // Private accessors & mutators:
+  TString getMapKey(double mass, TString type, TString value);
+  bool hasKey(TString key, TString mapType);
+  void loadBR(TString decayClass);
+  void loadXS(TString production);
   
   // Member objects:
-  std::string directory;
+  TString directory;
+  std::map<TString,float> valuesXS;
+  std::map<TString,float> valuesBR;
   
-  std::map<std::string,double> xSectionValues[3];
-  
-  
-  std::map<int, std::map<std::string,double> > branchingRatios;
-
 };
 
 #endif

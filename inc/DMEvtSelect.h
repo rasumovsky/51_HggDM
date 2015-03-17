@@ -33,7 +33,8 @@ class DMEvtSelect
   double getPassingEventsWt(TString cutname);
   int getTotalEvents(TString cutname);
   double getTotalEventsWt(TString cutname);
-  void printCuts();
+  void printCutflow(bool weighted);
+  void saveCutflow(TString filename, bool weighted);
   
   // Mutators
   void clearCounters();
@@ -51,6 +52,7 @@ class DMEvtSelect
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;
   std::map<TString,double> evtCountTotalWt;
+  bool recursiveCall;
   
 };
 

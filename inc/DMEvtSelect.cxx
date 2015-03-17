@@ -22,16 +22,18 @@
    Initializes the tool and loads XS, BR values from files. 
 */
 DMEvtSelect::DMEvtSelect(DMTree* newTree) {
-  evtTree = newTree;
-  
-  ///////////// ADD CUT HERE /////////////
+    
+  // ADD CUT HERE
   cutnames = {"photonPt",
 	      "photonEta",
 	      "diphotonMass",
 	      "diphotonPt",
-	      "diphotonETMiss"};
-  ////////////////////////////////////////
+	      "diphotonETMiss",
+	      "allCuts"};
   
+  evtTree = newTree;
+  recursiveCall = false;
+  // Reset event counters and initialize values to zero:
   clearCounters();
   std::cout << "DMEvtSelect: Successfully initialized!" << std::endl;
 }
@@ -69,6 +71,47 @@ double DMEvtSelect::getTotalEventsWt(TString cutname) {
 }
 
 /**
+   Print the cutflow.
+*/
+void DMEvtSelect::printCutflow(bool weighted) {
+  std::cout << "Printing Cutflow: " << std::endl;
+  // Loop over the cuts and print the name as well as the pass ratio:
+  for (int i = 0; i < (int)cutNames.size(); i++) {
+    // Print the weighted cutflow (for MC):
+    if (weighted) {
+      std::cout << "\t" << cutNames[i] << "\t" << evtCountPassWt[cutNames[i]]
+		<< " / " << evtCountTotalWt[cutNames[i]] std::endl;
+    }
+    // Print the unweighted cutflow (for data):
+    else {
+      std::cout << "\t" << cutNames[i] << "\t" << evtCountPass[cutNames[i]]
+		<< " / " << evtCountTotal[cutNames[i]] std::endl;
+    }
+  }
+}
+
+/**
+   Save the cutflow.
+*/
+void DMEvtSelect::saveCutflow(TString filename, bool weighted) {
+  ofstream outFile(filename);
+  // Loop over the cuts and print the name as well as the pass ratio:
+  for (int i = 0; i < (int)cutNames.size(); i++) {
+    // Print the weighted cutflow (for MC):
+    if (weighted) {
+      outFile << "\t" << cutNames[i] << "\t" << evtCountPassWt[cutNames[i]]
+	      << " / " << evtCountTotalWt[cutNames[i]] std::endl;
+    }
+    // Print the unweighted cutflow (for data):
+    else {
+      outFile << "\t" << cutNames[i] << "\t" << evtCountPass[cutNames[i]]
+	      << " / " << evtCountTotal[cutNames[i]] std::endl;
+    }
+  }
+  outFile.close();
+}
+
+/**
    Clear the event counters.
 */
 void DMEvtSelect::clearCounters() {
@@ -101,35 +144,57 @@ bool DMEvtSelect::passesCut(TString cutname, double weight) {
   // check that map exists first.
   if (!cutExists(cutname)) return false;
   
-  ///////////// ADD CUT HERE /////////////
-  bool passes;
+  // ADD CUT HERE:
+  bool passes = true;
+  // Cut on photon transverse momenta / diphoton mass:
   if (cutname.Contains("photonPt")) {
-    passes = (pt1/mgg > 0.35 && pt2/mgg > 0.25);
+    passes = (EventInfoAuxDyn.y1_pt/EventInfoAuxDyn.m_yy > 0.35 &&
+	      EventInfoAuxDyn.y2_pt/EventInfoAuxDyn.m_yy > 0.25);
   }
+  // Cut on the photon pseudorapidities:
   else if (cutname.Contains("photonEta")) {
-    passes = (eta1 < 2.5 && eta2 < 2.5);
+    passes = (EventInfoAuxDyn.y1_eta < 2.5 && 
+	      EventInfoAuxDyn.y2_eta < 2.5);
   }
+  // Cut on the diphoton invariant mass:
   else if (cutname.Contains("diphotonMass")) {
-    passes = (mgg > 105000 && mgg < 160000);
+    passes = (EventInfoAuxDyn.m_yy > 105.0 && 
+	      EventInfoAuxDyn.m_yy < 160.0);
   }
+  // Cut on the diphoton transverse momentum:
   else if (cutname.Contains("diphotonPt")) {
-    passes = (ptgg > 120000);
+    passes = (EventInfoAuxDyn.pt_yy > 120.0);
   }
+  // Cut on the event missing transverse energy:
   else if (cutname.Contains("diphotonETMiss")) {
-    passes = (met > 120000);
+    passes = (EventInfoAuxDyn.metref_final > 120.0);
   }
-  ////////////////////////////////////////
-  
-  // Add to total counters:
-  evtCountTot[cutname]++;
-  evtCountTotWt[cutname]+=weight;
-  
-  // Add to passing counters:
-  if (passes) {
-    evtCountPass[cutname]++;
-    evtCountPassWt[cutname]+=weight;
+  // Check whether event passes all of the cuts above:
+  else if (cutname.Contains("all")) {
+    recursiveCall = true;
+    for (int i = 0; i < cutNames.size(); i++) {
+      if (cutNames[i].Contains("all")) continue;
+      if (!passesCut(cutNames[i])) {
+	passes = false;
+      }
+    }
+    recursiveCall = false;
   }
-  return passes;
+  
+  // The recursiveCall flag makes sure the event counters are not fucked up by
+  // recursive calls to this method that checks the cuts. 
+  if (!recursiveCall) {
+    // Add to total counters:
+    evtCountTot[cutname]++;
+    evtCountTotWt[cutname]+=weight;
+    
+    // Add to passing counters:
+    if (passes) {
+      evtCountPass[cutname]++;
+      evtCountPassWt[cutname]+=weight;
+    }
+    return passes;
+  }
 }
 
 /** 

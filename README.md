@@ -11,12 +11,13 @@ Main Classes:
 
      * DMMassPoints.cxx
           This program uses a TTree of data events to produce a series of mass
-	  points that can be used as inputs for the workspace. 
+	  points that can be used as inputs for the workspace. The cutflow is
+	  implemented using the DMEvtSelect class.
 
      * DMSigParam.cxx
           This program uses MC to fit the resonance shape for the SM Higgs and 
 	  the DM signal and saves the parameters for use in workspace 
-	  generation.
+	  generation. The cutflow is implemented using the DMEvtSelect class.
 
 Supporting Classes:
 
@@ -26,7 +27,8 @@ Supporting Classes:
 
      * DMEvtSelect.cxx
           This class implements the cutflow and counters for the analysis. It
-	  can be initialized using a pointer to the DMTree. 
+	  can be initialized using a pointer to the DMTree. This class is 
+	  instantiated in the DMMassPoints and DMSigParam classes. 
 
      * DMTree.cxx
           This class is automatically generated based on the MxAOD structure.

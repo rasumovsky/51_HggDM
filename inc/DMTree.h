@@ -5,8 +5,8 @@
 // found on file: sample.root
 //////////////////////////////////////////////////////////
 
-#ifndef HDMTree_h
-#define HDMTree_h
+#ifndef DMTree_h
+#define DMTree_h
 
 #include <TROOT.h>
 #include <TChain.h>
@@ -21,7 +21,7 @@ using std::vector;
 const Int_t kMaxEventInfoAux = 1;
 const Int_t kMaxEventInfoAuxDyn_subEventLink = 2570;
 
-class HDMTree {
+class DMTree {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
@@ -129,8 +129,8 @@ public :
    TBranch        *b_EventInfoAuxDyn_m_yy;   //!
    TBranch        *b_EventInfoAuxDyn_mcEventWeights;   //!
 
-   HDMTree(TTree *tree=0);
-   virtual ~HDMTree();
+   DMTree(TTree *tree=0);
+   virtual ~DMTree();
    virtual Int_t    Cut(Long64_t entry);
    virtual Int_t    GetEntry(Long64_t entry);
    virtual Long64_t LoadTree(Long64_t entry);
@@ -142,8 +142,8 @@ public :
 
 #endif
 
-#ifdef HDMTree_cxx
-HDMTree::HDMTree(TTree *tree) : fChain(0) 
+#ifdef DMTree_cxx
+DMTree::DMTree(TTree *tree) : fChain(0) 
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -158,19 +158,19 @@ HDMTree::HDMTree(TTree *tree) : fChain(0)
    Init(tree);
 }
 
-HDMTree::~HDMTree()
+DMTree::~DMTree()
 {
    if (!fChain) return;
    delete fChain->GetCurrentFile();
 }
 
-Int_t HDMTree::GetEntry(Long64_t entry)
+Int_t DMTree::GetEntry(Long64_t entry)
 {
 // Read contents of entry.
    if (!fChain) return 0;
    return fChain->GetEntry(entry);
 }
-Long64_t HDMTree::LoadTree(Long64_t entry)
+Long64_t DMTree::LoadTree(Long64_t entry)
 {
 // Set the environment to read one entry
    if (!fChain) return -5;
@@ -183,7 +183,7 @@ Long64_t HDMTree::LoadTree(Long64_t entry)
    return centry;
 }
 
-void HDMTree::Init(TTree *tree)
+void DMTree::Init(TTree *tree)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
@@ -255,7 +255,7 @@ void HDMTree::Init(TTree *tree)
    Notify();
 }
 
-Bool_t HDMTree::Notify()
+Bool_t DMTree::Notify()
 {
    // The Notify() function is called when a new file is opened. This
    // can be either for a new TTree in a TChain or when when a new TTree
@@ -266,18 +266,18 @@ Bool_t HDMTree::Notify()
    return kTRUE;
 }
 
-void HDMTree::Show(Long64_t entry)
+void DMTree::Show(Long64_t entry)
 {
 // Print contents of entry.
 // If entry is not specified, print current entry
    if (!fChain) return;
    fChain->Show(entry);
 }
-Int_t HDMTree::Cut(Long64_t entry)
+Int_t DMTree::Cut(Long64_t entry)
 {
 // This function may be called from Loop.
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
    return 1;
 }
-#endif // #ifdef HDMTree_cxx
+#endif // #ifdef DMTree_cxx

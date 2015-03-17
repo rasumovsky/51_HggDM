@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: HDMEvtSelect.cxx                                                    //
+//  Name: DMEvtSelect.cxx                                                     //
 //                                                                            //
 //  Created: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
@@ -11,17 +11,17 @@
 //                                                                            //
 //  To add a new cut, two modifications must be made at the locations labeled //
 //  with the tag "ADD CUT HERE":                                              //
-//    - add to the list of cutnames in HDMEvtSelect()                         //
+//    - add to the list of cutnames in DMEvtSelect()                         //
 //    - add to the implementation of cuts in passesCut()                      //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "HDMEvtSelect.h"
+#include "DMEvtSelect.h"
 
 /**
    Initializes the tool and loads XS, BR values from files. 
 */
-HDMEvtSelect::HDMEvtSelect(HDMTree* newTree) {
+DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   evtTree = newTree;
   
   ///////////// ADD CUT HERE /////////////
@@ -33,13 +33,13 @@ HDMEvtSelect::HDMEvtSelect(HDMTree* newTree) {
   ////////////////////////////////////////
   
   clearCounters();
-  std::cout << "HDMEvtSelect: Successfully initialized!" << std::endl;
+  std::cout << "DMEvtSelect: Successfully initialized!" << std::endl;
 }
 
 /**
    Get the (integer) number of events passing the specified cut.
 */
-int HDMEvtSelect::getPassingEvents(TString cutname) {
+int DMEvtSelect::getPassingEvents(TString cutname) {
   if (cutExists(cutname)) return evtCountPass[cutname];
   else return 0;
 }
@@ -47,7 +47,7 @@ int HDMEvtSelect::getPassingEvents(TString cutname) {
 /**
    Get the weighted number of events passing the specified cut.
 */
-double HDMEvtSelect::getPassingEventsWt(TString cutname) {
+double DMEvtSelect::getPassingEventsWt(TString cutname) {
   if (cutExists(cutname)) return evtCountPassWt[cutname];
   else return 0;
 }
@@ -55,7 +55,7 @@ double HDMEvtSelect::getPassingEventsWt(TString cutname) {
 /**
    Get the (integer) number of events tested at the specified cut.
 */
-int HDMEvtSelect::getTotalEvents(TString cutname) {
+int DMEvtSelect::getTotalEvents(TString cutname) {
   if (cutExists(cutname)) return evtCountTot[cutname];
   else return 0;
 }
@@ -63,7 +63,7 @@ int HDMEvtSelect::getTotalEvents(TString cutname) {
 /**
    Get the weighted number of events tested at the specified cut.
 */
-double HDMEvtSelect::getTotalEventsWt(TString cutname) {
+double DMEvtSelect::getTotalEventsWt(TString cutname) {
   if (cutExists(cutname)) return evtCountTotWt[cutname];
   else return 0;
 }
@@ -71,7 +71,7 @@ double HDMEvtSelect::getTotalEventsWt(TString cutname) {
 /**
    Clear the event counters.
 */
-void HDMEvtSelect::clearCounters() {
+void DMEvtSelect::clearCounters() {
   // Clear the maps:
   evtCountPass.clear();
   evtCountPassWt.clear();
@@ -89,14 +89,14 @@ void HDMEvtSelect::clearCounters() {
 /**
    check whether an event passes the specified cut.
 */
-bool HDMEvtSelect::passesCut(TString cutname) {
+bool DMEvtSelect::passesCut(TString cutname) {
   return passesCut(cutname, 1.0);
 }
 
 /**
    Check whether a weighted event passes the specified cut.
 */
-bool HDMEvtSelect::passesCut(TString cutname, double weight) {
+bool DMEvtSelect::passesCut(TString cutname, double weight) {
   
   // check that map exists first.
   if (!cutExists(cutname)) return false;
@@ -135,11 +135,11 @@ bool HDMEvtSelect::passesCut(TString cutname, double weight) {
 /** 
     Check whether the specified cut has been defined.
 */
-bool HDMEvtSelect::cutExists(TString cutname) {
+bool DMEvtSelect::cutExists(TString cutname) {
   // Checks if there is a key corresponding to cutname in the map: 
   bool exists = (evtCountTot.find(cutname) == evtCountTot.end());
   if (!exists) {
-    std::cout << "HDMEvtSelect: Cut not defined!" << std::endl;
+    std::cout << "DMEvtSelect: Cut not defined!" << std::endl;
   }
   return exists;
 }

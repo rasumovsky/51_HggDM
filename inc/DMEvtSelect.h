@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: HDMEvtSelect.h                                                      //
-//  Class: HDMEvtSelect.cxx                                                   //
+//  Name: DMEvtSelect.h                                                       //
+//  Class: DMEvtSelect.cxx                                                    //
 //                                                                            //
 //  Author: Andrew Hard                                                       //
 //  Email: ahard@cern.ch                                                      //
@@ -9,24 +9,24 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef HDMEvtSelect_h
-#define HDMEvtSelect_h
+#ifndef DMEvtSelect_h
+#define DMEvtSelect_h
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
 #include <map>
-#include "HDMTree.h"
+#include "DMTree.h"
 
 
 
-class HDMEvtSelect 
+class DMEvtSelect 
 {
   
  public:
   
-  HDMEvtSelect(HDMTree *newTree);
-  ~HDMEvtSelect();
+  DMEvtSelect(DMTree *newTree);
+  ~DMEvtSelect();
   
   // Accessors:
   int getPassingEvents(TString cutname);
@@ -45,7 +45,7 @@ class HDMEvtSelect
   bool cutExists();
   
   // Member objects:
-  HDMTree *evtTree;
+  DMTree *evtTree;
   std::vector<TString> cutNames;
   std::map<TString,int> evtCountPass;
   std::map<TString,double> evtCountPassWt;

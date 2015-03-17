@@ -12,13 +12,20 @@
 #ifndef DMEvtSelect_h
 #define DMEvtSelect_h
 
-#include <stdlib.h>
+// C++ includes:
 #include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
 #include <string>
 #include <map>
+
+// ROOT includes:
+#include "TString.h"
+
+// Package includes:
 #include "DMTree.h"
-
-
 
 class DMEvtSelect 
 {

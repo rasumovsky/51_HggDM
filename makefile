@@ -38,7 +38,7 @@ GLIBS	+= -lTreePlayer -lProof -lProofPlayer -lutil -lRooFit -lRooFitCore  -lRooS
 OBJS_Template		= obj/template.o
 DEPS_Template		:= $(OBJS_Template:.o=.d) 
 
-bin/%	: obj/%.o obj/ChipDimension.o obj/PixelHit.o obj/PixelCluster.o obj/LinearMapMaker.o obj/ModuleMapping.o obj/MatchMaker.o obj/TreeFEI4.o obj/TreeT3MAPS.o obj/PlotUtil.o obj/SplitT3MAPS.o obj/LoadT3MAPS.o
+bin/%	: obj/%.o obj/DMTree.o obj/BRXSReader.o obj/DMEvtSelect.o obj/DMMassPoints.o obj/DMSigParam.o obj/DMMaster.o
 
 	@echo "Linking " $@
 	echo $(LD) $(LDFLAGS) $^ $(GLIBS) -o $@	

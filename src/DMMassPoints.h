@@ -12,6 +12,7 @@
 #ifndef DMMassPoints_h
 #define DMMassPoints_h
 
+// C++ includes:
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -19,10 +20,16 @@
 #include <vector>
 #include <string>
 
+// ROOT includes:
 #include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
 #include "TString.h"
+
+// Package includes:
+#include "DMEvtSelect.h"
+#include "DMHeader.h"
+#include "DMTree.h"
 
 class DMMassPoints 
 {
@@ -52,7 +59,6 @@ class DMMassPoints
   double nEvents_weighted[20];
   
   TTree *tree;
-  
   TString jobname;
   TString option;
     

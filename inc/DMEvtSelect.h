@@ -36,30 +36,42 @@ class DMEvtSelect
   ~DMEvtSelect();
   
   // Accessors:
-  int getPassingEvents(TString cutname);
-  double getPassingEventsWt(TString cutname);
-  int getTotalEvents(TString cutname);
-  double getTotalEventsWt(TString cutname);
+  int getPassingEvents(TString cutName);
+  double getPassingEventsWt(TString cutName);
+  int getTotalEvents(TString cutName);
+  double getTotalEventsWt(TString cutName);
+  int getEventsPerCate(TString cateName, int cate);
+  double getEventsPerCateWt(TString cateName, int cate);
   void printCutflow(bool weighted);
+  void printCategorization(bool weighted);
   void saveCutflow(TString filename, bool weighted);
-  
+  void saveCategorization(TString filename, bool weighted);
+
   // Mutators
   void clearCounters();
-  bool passesCut(TString cutname);
-  bool passesCut(TString cutname, double weight);
+  int getCategoryNumber(TString cateName);
+  int getCategoryNumber(TString cateName, double weight);
+  bool passesCut(TString cutName);
+  bool passesCut(TString cutName, double weight);
   
  private:
   
-  bool cutExists();
-  
+  // Member methods:
+  bool cutExists(TString cutName);
+  bool cateExists(TString cateName);
+
   // Member objects:
   DMTree *evtTree;
-  std::vector<TString> cutNames;
+  std::vector<TString> cutList;
   std::map<TString,int> evtCountPass;
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;
   std::map<TString,double> evtCountTotalWt;
   bool recursiveCall;
+  
+  std::map<TString,int> cateNamesAndSizes;
+  std::map<TString,int> cateCount;
+  std::map<Tstring,double> cateCountWt;
   
 };
 

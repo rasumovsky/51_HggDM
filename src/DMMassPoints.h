@@ -36,9 +36,9 @@ class DMMassPoints
   
  public:
   
-  DMMassPoints(std::string directory, 
-	       std::string inFileName,
-	       std::string outFileName);
+  DMMassPoints(TString directory, 
+	       TString inFileName,
+	       TString outFileName);
   virtual ~DMMassPoints() {};
   
   // Member functions:

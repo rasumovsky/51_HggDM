@@ -43,10 +43,9 @@ class DMMassPoints
   virtual ~DMMassPoints() {};
   
   // Accessors:
-  TString getTextFileName(int cateIndex);
+  TString getMassPointsFileName(int cateIndex);
   RooDataSet* getCateDataSet(int cateIndex);
   RooDataSet* getCombDataSet();
-  //TTree* getTTree(int cateIndex);
   
   // Mutators:
     
@@ -64,6 +63,9 @@ class DMMassPoints
   
   TString outputDir;
   bool isWeighted;
+  
+  RooDataSet *cateData[20];
+  RooDataSet *combData;
 };
 
 #endif

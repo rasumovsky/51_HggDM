@@ -239,7 +239,7 @@ int DMEvtSelect::getCategoryNumber(TString cateName) {
 /**
    Find the category in which this weighted event belongs. 
 */
-int DMEvtSelect::getCategoryNumber(TString cateName) {
+int DMEvtSelect::getCategoryNumber(TString cateName, double weight) {
   
   // check that the category is defined first. 
   if (!cateExists(cateName)) return -1;

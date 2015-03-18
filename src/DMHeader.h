@@ -16,7 +16,7 @@
 bool doBlind = false;
 
 // Luminosity in fb-1:
-double analysis_luminosity = 20.3;
+double analysisLuminosity = 20.3;
 
 // Location of global input files:
 TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
@@ -36,3 +36,6 @@ TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 
 double DMMassRangeLo = 105.0;
 double DMMassRangeHi = 160.0;
+
+int const nProdModes = 6;
+TString sigProdModes[nProductionModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};

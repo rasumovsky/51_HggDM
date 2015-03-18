@@ -30,20 +30,31 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   outputDir = Form("%s/%s/DMSigParam/",masterOutput.Data(),jobName.Data());
   System(Form("mkdir -vp %s",outputDir.Data()));
     
-  // Either load the masspoints from file or create new ones:
+  outputDir = Form("%s/%s/SigParam",masterOutput.Data(),jobName.Data());
+  system(Form("mkdir -vp %s",outputDir.Data()));
+  system(Form("mkdir -vp %s/Plots",outputDir.Data())); 
+  system(Form("mkdir -vp %s/all",outputDir.Data()));
+  for (int i_p = 0; i_p < nProdModes; i_p++) {
+    system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigProdModes[i_p]).Data()));
+  }
+  
+  // Either load the signal parameterization from file or create new ones:
   if (options.Contains("FromFile")) loadSigParamFromFile();
   else createNewSigParam();
   return;
 }
 
 /**
-   Get the name of the output textfile for the given category index.
+   Get the name of the output textfile for the given category index. fileType
+   can either be "fit" or "yield".
 */
-TString DMSigParam::getTextFileName(int cateIndex, TString process) {
-  //TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),i_f);
+TString DMSigParam::getSigParamFileName(int cateIndex, TString production,
+					TString fileType) {
+  TString name = Form("%s/%s/%s_%s_%d.txt",outputDir.Data(),production.Data(),
+		      fileType.Data(),cateScheme.Data(),cateIndex);
   return name;
 }
-   
+
 /**
    Create new masspoints by looping over the TTree.
 */

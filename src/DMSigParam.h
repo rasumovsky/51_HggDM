@@ -47,7 +47,8 @@ class DMSigParam
   double getCateSigYield(int cateIndex, TString process);
   //RooSimultaneous* getCombSigPDF(TString process); // not sure of class...
   double getCombSigYield(TString process);
-  TString getTextFileName(int cateIndex, TString process);
+  TString getSigParamFileName(int cateIndex, TString production,
+			      TString fileType);
   
  private:
   

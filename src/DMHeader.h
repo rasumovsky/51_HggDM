@@ -19,10 +19,10 @@ bool doBlind = false;
 double analysis_luminosity = 20.3;
 
 // Location of global input files:
-TString master_input = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
+TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
 
 // Location of output directory:
-TString master_output = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
+TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 
 // Ntuple locations:
 //TString ntuple_input_background_gamma = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/list_background_gamma.txt";
@@ -34,3 +34,5 @@ TString master_output = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
 //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
 
+double DMMassRangeLo = 105.0;
+double DMMassRangeHi = 160.0;

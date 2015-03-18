@@ -36,12 +36,13 @@ class DMEvtSelect
   ~DMEvtSelect();
   
   // Accessors:
+  int getEventsPerCate(TString cateName, int cate);
+  double getEventsPerCateWt(TString cateName, int cate);
+  int getNCategories(TString cateName);
   int getPassingEvents(TString cutName);
   double getPassingEventsWt(TString cutName);
   int getTotalEvents(TString cutName);
   double getTotalEventsWt(TString cutName);
-  int getEventsPerCate(TString cateName, int cate);
-  double getEventsPerCateWt(TString cateName, int cate);
   void printCutflow(bool weighted);
   void printCategorization(bool weighted);
   void saveCutflow(TString filename, bool weighted);
@@ -67,7 +68,7 @@ class DMEvtSelect
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;
   std::map<TString,double> evtCountTotalWt;
-  bool recursiveCall;
+  //bool recursiveCall;
   
   std::map<TString,int> cateNamesAndSizes;
   std::map<TString,int> cateCount;

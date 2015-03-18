@@ -27,6 +27,8 @@
 #include "TString.h"
 
 // Package includes:
+#include "CommonHead.h"
+#include "RooFitHead.h"
 #include "DMEvtSelect.h"
 #include "DMHeader.h"
 #include "DMTree.h"
@@ -36,32 +38,32 @@ class DMMassPoints
   
  public:
   
-  DMMassPoints(TString directory, 
-	       TString inFileName,
-	       TString outFileName);
+  DMMassPoints(TString newJobName, TString newSampleName, TString newCateScheme,
+	       TString newOptions);
   virtual ~DMMassPoints() {};
   
-  // Member functions:
-  int getNEvents(TString cateType, int cate);
+  // Accessors:
+  TString getTextFileName(int cateIndex);
+  RooDataSet* getCateDataSet(int cateIndex);
+  RooDataSet* getCombDataSet();
+  //TTree* getTTree(int cateIndex);
   
-  RooDataSet* createDataSet(TString cateType, int cateNum);
-  TTree* createTTree(TString cateType, int cateNum);
-  
+  // Mutators:
+    
  private:
   
-  // count passing selection at each stage:
-  int nPassing[20];
-  double nPassing_weighted[20];
-  TString cutNames[20];
+  // Member methods:
+  void createNewMassPoints();
+  void loadMassPointsFromFile();//simple method that just counts from text file.
   
-  // count numbers in each category:
-  int nEvents[20];
-  double nEvents_weighted[20];
+  // Member variables:
+  TString jobName;
+  TString sampleName;
+  TString cateScheme;
+  TString options;
   
-  TTree *tree;
-  TString jobname;
-  TString option;
-    
+  TString outputDir;
+  bool isWeighted;
 };
 
 #endif

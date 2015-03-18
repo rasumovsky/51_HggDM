@@ -19,6 +19,11 @@
 //    - add to the list of cateNames in DMEvtSelect()                         //
 //    - add to the implementation of categories in getCategory()              //
 //                                                                            //
+//  Note: the counter is a bit finnicky. Either check each step of the        //
+//  individually OR use passesCut("all"), but don't use both. Otherwise, you  //
+//  will be double-counting events, since the "all" cut recursively calls the //
+//  passesCut() method.                                                       //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMEvtSelect.h"
@@ -49,11 +54,39 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
 }
 
 /**
+   Get the (integer) number of events in the specified category.
+*/
+int DMEvtSelect::getEventsPerCate(TString cateName, int cate) {
+  if (cateExists(cateName)) {
+    return cateCount[Form("%s_%d",cateName.Data(),cate)];
+  }
+  else return -1;
+}
+
+/**
+   Get the weighted number of events in the specified category.
+*/
+double DMEvtSelect::getEventsPerCateWt(TString cateName, int cate) {
+  if (cateExists(cateName)) {
+    return cateCountWt[Form("%s_%d",cateName.Data(),cate)];
+  }
+  else return -1;
+}
+
+/**
+   Get the number of categories in the named categorization scheme.
+*/
+int DMEvtSelect::getNCategories(TString cateName) {
+  if (cateExists(cateName)) return cateNamesAndSizes[cateName];
+  else return -1;
+}
+
+/**
    Get the (integer) number of events passing the specified cut.
 */
 int DMEvtSelect::getPassingEvents(TString cutName) {
   if (cutExists(cutName)) return evtCountPass[cutName];
-  else return 0;
+  else return -1;
 }
 
 /**
@@ -61,7 +94,7 @@ int DMEvtSelect::getPassingEvents(TString cutName) {
 */
 double DMEvtSelect::getPassingEventsWt(TString cutName) {
   if (cutExists(cutName)) return evtCountPassWt[cutName];
-  else return 0;
+  else return -1;
 }
 
 /**
@@ -69,7 +102,7 @@ double DMEvtSelect::getPassingEventsWt(TString cutName) {
 */
 int DMEvtSelect::getTotalEvents(TString cutName) {
   if (cutExists(cutName)) return evtCountTot[cutName];
-  else return 0;
+  else return -1;
 }
 
 /**
@@ -77,27 +110,7 @@ int DMEvtSelect::getTotalEvents(TString cutName) {
 */
 double DMEvtSelect::getTotalEventsWt(TString cutName) {
   if (cutExists(cutName)) return evtCountTotWt[cutName];
-  else return 0;
-}
-
-/**
-   Get the (integer) number of events in the specified category.
-*/
-int DMEvtSelect::getEventsPerCate(Tstring cateName, int cate) {
-  if (cateExists(cateName)) {
-    return cateCount[Form("%s_%d",cateName.Data(),cate)];
-  }
-  else return 0;
-}
-
-/**
-   Get the weighted number of events in the specified category.
-*/
-double DMEvtSelect::getEventsPerCateWt(Tstring cateName, int cate) {
-  if (cateExists(cateName)) {
-    return cateCountWt[Form("%s_%d",cateName.Data(),cate)];
-  }
-  else return 0;
+  else return -1;
 }
 
 /**
@@ -296,19 +309,20 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Check whether event passes all of the cuts above:
   else if (cutName.Contains("all")) {
-    recursiveCall = true;
+    //recursiveCall = true;
     for (int i = 0; i < cutList.size(); i++) {
       if (cutList[i].Contains("all")) continue;
       if (!passesCut(cutList[i])) {
 	passes = false;
+	break;
       }
     }
-    recursiveCall = false;
+    //recursiveCall = false;
   }
   
   // The recursiveCall flag makes sure the event counters are not fucked up by
   // recursive calls to this method that checks the cuts. 
-  if (!recursiveCall) {
+  //if (!recursiveCall) {
     // Add to total counters:
     evtCountTot[cutName]++;
     evtCountTotWt[cutName]+=weight;
@@ -319,7 +333,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
       evtCountPassWt[cutName]+=weight;
     }
     return passes;
-  }
+    //}
 }
 
 /** 

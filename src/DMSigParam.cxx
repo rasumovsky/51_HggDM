@@ -27,9 +27,6 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   options = newOptions;
   
   // Assign output directory, and make sure it exists:
-  outputDir = Form("%s/%s/DMSigParam/",masterOutput.Data(),jobName.Data());
-  System(Form("mkdir -vp %s",outputDir.Data()));
-    
   outputDir = Form("%s/%s/SigParam",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
   system(Form("mkdir -vp %s/Plots",outputDir.Data())); 
@@ -58,6 +55,10 @@ TString DMSigParam::getSigParamFileName(int cateIndex, TString production,
 /**
    Create new masspoints by looping over the TTree.
 */
-void DMSigParam::createNewSigParam() {
+void DMSigParam::createNewSigParam(TString production) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
+  
+   CB = new RooCBShape(Form("CB_%d",signalmass[i]), Form("CB_%d",signalmass[i]), v_mass, *mu[i], *sigma[i], alpha, n_CB);
+   GA = new RooGaussian("GA_%d",signalmass[i]), Form("GA_%d",signalmass[i]), v_mass, *mu[i], *sGA[i]);
+   Signal = new RooAddPdf(Form("Signal_%d",signalmass[i]), Form("Signal_%d",signalmass[i]), *CB[i], *GA[i], frac);
 }

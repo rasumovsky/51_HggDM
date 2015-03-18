@@ -53,7 +53,7 @@ class DMMassPoints
   
   // Member methods:
   void createNewMassPoints();
-  void loadMassPointsFromFile();//simple method that just counts from text file.
+  void loadMassPointsFromFile();
   
   // Member variables:
   TString jobName;

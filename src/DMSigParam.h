@@ -61,8 +61,10 @@ class DMSigParam
   TString sampleName;
   TString cateScheme;
   TString options;
-  
   TString outputDir;
+  
+  RooAddPdf* sigPDF[20];
+  
 };
 
 #endif

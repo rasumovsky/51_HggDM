@@ -7,7 +7,8 @@
 //  Date: 17/03/2015                                                          //
 //                                                                            //
 //  This class parameterizes the resonance shape of the SM Higgs including    //
-//  the SM and DM production modes.                                           //
+//  the SM and DM production modes. For now, the program uses a single mass   //
+//  point (125 GeV), and only has the SM production modes.                    //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +59,13 @@ TString DMSigParam::getSigParamFileName(int cateIndex, TString production,
 void DMSigParam::createNewSigParam(TString production) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
   
-   CB = new RooCBShape(Form("CB_%d",signalmass[i]), Form("CB_%d",signalmass[i]), v_mass, *mu[i], *sigma[i], alpha, n_CB);
-   GA = new RooGaussian("GA_%d",signalmass[i]), Form("GA_%d",signalmass[i]), v_mass, *mu[i], *sGA[i]);
-   Signal = new RooAddPdf(Form("Signal_%d",signalmass[i]), Form("Signal_%d",signalmass[i]), *CB[i], *GA[i], frac);
+  // loop over TTree as in masspoints, fill datasets for fitting.
+  
+  // loop over categories, loop over production modes,
+  // define functions, then fit
+  CB = new RooCBShape(Form("CB_%d",signalmass[i]), Form("CB_%d",signalmass[i]), v_mass, *mu[i], *sigma[i], alpha, n_CB);
+  GA = new RooGaussian("GA_%d",signalmass[i]), Form("GA_%d",signalmass[i]), v_mass, *mu[i], *sGA[i]);
+Signal = new RooAddPdf(Form("Signal_%d",signalmass[i]), Form("Signal_%d",signalmass[i]), *CB[i], *GA[i], frac);
+
+
 }

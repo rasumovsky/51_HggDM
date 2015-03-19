@@ -1,6 +1,28 @@
 # HggDM
 Higgs to diphoton + dark matter search 
 
+This package implements an analysis of ATLAS Experiment data designed to look
+for Higgs bosons produced in association with dark matter particles. The Higgs
+decay is identified by a diphoton resonance, while the dark matter particle
+would manifest as missing transverse energy.
+
+General analysis strategy:
+     1) Produce mini-MxAODs from xAODs using the tools provided by Hgamma WG.
+     2) Produce mass points and parameterization of the SM and DM signals.
+     3) Generate workspace to store models and PDFs.
+     4) Pseudoexperiment ensemble generator and analyzer 
+     5) CLs and p0 calculators
+     
+Update March 19: Step 1 complete, Step 2 under development.
+
+Analysis Header:
+
+     * DMHeader.h
+          This header file should store all important analysis information. The
+	  idea is to avoid hard-coding anything in the supporting classes. File
+	  names, analysis luminosity, category names, production modes, mass
+	  ranges are just a few of the quantities that should be defined here.
+
 Main Classes:
      
      * DMMaster.cxx

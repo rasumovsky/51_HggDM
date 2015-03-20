@@ -96,8 +96,8 @@ void DMMassPoints::createNewMassPoints() {
   RooArgSet *args = new RooArgSet();
   args->add(m_yy);
   
-   ofstream massFiles[20];
-   
+  ofstream massFiles[20];
+  
   // Loop over categories to define datasets and mass files:
   for (int i_c = 0; i_c < selector->getNCategories(cateScheme); i_c++) {
     

@@ -43,10 +43,13 @@ class DMSigParam
   virtual ~DMSigParam() {};
   
   // Accessors:
+  RooCBShape* getCateCrystalBall(int cateIndex, TString process);
+  RooGaussian* getCateGaussian(int cateIndex, TString process);
   RooAddPdf* getCateSigPDF(int cateIndex, TString process);
+  
   double getCateSigYield(int cateIndex, TString process);
-  //RooSimultaneous* getCombSigPDF(TString process); // not sure of class...
   double getCombSigYield(TString process);
+  
   TString getSigParamFileName(int cateIndex, TString production,
 			      TString fileType);
   
@@ -63,7 +66,11 @@ class DMSigParam
   TString options;
   TString outputDir;
   
-  RooAddPdf* sigPDF[20];
+  std::map<TString,std::vector<RooCBShape*>> sigCB;
+  std::map<TString,std::vector<RooGaussian*>> sigGA;
+  std::map<TString,std::vector<RooAddPdf*>> sigPDF;
+  
+  std::map<TString,std::vector<double>> sigYield;
   
 };
 

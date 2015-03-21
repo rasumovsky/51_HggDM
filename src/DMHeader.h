@@ -26,14 +26,14 @@ double DMMyyRangeLo = 105.0;
 double DMMyyRangeHi = 160.0;
 
 int const nProdModes = 6;
-TString sigProdModes[nProductionModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
+TString sigProdModes[nProdModes];// = {"ggH","VBF","WH","ZH","ttH","bbH"};
 
-std::map<TString,TString> prodToSample= { {"ggH", "sampleName_ggH"}, 
-					  {"VBF", "sampleName_VBF"},
-					  {"WH", "sampleName_WH"},
-					  {"ZH", "sampleName_ZH"},
-					  {"ttH", "sampleName_ttH"},
-					  {"bbH","sampleName_bbH"} };
+//std::map<TString,TString> prodToSample;// = { {"ggH", "sampleName_ggH"}, 
+// {"VBF", "sampleName_VBF"},
+//					  {"WH", "sampleName_WH"},
+//					  {"ZH", "sampleName_ZH"},
+//					  {"ttH", "sampleName_ttH"},
+//					  {"bbH","sampleName_bbH"} };
 
 ////////////////////////////////////////
 // INPUT AND OUTPUT DIRECTORIES
@@ -50,7 +50,9 @@ TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 ////////////////////////////////////////
 
 // Ntuple locations:
-std::map<TString,TString> prodToSample= { {"ggH","sampleName_ggH"},
+std::map<TString,TString> prodToSample;
+/*
+ = { {"ggH","sampleName_ggH"},
 					  {"VBF","sampleName_VBF"},
 					  {"WH","~lkashif/public/for_andrew/H2yyMETAnalysis_WH/data-outputLabel/sample.root"},
 					  {"ZH","~lkashif/public/for_andrew/H2yyMETAnalysis_ZH/data-outputLabel/sample.root"},
@@ -58,6 +60,7 @@ std::map<TString,TString> prodToSample= { {"ggH","sampleName_ggH"},
 					  {"shxx_gg_ms100_mx100","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx100/data-outputLabel/sample.root"},
 					  {"shxx_gg_ms100_mx500","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx500/data-outputLabel/sample.root"}
 };
+*/
 
 
 ////////////////////////////////////////

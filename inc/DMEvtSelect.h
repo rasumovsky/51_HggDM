@@ -72,7 +72,7 @@ class DMEvtSelect
   
   std::map<TString,int> cateNamesAndSizes;
   std::map<TString,int> cateCount;
-  std::map<Tstring,double> cateCountWt;
+  std::map<TString,double> cateCountWt;
   
 };
 

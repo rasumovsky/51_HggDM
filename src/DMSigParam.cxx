@@ -209,11 +209,10 @@ void DMSigParam::createNewSigParam(TString process, bool makeNew) {
     }
     else {
       // THIS MUST BE FIXED ASAP!
+      double rC, rMu, rSigmaCB, rAlpha, rNCB, rSigmaGA, rFrac;
       while (!inputFitFile.eof()) {
-	inputFitFile >> rC >> mu->getVal() >> sigmaCB->getVal() 
-		     >> alpha->getVal() >> nCB->getVal() >> sigmaGA->getVal() 
-		     >> frac->getVal();
-      
+	inputFitFile >> rC >> rMu >> rSigmaCB >> rAlpha >> rNCB >> rSigmaGA
+		     >> rFrac;
 	mu->setVal(rMu);
 	sigmaCB->setVal(rSigmaCB);
 	alpha->setVal(rAlpha);
@@ -222,13 +221,13 @@ void DMSigParam::createNewSigParam(TString process, bool makeNew) {
 	frac->setVal(rFrac);
 	break;
       }
-
+      double rSum, rNum;
       while (!inputYieldFile.eof()) {
-	inputYieldFile >> rC >> currData->sumEntries() >> currData->numEntries() >> std::endl;
+	inputYieldFile >> rC >> rSum >> rNum;
+	vectorYield.push_back(rSum);
 	break;
       }
     }
-    
     
     // Save the fitted PDFs:
     vectorCB.push_back(currCB);
@@ -239,6 +238,10 @@ void DMSigParam::createNewSigParam(TString process, bool makeNew) {
   if (makeNew) {
     outputFitFile.close();
     outputYieldFile.close();
+  }
+  else {
+    inputFitFile.close();
+    inputYieldFile.close();
   }
   
   // Add signal shapes in all categories to the map.

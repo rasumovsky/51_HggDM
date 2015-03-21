@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Sat Mar 14 18:47:39 2015 by ROOT version 5.34/05
+// Sat Mar 21 14:14:53 2015 by ROOT version 5.34/05
 // from TTree CollectionTree/xAOD event tree
 // found on file: sample.root
 //////////////////////////////////////////////////////////
@@ -19,7 +19,7 @@ using std::vector;
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 const Int_t kMaxEventInfoAux = 1;
-const Int_t kMaxEventInfoAuxDyn_subEventLink = 2570;
+const Int_t kMaxEventInfoAuxDyn_subEventLink = 2655;
 
 class DMTree {
 public :
@@ -68,16 +68,22 @@ public :
    Float_t         EventInfoAux_beamTiltXZ;
    Float_t         EventInfoAux_beamTiltYZ;
    UInt_t          EventInfoAux_beamStatus;
-   UInt_t          EventInfoAuxDyn_mcChannelNumber;
-   Float_t         EventInfoAuxDyn_PileupWeight;
-   ULong64_t       EventInfoAuxDyn_mcEventNumber;
-   vector<unsigned short> *EventInfoAuxDyn_subEventTime;
+   Float_t         EventInfoAuxDyn_m_yy;
    Int_t           EventInfoAuxDyn_subEventLink_;
    UInt_t          EventInfoAuxDyn_subEventLink_m_persKey[kMaxEventInfoAuxDyn_subEventLink];   //[EventInfoAuxDyn.subEventLink_]
    UInt_t          EventInfoAuxDyn_subEventLink_m_persIndex[kMaxEventInfoAuxDyn_subEventLink];   //[EventInfoAuxDyn.subEventLink_]
+   UInt_t          EventInfoAuxDyn_mcChannelNumber;
    vector<unsigned short> *EventInfoAuxDyn_subEventType;
-   Float_t         EventInfoAuxDyn_m_yy;
+   ULong64_t       EventInfoAuxDyn_mcEventNumber;
+   Float_t         EventInfoAuxDyn_PileupWeight;
+   Float_t         EventInfoAuxDyn_pt_yy;
+   Float_t         EventInfoAuxDyn_y1_pt;
+   Float_t         EventInfoAuxDyn_y1_eta;
+   Float_t         EventInfoAuxDyn_y2_pt;
+   Float_t         EventInfoAuxDyn_y2_eta;
+   Float_t         EventInfoAuxDyn_metref_final;
    vector<float>   *EventInfoAuxDyn_mcEventWeights;
+   vector<unsigned short> *EventInfoAuxDyn_subEventTime;
 
    // List of branches
    TBranch        *b_EventInfo;   //!
@@ -118,16 +124,22 @@ public :
    TBranch        *b_EventInfoAux_beamTiltXZ;   //!
    TBranch        *b_EventInfoAux_beamTiltYZ;   //!
    TBranch        *b_EventInfoAux_beamStatus;   //!
-   TBranch        *b_EventInfoAuxDyn_mcChannelNumber;   //!
-   TBranch        *b_EventInfoAuxDyn_PileupWeight;   //!
-   TBranch        *b_EventInfoAuxDyn_mcEventNumber;   //!
-   TBranch        *b_EventInfoAuxDyn_subEventTime;   //!
+   TBranch        *b_EventInfoAuxDyn_m_yy;   //!
    TBranch        *b_EventInfoAuxDyn_subEventLink_;   //!
    TBranch        *b_EventInfoAuxDyn_subEventLink_m_persKey;   //!
    TBranch        *b_EventInfoAuxDyn_subEventLink_m_persIndex;   //!
+   TBranch        *b_EventInfoAuxDyn_mcChannelNumber;   //!
    TBranch        *b_EventInfoAuxDyn_subEventType;   //!
-   TBranch        *b_EventInfoAuxDyn_m_yy;   //!
+   TBranch        *b_EventInfoAuxDyn_mcEventNumber;   //!
+   TBranch        *b_EventInfoAuxDyn_PileupWeight;   //!
+   TBranch        *b_EventInfoAuxDyn_pt_yy;   //!
+   TBranch        *b_EventInfoAuxDyn_y1_pt;   //!
+   TBranch        *b_EventInfoAuxDyn_y1_eta;   //!
+   TBranch        *b_EventInfoAuxDyn_y2_pt;   //!
+   TBranch        *b_EventInfoAuxDyn_y2_eta;   //!
+   TBranch        *b_EventInfoAuxDyn_metref_final;   //!
    TBranch        *b_EventInfoAuxDyn_mcEventWeights;   //!
+   TBranch        *b_EventInfoAuxDyn_subEventTime;   //!
 
    DMTree(TTree *tree=0);
    virtual ~DMTree();
@@ -195,9 +207,9 @@ void DMTree::Init(TTree *tree)
 
    // Set object pointer
    EventInfo = 0;
-   EventInfoAuxDyn_subEventTime = 0;
    EventInfoAuxDyn_subEventType = 0;
    EventInfoAuxDyn_mcEventWeights = 0;
+   EventInfoAuxDyn_subEventTime = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -242,16 +254,22 @@ void DMTree::Init(TTree *tree)
    fChain->SetBranchAddress("EventInfoAux.beamTiltXZ", &EventInfoAux_beamTiltXZ, &b_EventInfoAux_beamTiltXZ);
    fChain->SetBranchAddress("EventInfoAux.beamTiltYZ", &EventInfoAux_beamTiltYZ, &b_EventInfoAux_beamTiltYZ);
    fChain->SetBranchAddress("EventInfoAux.beamStatus", &EventInfoAux_beamStatus, &b_EventInfoAux_beamStatus);
-   fChain->SetBranchAddress("EventInfoAuxDyn.mcChannelNumber", &EventInfoAuxDyn_mcChannelNumber, &b_EventInfoAuxDyn_mcChannelNumber);
-   fChain->SetBranchAddress("EventInfoAuxDyn.PileupWeight", &EventInfoAuxDyn_PileupWeight, &b_EventInfoAuxDyn_PileupWeight);
-   fChain->SetBranchAddress("EventInfoAuxDyn.mcEventNumber", &EventInfoAuxDyn_mcEventNumber, &b_EventInfoAuxDyn_mcEventNumber);
-   fChain->SetBranchAddress("EventInfoAuxDyn.subEventTime", &EventInfoAuxDyn_subEventTime, &b_EventInfoAuxDyn_subEventTime);
+   fChain->SetBranchAddress("EventInfoAuxDyn.m_yy", &EventInfoAuxDyn_m_yy, &b_EventInfoAuxDyn_m_yy);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventLink", &EventInfoAuxDyn_subEventLink_, &b_EventInfoAuxDyn_subEventLink_);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventLink.m_persKey", EventInfoAuxDyn_subEventLink_m_persKey, &b_EventInfoAuxDyn_subEventLink_m_persKey);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventLink.m_persIndex", EventInfoAuxDyn_subEventLink_m_persIndex, &b_EventInfoAuxDyn_subEventLink_m_persIndex);
+   fChain->SetBranchAddress("EventInfoAuxDyn.mcChannelNumber", &EventInfoAuxDyn_mcChannelNumber, &b_EventInfoAuxDyn_mcChannelNumber);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventType", &EventInfoAuxDyn_subEventType, &b_EventInfoAuxDyn_subEventType);
-   fChain->SetBranchAddress("EventInfoAuxDyn.m_yy", &EventInfoAuxDyn_m_yy, &b_EventInfoAuxDyn_m_yy);
+   fChain->SetBranchAddress("EventInfoAuxDyn.mcEventNumber", &EventInfoAuxDyn_mcEventNumber, &b_EventInfoAuxDyn_mcEventNumber);
+   fChain->SetBranchAddress("EventInfoAuxDyn.PileupWeight", &EventInfoAuxDyn_PileupWeight, &b_EventInfoAuxDyn_PileupWeight);
+   fChain->SetBranchAddress("EventInfoAuxDyn.pt_yy", &EventInfoAuxDyn_pt_yy, &b_EventInfoAuxDyn_pt_yy);
+   fChain->SetBranchAddress("EventInfoAuxDyn.y1_pt", &EventInfoAuxDyn_y1_pt, &b_EventInfoAuxDyn_y1_pt);
+   fChain->SetBranchAddress("EventInfoAuxDyn.y1_eta", &EventInfoAuxDyn_y1_eta, &b_EventInfoAuxDyn_y1_eta);
+   fChain->SetBranchAddress("EventInfoAuxDyn.y2_pt", &EventInfoAuxDyn_y2_pt, &b_EventInfoAuxDyn_y2_pt);
+   fChain->SetBranchAddress("EventInfoAuxDyn.y2_eta", &EventInfoAuxDyn_y2_eta, &b_EventInfoAuxDyn_y2_eta);
+   fChain->SetBranchAddress("EventInfoAuxDyn.metref_final", &EventInfoAuxDyn_metref_final, &b_EventInfoAuxDyn_metref_final);
    fChain->SetBranchAddress("EventInfoAuxDyn.mcEventWeights", &EventInfoAuxDyn_mcEventWeights, &b_EventInfoAuxDyn_mcEventWeights);
+   fChain->SetBranchAddress("EventInfoAuxDyn.subEventTime", &EventInfoAuxDyn_subEventTime, &b_EventInfoAuxDyn_subEventTime);
    Notify();
 }
 

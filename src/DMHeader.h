@@ -50,10 +50,15 @@ TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 ////////////////////////////////////////
 
 // Ntuple locations:
-//TString ntuple_input_background_gamma = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/list_background_gamma.txt";
+std::map<TString,TString> prodToSample= { {"ggH","sampleName_ggH"},
+					  {"VBF","sampleName_VBF"},
+					  {"WH","~lkashif/public/for_andrew/H2yyMETAnalysis_WH/data-outputLabel/sample.root"},
+					  {"ZH","~lkashif/public/for_andrew/H2yyMETAnalysis_ZH/data-outputLabel/sample.root"},
+					  {"ttH","~lkashif/public/for_andrew/H2yyMETAnalysis_ttH/data-outputLabel/sample.root"},
+					  {"shxx_gg_ms100_mx100","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx100/data-outputLabel/sample.root"},
+					  {"shxx_gg_ms100_mx500","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx500/data-outputLabel/sample.root"}
+};
 
-// Signal cross-sections file:
-//TString cross_sections_file = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/cross_sections_8TeV.txt";
 
 ////////////////////////////////////////
 // SCRIPT LOCATIONS

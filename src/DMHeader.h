@@ -22,8 +22,8 @@ bool doBlind = false;
 // Luminosity in fb-1:
 double analysisLuminosity = 20.3;
 
-double DMMassRangeLo = 105.0;
-double DMMassRangeHi = 160.0;
+double DMMyyRangeLo = 105.0;
+double DMMyyRangeHi = 160.0;
 
 int const nProdModes = 6;
 TString sigProdModes[nProductionModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};

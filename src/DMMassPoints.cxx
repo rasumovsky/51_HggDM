@@ -91,7 +91,7 @@ void DMMassPoints::createNewMassPoints() {
 					  );
   std::map<string,RooDataSet*> dataMap;
   datasetMap.clear();
-  RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMassRangeLo,DMMassRangeHi);
+  RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
   RooReadVar wt("wt","wt",1);
   RooArgSet *args = new RooArgSet();
   args->add(m_yy);

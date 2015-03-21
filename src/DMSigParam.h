@@ -46,18 +46,15 @@ class DMSigParam
   RooCBShape* getCateCrystalBall(int cateIndex, TString process);
   RooGaussian* getCateGaussian(int cateIndex, TString process);
   RooAddPdf* getCateSigPDF(int cateIndex, TString process);
-  
   double getCateSigYield(int cateIndex, TString process);
   double getCombSigYield(TString process);
-  
-  TString getSigParamFileName(int cateIndex, TString production,
-			      TString fileType);
+  double getSignalParameter(TString process, TString param, int cateIndex);
+  TString getSigParamFileName(int cateIndex, TString process, TString fileType);
   
  private:
   
   // Member methods:
-  void createNewSigParam();
-  void loadSigParamFromFile();//simple method that just counts from text file.
+  void createSigParam(TString process, bool makeNew);
   
   // Member variables:
   TString jobName;
@@ -69,7 +66,6 @@ class DMSigParam
   std::map<TString,std::vector<RooCBShape*>> sigCB;
   std::map<TString,std::vector<RooGaussian*>> sigGA;
   std::map<TString,std::vector<RooAddPdf*>> sigPDF;
-  
   std::map<TString,std::vector<double>> sigYield;
   
 };

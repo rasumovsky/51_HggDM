@@ -33,8 +33,6 @@
 #include "DMHeader.h"
 #include "DMTree.h"
 
-//using namespace std;
-
 class DMMassPoints 
 {
   
@@ -66,6 +64,7 @@ class DMMassPoints
   
   RooDataSet *cateData[20];
   RooDataSet *combData;
+
 };
 
 #endif

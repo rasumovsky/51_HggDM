@@ -38,6 +38,8 @@
 
 /**
    Initializes the tool and loads XS, BR values from files. 
+   @param inputDirectory - The location of the XS and BR tables from the LHCWG
+   @returns void.
 */
 BRXSReader::BRXSReader(TString inputDirectory) {
   
@@ -61,6 +63,10 @@ BRXSReader::BRXSReader(TString inputDirectory) {
 /**
    Returns the branching-ratio, or related uncertainties, for a decay mode
    at a particular Higgs mass. 
+   @param mass - The signal mass of interest.
+   @param decay - The decay name. 
+   @param value - The value (BR, +ERR, -ERR).
+   @returns The value of the branching-ratio.
 */
 float BRXSReader::getBR(double mass, TString decay, TString value) {
   TString currKey = getMapKey(mass, decay, value);
@@ -77,6 +83,10 @@ float BRXSReader::getBR(double mass, TString decay, TString value) {
 /**
    Returns the cross-section, or related uncertainties, for a production 
    process at a particular mass.
+   @param mass - The signal mass of interest.
+   @param production - The production mode name. 
+   @param value - The value (XS, +QCD, -QCD, +PDF, -PDF).
+   @returns The value of the production cross-section.
 */
 float BRXSReader::getXS(double mass, TString production, TString value) {
   TString currKey = getMapKey(mass, production, value);
@@ -92,6 +102,9 @@ float BRXSReader::getXS(double mass, TString production, TString value) {
 
 /**
    Print the specified branching-ratio values.
+   @param mass - The signal mass of interest.
+   @param decay - The decay name. 
+   @returns void after printing BR data.
 */
 void BRXSReader::printBR(double mass, TString decay) {
   if (hasKey(getMapKey(mass, decay, "BR"),"BR")) {
@@ -108,6 +121,9 @@ void BRXSReader::printBR(double mass, TString decay) {
 
 /**
    Print the specified cross-section values.
+   @param mass - The signal mass of interest.
+   @param production - The production mode name. 
+   @returns void after printing XS data.
 */
 void BRXSReader::printXS(double mass, TString production) {
   if (hasKey(getMapKey(mass, production, "XS"),"XS")) {
@@ -126,6 +142,8 @@ void BRXSReader::printXS(double mass, TString production) {
 
 /**
    Load the branching ratios from input files.
+   @param decayClass - The class of decays ("2bosons", "2fermions").
+   @returns void
 */
 void BRXSReader::loadBR(TString decayClass) {
   
@@ -192,6 +210,8 @@ void BRXSReader::loadBR(TString decayClass) {
 
 /**
    Load the cross-sections from input files.
+   @param production - The production mode name. 
+   @returns void.
 */
 void BRXSReader::loadXS(TString production) {
   
@@ -218,6 +238,10 @@ void BRXSReader::loadXS(TString production) {
 
 /**
    Convert variables to the key for the map.
+   @param mass - The signal mass of interest.
+   @param type - The production or decay mode name. 
+   @param value - The value (XS, +QCD, -QCD, +PDF, -PDF, BR, +ERR, -ERR).
+   @returns void.
 */
 TString BRXSReader::getMapKey(double mass, TString type, TString value) {
   int massInt = (int)(100*mass);
@@ -227,6 +251,8 @@ TString BRXSReader::getMapKey(double mass, TString type, TString value) {
 
 /**
    Check whether the specified key is contained in the specified map.
+   @param key - The key for either the valuesXS or valuesBR map.
+   @param mapType - The map type (either "XS", "BR").
 */
 bool BRXSReader::hasKey(TString key, TString mapType) {
   if (mapType.EqualTo("XS")) {

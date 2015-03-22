@@ -21,6 +21,11 @@
 
 /**
    Initialize the MassPoint class.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @returns void.
 */
 DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
 			   TString newCateScheme, TString newOptions) {
@@ -47,6 +52,8 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 
 /**
    Get the name of the output textfile for the given category index.
+   @param cateIndex - The index of the category for which we want the .txt name.
+   @returns The full path of the mass points text file.
 */
 TString DMMassPoints::getMassPointsFileName(int cateIndex) {
   TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),
@@ -56,6 +63,8 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex) {
 
 /**
    Create a RooDataSet containing the mass points in a given category.
+   @param cateIndex - The index of the category for which we want the .txt name.
+   @returns The RooDataSet of the data in the specified category.
 */
 RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
   cateData[cateIndex]->Print("v");
@@ -64,6 +73,7 @@ RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
 
 /**
    Create a RooDataSet containing the mass points in all categories.
+   @returns The combined RooDataSet object for the given categorization.
 */
 RooDataSet* DMMassPoints::getCombDataSet() {
   combData->Print("v");
@@ -71,14 +81,15 @@ RooDataSet* DMMassPoints::getCombDataSet() {
 }
    
 /**
-   Create new masspoints by looping over the TTree.
+   Create new mass points by looping over the TTree.
+   @returns void.
 */
 void DMMassPoints::createNewMassPoints() {
   
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
 
   // Load the input TFile and TTree here:
-  TFile *myFile = new TFile(prodToSample[sampleName]);
+  TFile *myFile = new TFile(nameToSample[sampleName]);
   TTree *myTree = (TTree*)myFile->Get("treename");
   DMTree *dmt = new DMTree(myTree);
 
@@ -86,9 +97,11 @@ void DMMassPoints::createNewMassPoints() {
   DMEvtSelect *selector = new DMEvtSelect(dmt);
   
   // RooFit stuff:
-  RooCategory *Categories = new RooCategory(Form("Categories_%s",cateScheme.Data()),
-					  Form("Categories_%s",cateScheme.Data())
-					  );
+  RooCategory *Categories = new RooCategory(Form("Categories_%s",
+						 cateScheme.Data()),
+					    Form("Categories_%s",
+						 cateScheme.Data()));
+
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
   RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
@@ -121,7 +134,8 @@ void DMMassPoints::createNewMassPoints() {
     }
     
     Categories->defineType(Form("%s_%d",cateScheme.Data(),i_c));
-    //data_category->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+    //Categories->setRange(Form("rangeName_",i_b,i_r),
+    //                     Form("%s_%d",cateScheme.Data(),i_c));
     dataMap[Form("%s_%d",cateScheme.Data(),i_c)] = cateData[i_c];
   }
     
@@ -181,7 +195,9 @@ void DMMassPoints::createNewMassPoints() {
 }
   
 /**
-   Load the mass points from text files that have already been produced.
+   Load the mass points from text files that have already been produced. This is
+   much faster than producing mass points from scratch, and is preferred. 
+   @returns void.
 */
 void DMMassPoints::loadMassPointsFromFile() {
   
@@ -224,7 +240,8 @@ void DMMassPoints::loadMassPointsFromFile() {
     }
     
     Categories->defineType(Form("%s_%d",cateScheme.Data(),i_c));
-    //data_category->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+    //Categories->setRange(Form("rangeName_",i_b,i_r),
+    //                     Form("%s_%d",cateScheme.Data(),i_c));
     
     double readMass; double readWeight;
     ifstream massFile(getMassPointsFileName(i_c));

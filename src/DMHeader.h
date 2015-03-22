@@ -28,7 +28,7 @@ double DMMyyRangeHi = 160.0;
 int const nProdModes = 6;
 TString sigProdModes[nProdModes];// = {"ggH","VBF","WH","ZH","ttH","bbH"};
 
-//std::map<TString,TString> prodToSample;// = { {"ggH", "sampleName_ggH"}, 
+//std::map<TString,TString> nameToSample;// = { {"ggH", "sampleName_ggH"}, 
 // {"VBF", "sampleName_VBF"},
 //					  {"WH", "sampleName_WH"},
 //					  {"ZH", "sampleName_ZH"},
@@ -50,7 +50,7 @@ TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 ////////////////////////////////////////
 
 // Ntuple locations:
-std::map<TString,TString> prodToSample;
+std::map<TString,TString> nameToSample;
 /*
  = { {"ggH","sampleName_ggH"},
 					  {"VBF","sampleName_VBF"},

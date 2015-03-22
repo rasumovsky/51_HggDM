@@ -16,6 +16,11 @@
 
 /**
    Initialize the SigParam class.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @returns void.
 */
 DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
 		       TString newCateScheme, TString newOptions) {
@@ -46,13 +51,22 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
 /**
    Get a pointer to the fitted Crystal Ball component for a particular category
    and production process.
+   @param cateIndex - The index of the category for which we want the PDF.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h.
+   @returns A pointer to the crystal-ball component of the fit.
 */
 RooCBShape* DMSigParam::getCateCrystalBall(int cateIndex, TString process) {
   return (sigCB[process])[cateIndex];
 }
 
-/** Get a pointer to the fitted Gaussian component for a particular category
-    and production process.
+/**
+   Get a pointer to the fitted Gaussian component for a particular category
+   and production process.
+   @param cateIndex - The index of the category for which we want the PDF.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h.
+   @returns A pointer to the gaussian component of the fit.
  */
 RooGaussian* DMSigParam::getCateGaussian(int cateIndex, TString process) {
   return (sigGA[process])[cateIndex];
@@ -60,6 +74,10 @@ RooGaussian* DMSigParam::getCateGaussian(int cateIndex, TString process) {
 
 /**
    Get the combined resonance shape for a category and production process.
+   @param cateIndex - The index of the category for which we want the PDF.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h.
+   @returns A pointer to the total signal shape.
 */
 RooAddPdf* DMSigParam::getCateSigPDF(int cateIndex, TString process) {
   return (sigPDF[process])[cateIndex];
@@ -67,6 +85,10 @@ RooAddPdf* DMSigParam::getCateSigPDF(int cateIndex, TString process) {
 
 /**
    Get the signal yield for a particular process in a particular category.
+   @param cateIndex - The index of the category for which we want the PDF.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h.
+   @returns The signal yield for the specified process in the given category.
 */
 double DMSigParam::getCateSigYield(int cateIndex, TString process) {
   return (sigYield[process])[cateIndex];
@@ -74,6 +96,9 @@ double DMSigParam::getCateSigYield(int cateIndex, TString process) {
 
 /**
    Get the signal yield for a particular process in all categories.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h.
+   @returns The signal yield in all of the categories for the specified process.
 */
 double DMSigParam::getCombSigYield(TString process) {
   double sum = 0;
@@ -84,8 +109,13 @@ double DMSigParam::getCombSigYield(TString process) {
 }
 
 /**
-   Get the value of a particular parameter of the signal PDF. Options for the param argument are: "mu", "sigmaCB", "sigmaGA", "alpha", "nCB", "frac"
-
+   Get the value of a particular parameter of the signal PDF. 
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h
+   @param param - The fit parameter. Options are: "mu", "sigmaCB", "sigmaGA", 
+   "alpha", "nCB", "frac"
+   @param cateIndex - The index of the category for which we want the PDF.
+   @returns The value of the specified signal parameter. 
 */
 double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
   RooArgSet *currArgs = ((sigPDF[process])[cateIndex])->getVariables();
@@ -104,6 +134,10 @@ double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
 /**
    Get the name of the output textfile for the given category index. fileType
    can either be "fit" or "yield".
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h
+   @param fileType - The file type (either "yield" or "fit").
+   @returns The filename for loading/saving signal parameters (yield and fit).
 */
 TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
   TString name = Form("%s/%s/%s_%s.txt",outputDir.Data(),process.Data(),
@@ -113,6 +147,10 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
 
 /**
    Create new masspoints by looping over the TTree.
+   @param process - The signal production process of interest. Possibilities
+   are listed in DMHeader.h
+   @param makeNew - Set true if make parameterization from scratch. Else false.
+   @returns void.
 */
 void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
@@ -138,7 +176,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::vector<double> vectorYield; vectorYield.clear();
   
   // Load the RooDataSet corresponding to the sample
-  TString sampleName = prodToSample[process];
+  TString sampleName = nameToSample[process];
   DMMassPoints *dmmp;
   if (makeNew) dmmp = new DMMassPoints(jobName,sampleName,cateScheme,"New");
   

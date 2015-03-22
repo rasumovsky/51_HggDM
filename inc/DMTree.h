@@ -27,7 +27,7 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
 
    // Declaration of leaf types
-   xAOD::EventInfo_v1 *EventInfo;
+   //xAOD::EventInfo_v1 *EventInfo;
  //xAOD::EventAuxInfo_v1 *EventInfoAux_;
  //xAOD::EventAuxInfo_v1 *EventInfoAux_xAOD__AuxInfoBase;
    UInt_t          EventInfoAux_runNumber;
@@ -206,7 +206,7 @@ void DMTree::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   EventInfo = 0;
+   //EventInfo = 0;
    EventInfoAuxDyn_subEventType = 0;
    EventInfoAuxDyn_mcEventWeights = 0;
    EventInfoAuxDyn_subEventTime = 0;
@@ -216,7 +216,7 @@ void DMTree::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("EventInfo", &EventInfo, &b_EventInfo);
+   //fChain->SetBranchAddress("EventInfo", &EventInfo, &b_EventInfo);
    fChain->SetBranchAddress("EventInfoAux.runNumber", &EventInfoAux_runNumber, &b_EventInfoAux_runNumber);
    fChain->SetBranchAddress("EventInfoAux.eventNumber", &EventInfoAux_eventNumber, &b_EventInfoAux_eventNumber);
    fChain->SetBranchAddress("EventInfoAux.lumiBlock", &EventInfoAux_lumiBlock, &b_EventInfoAux_lumiBlock);

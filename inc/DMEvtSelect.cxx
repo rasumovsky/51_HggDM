@@ -29,25 +29,34 @@
 #include "DMEvtSelect.h"
 
 /**
+   Initializes the tool and loads XS, BR values from files. The input Tree is 
+   set to NULL, and would have to be set later if used. 
+*/
+DMEvtSelect::DMEvtSelect() {
+  DMEvtSelect(NULL);
+}
+
+/**
    Initializes the tool and loads XS, BR values from files. 
 */
 DMEvtSelect::DMEvtSelect(DMTree* newTree) {
     
   // ADD CUT HERE
-  cutList = {"photonPt",
-	      "photonEta",
-	      "diphotonMass",
-	      "diphotonPt",
-	      "diphotonETMiss",
-	      "allCuts"};
-  
+  cutList.clear();
+  cutList.push_back("photonPt");
+  cutList.push_back("photonEta");
+  cutList.push_back("diphotonMass");
+  cutList.push_back("diphotonPt");
+  cutList.push_back("diphotonETMiss");
+  cutList.push_back("allCuts");
+    
   // ADD CATE HERE ([name] = # categories):
   cateNamesAndSizes.clear();
   cateNamesAndSizes["inclusive"] = 1;
   cateNamesAndSizes["splitETMiss"] = 2;
   
   evtTree = newTree;
-  recursiveCall = false;
+
   // Reset event counters and initialize values to zero:
   clearCounters();
   std::cout << "DMEvtSelect: Successfully initialized!" << std::endl;
@@ -123,12 +132,12 @@ void DMEvtSelect::printCutflow(bool weighted) {
     // Print the weighted cutflow (for MC):
     if (weighted) {
       std::cout << "\t" << cutList[i] << "\t" << evtCountPassWt[cutList[i]]
-		<< " / " << evtCountTotalWt[cutList[i]] std::endl;
+		<< " / " << evtCountTotWt[cutList[i]] << std::endl;
     }
     // Print the unweighted cutflow (for data):
     else {
       std::cout << "\t" << cutList[i] << "\t" << evtCountPass[cutList[i]]
-		<< " / " << evtCountTotal[cutList[i]] std::endl;
+		<< " / " << evtCountTot[cutList[i]] << std::endl;
     }
   }
 }
@@ -141,14 +150,14 @@ void DMEvtSelect::printCategorization(bool weighted) {
   // iterate over category names:
   std::map<TString,int>::iterator it;
   for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
-    std::cout << "\t" << it.first << " ";
-    for (int j = 0; j < it.second; j++) {
+    std::cout << "\t" << it->first << " ";
+    for (int j = 0; j < it->second; j++) {
       if (weighted) {
-	std::cout << cateCount[Form("%s_%d",(it.first).Data(),it.second)]
+	std::cout << cateCount[Form("%s_%d",(it->first).Data(),it->second)]
 		  << " ";
       }
       else {
-	std::cout << cateCountWt[Form("%s_%d",(it.first).Data(),it.second)]
+	std::cout << cateCountWt[Form("%s_%d",(it->first).Data(),it->second)]
 		  << " ";
       }
     }
@@ -166,12 +175,12 @@ void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
     // Print the weighted cutflow (for MC):
     if (weighted) {
       outFile << "\t" << cutList[i] << "\t" << evtCountPassWt[cutList[i]]
-	      << " / " << evtCountTotalWt[cutList[i]] std::endl;
+	      << " / " << evtCountTotWt[cutList[i]] << std::endl;
     }
     // Print the unweighted cutflow (for data):
     else {
       outFile << "\t" << cutList[i] << "\t" << evtCountPass[cutList[i]]
-	      << " / " << evtCountTotal[cutList[i]] std::endl;
+	      << " / " << evtCountTot[cutList[i]] << std::endl;
     }
   }
   outFile.close();
@@ -185,15 +194,15 @@ void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
   // iterate over category names:
   std::map<TString,int>::iterator it;
   for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
-    outFile << "\t" << it.first << " ";
-    for (int j = 0; j < it.second; j++) {
+    outFile << "\t" << it->first << " ";
+    for (int j = 0; j < it->second; j++) {
       if (weighted) {
-	outFile << cateCount[Form("%s_%d",(it.first).Data(),it.second)]
-		  << " ";
+	outFile << cateCount[Form("%s_%d",(it->first).Data(),it->second)]
+		<< " ";
       }
       else {
-	outFile << cateCountWt[Form("%s_%d",(it.first).Data(),it.second)]
-		  << " ";
+	outFile << cateCountWt[Form("%s_%d",(it->first).Data(),it->second)]
+		<< " ";
       }
     }
     outFile << std::endl;
@@ -217,14 +226,14 @@ void DMEvtSelect::clearCounters() {
     evtCountPass[cutList[i]] = 0;
     evtCountPassWt[cutList[i]] = 0.0;
     evtCountTot[cutList[i]] = 0;
-    evtCountTotalWt[cutList[i]] = 0.0;
+    evtCountTotWt[cutList[i]] = 0.0;
   }
   // Then initialize all category counters to zero:
   std::map<TString,int>::iterator it;
   for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
-    for (int j = 0; j < it.second; j++) {
-      cateCount[Form("%s_%d",(it.first).Data(),it.second)] = 0;
-      cateCountWt[Form("%s_%d",(it.first).Data(),it.second)] = 0.0;
+    for (int j = 0; j < it->second; j++) {
+      cateCount[Form("%s_%d",(it->first).Data(),it->second)] = 0;
+      cateCountWt[Form("%s_%d",(it->first).Data(),it->second)] = 0.0;
     }
   }
 }
@@ -252,7 +261,7 @@ int DMEvtSelect::getCategoryNumber(TString cateName, double weight) {
   }
   // Split MET - low and high MET categories.
   else if (cateName.Contains("splitETMiss")) {
-    if (EventInfoAuxDyn.metref_final > 180.0) currCate = 0;
+    if (evtTree->EventInfoAuxDyn_metref_final > 180.0) currCate = 0;
     else currCate = 1;
   }
   
@@ -261,11 +270,11 @@ int DMEvtSelect::getCategoryNumber(TString cateName, double weight) {
   cateCountWt[Form("%s_%d",cateName.Data(),currCate)] += weight;
   
   // Print error message before returning bad category value.
-  if (currCate == -1) {
-  std:cout << "DMEvtSelect: Error! category not defined!" << std::endl;
+  if (currCate == -1) { 
+    std::cout << "DMEvtSelect: Error! category not defined!" << std::endl;
+  }
   return currCate;
 }
-
 
 /**
    Check whether an event passes the specified cut.
@@ -286,58 +295,63 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   bool passes = true;
   // Cut on photon transverse momenta / diphoton mass:
   if (cutName.Contains("photonPt")) {
-    passes = (EventInfoAuxDyn.y1_pt/EventInfoAuxDyn.m_yy > 0.35 &&
-	      EventInfoAuxDyn.y2_pt/EventInfoAuxDyn.m_yy > 0.25);
+    passes = ((evtTree->EventInfoAuxDyn_y1_pt /
+	       evtTree->EventInfoAuxDyn_m_yy > 0.35) &&
+	      (evtTree->EventInfoAuxDyn_y2_pt /
+	       evtTree->EventInfoAuxDyn_m_yy > 0.25));
   }
   // Cut on the photon pseudorapidities:
   else if (cutName.Contains("photonEta")) {
-    passes = (EventInfoAuxDyn.y1_eta < 2.5 && 
-	      EventInfoAuxDyn.y2_eta < 2.5);
+    passes = (evtTree->EventInfoAuxDyn_y1_eta < 2.5 && 
+	      evtTree->EventInfoAuxDyn_y2_eta < 2.5);
   }
   // Cut on the diphoton invariant mass:
   else if (cutName.Contains("diphotonMass")) {
-    passes = (EventInfoAuxDyn.m_yy > 105.0 && 
-	      EventInfoAuxDyn.m_yy < 160.0);
+    passes = (evtTree->EventInfoAuxDyn_m_yy > 105.0 && 
+	      evtTree->EventInfoAuxDyn_m_yy < 160.0);
   }
   // Cut on the diphoton transverse momentum:
   else if (cutName.Contains("diphotonPt")) {
-    passes = (EventInfoAuxDyn.pt_yy > 120.0);
+    passes = (evtTree->EventInfoAuxDyn_pt_yy > 120.0);
   }
   // Cut on the event missing transverse energy:
   else if (cutName.Contains("diphotonETMiss")) {
-    passes = (EventInfoAuxDyn.metref_final > 120.0);
+    passes = (evtTree->EventInfoAuxDyn_metref_final > 120.0);
   }
   // Check whether event passes all of the cuts above:
   else if (cutName.Contains("all")) {
-    //recursiveCall = true;
-    for (int i = 0; i < cutList.size(); i++) {
+   
+    for (int i = 0; i < (int)cutList.size(); i++) {
       if (cutList[i].Contains("all")) continue;
       if (!passesCut(cutList[i])) {
 	passes = false;
 	break;
       }
     }
-    //recursiveCall = false;
   }
   
-  // The recursiveCall flag makes sure the event counters are not fucked up by
-  // recursive calls to this method that checks the cuts. 
-  //if (!recursiveCall) {
-    // Add to total counters:
-    evtCountTot[cutName]++;
-    evtCountTotWt[cutName]+=weight;
-    
-    // Add to passing counters:
-    if (passes) {
-      evtCountPass[cutName]++;
-      evtCountPassWt[cutName]+=weight;
-    }
-    return passes;
-    //}
+  // Add to total counters:
+  evtCountTot[cutName]++;
+  evtCountTotWt[cutName]+=weight;
+  
+  // Add to passing counters:
+  if (passes) {
+    evtCountPass[cutName]++;
+    evtCountPassWt[cutName]+=weight;
+  }
+  return passes;
+}
+
+/**
+   Give the selector class a new TTree to deal with.
+*/
+void DMEvtSelect::setTree(DMTree *newTree) {
+  evtTree = newTree;
+  std::cout << "DMEvtSelect: A new TTree has been linked." << std::endl;
 }
 
 /** 
-    Check whether the specified cut has been defined.
+   Check whether the specified cut has been defined.
 */
 bool DMEvtSelect::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 

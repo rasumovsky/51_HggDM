@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <iostream>
+#include <fstream>
+
+#include "TString.h"
 
 class BRXSReader 
 {
@@ -26,10 +30,10 @@ class BRXSReader
   ~BRXSReader();
   
   // Accessors:
-  float getBR(int mass, TString decay, TString value);
-  float getXS(int mass, TString production, TString value);
-  void printBR(int mass, TString decay, TString value);
-  void printXS(int mass, TString production, TString value);
+  float getBR(double mass, TString decay, TString value);
+  float getXS(double mass, TString production, TString value);
+  void printBR(double mass, TString decay);
+  void printXS(double mass, TString production);
   
  private:
   

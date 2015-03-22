@@ -33,6 +33,8 @@
 #include "DMHeader.h"
 #include "DMTree.h"
 
+using namespace std;
+
 class DMMassPoints 
 {
   

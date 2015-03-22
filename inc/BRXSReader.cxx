@@ -54,8 +54,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   loadXS("bbH");
   
   // Open BR files and store values.
-  loadDecayBR("2bosons");
-  loadDecayBR("2fermions");
+  loadBR("2bosons");
+  loadBR("2fermions");
 }
 
 /**
@@ -64,8 +64,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
 */
 float BRXSReader::getBR(double mass, TString decay, TString value) {
   TString currKey = getMapKey(mass, decay, value);
-  if (hasKey(currKey)) {
-    return valueBR[currKey];
+  if (hasKey(currKey,"BR")) {
+    return valuesBR[currKey];
   }
   else {
     std::cout << "BRXSReader Error! No match for " << mass << " and " 
@@ -80,8 +80,8 @@ float BRXSReader::getBR(double mass, TString decay, TString value) {
 */
 float BRXSReader::getXS(double mass, TString production, TString value) {
   TString currKey = getMapKey(mass, production, value);
-  if (hasKey(currKey)) {
-    return valueXS[currKey];
+  if (hasKey(currKey,"XS")) {
+    return valuesXS[currKey];
   }
   else {
     std::cout << "BRXSReader Error! No match for " << mass << " and " 
@@ -93,13 +93,13 @@ float BRXSReader::getXS(double mass, TString production, TString value) {
 /**
    Print the specified branching-ratio values.
 */
-void printBR(int mass, TString decay) {
-  if (hasKey(getMapKey(mass, decay, "BR"))) {
+void BRXSReader::printBR(double mass, TString decay) {
+  if (hasKey(getMapKey(mass, decay, "BR"),"BR")) {
     std::cout << "Branching-ratio data for " << decay << std::endl;
     std::cout << "  BR=" << valuesXS[getMapKey(mass, decay, "BR")];
     std::cout << "  +ERR=" << valuesXS[getMapKey(mass, decay, "+ERR")];
     std::cout << "  -ERR=" << valuesXS[getMapKey(mass, decay, "-ERR")];
-    std::endl;
+    std::cout << std::endl;
   }
   else {
     std::cout <<"BRXSReader: Error! No matching entry." << std::endl;
@@ -109,15 +109,15 @@ void printBR(int mass, TString decay) {
 /**
    Print the specified cross-section values.
 */
-void printXS(int mass, TString production) {
-  if (hasKey(getMapKey(mass, production, "XS"))) {
+void BRXSReader::printXS(double mass, TString production) {
+  if (hasKey(getMapKey(mass, production, "XS"),"XS")) {
     std::cout << "Cross-section data for " << production << std::endl;
     std::cout << "  XS=" << valuesXS[getMapKey(mass, production, "XS")];
     std::cout << "  +QCD=" << valuesXS[getMapKey(mass, production, "+QCD")];
     std::cout << "  -QCD=" << valuesXS[getMapKey(mass, production, "-QCD")];
     std::cout << "  +PDF=" << valuesXS[getMapKey(mass, production, "+PDF")];
     std::cout << "  -PDF=" << valuesXS[getMapKey(mass, production, "-PDF")];
-    std::endl;
+    std::cout << std::endl;
   }
   else {
     std::cout <<"BRXSReader: Error! No matching entry." << std::endl;
@@ -183,7 +183,7 @@ void BRXSReader::loadBR(TString decayClass) {
       }
       
       else {
-	std::cout << "BRXSReader: No decay class provided!" << endl;
+	std::cout << "BRXSReader: No decay class provided!" << std::endl;
       }
     }
   }
@@ -229,10 +229,14 @@ TString BRXSReader::getMapKey(double mass, TString type, TString value) {
    Check whether the specified key is contained in the specified map.
 */
 bool BRXSReader::hasKey(TString key, TString mapType) {
-  if (mapType = "XS") {
-    return (!valuesXS.find(key) == valuesXS.end());
+  if (mapType.EqualTo("XS")) {
+    return (valuesXS.count(key) > 0);
+  }
+  else if (mapType.EqualTo("BR")) {
+    return (valuesBR.count(key) > 0);
   }
   else {
-    return (!valuesBR.find(key) == valuesBR.end());
+    std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
+    return false;
   }
 }

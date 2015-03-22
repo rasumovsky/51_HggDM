@@ -109,7 +109,8 @@ void DMMassPoints::createNewMassPoints() {
 					  cateScheme.Data(),i_c),
 				     Form("%s_%s_%d",sampleName.Data(),
 					  cateScheme.Data(),i_c),
-				     RooArgSet(*m_yy,wt), WeightVar(wt)); 
+				     RooArgSet(*m_yy,wt), 
+				     RooFit::WeightVar(wt)); 
     }
     else {
       cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
@@ -132,20 +133,26 @@ void DMMassPoints::createNewMassPoints() {
     // Check the cutflow:
     if (!selector->passesCut("all")) continue;
     
+    
+    
     // Save the categories:
     int currCate = selector->getCategoryNumber(cateScheme);
     if (currCate > 0) {
       
-      m_yy->setVal(dmt->EventInfoAuxDyn.m_yy);
+      m_yy->setVal(dmt->EventInfoAuxDyn_m_yy);
+      
       if (isWeighted) {
-	wt.setVal(dmt->EventInfoAuxDyn.weight);
-	cateData[currCate]->add(RooArgSet(*m_yy,wt), readWeight);
-	massFiles[currCate] << dmt->EventInfoAuxDyn.m_yy << " "
-			    << dmt->EventInfoAuxDyn.weight << std::endl;
+	// Get the event weight:
+	double evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
+	
+	wt.setVal(evtWeight);
+	cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
+	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << " " << evtWeight
+			    << std::endl;
       }
       else {
 	cateData[currCate]->add(*m_yy);
-	massFiles[currCate] << dmt->EventInfoAuxDyn.m_yy << std::endl;
+	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << std::endl;
       }
     }
   }
@@ -168,7 +175,8 @@ void DMMassPoints::createNewMassPoints() {
   // Create combined data set from individual categories:
   combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
 			    Form("combData_%s",cateScheme.Data()),
-			    *args, Index(*Categories),Import(dataMap),
+			    *args, RooFit::Index(*Categories),
+			    RooFit::Import(dataMap),
 			    RooFit::WeightVar(wt));
 }
   
@@ -178,6 +186,9 @@ void DMMassPoints::createNewMassPoints() {
 void DMMassPoints::loadMassPointsFromFile() {
   
   std::cout << "DMMassPoints: loading mass points from .txt file." << std::endl;
+  
+  // Tool to implement the cutflow, categorization, and counting. 
+  DMEvtSelect *selector = new DMEvtSelect();
   
   // RooFit stuff:
   RooCategory *Categories = new RooCategory(Form("Categories_%s",
@@ -195,28 +206,29 @@ void DMMassPoints::loadMassPointsFromFile() {
   // Loop over categories to define datasets and mass files:
   for (int i_c = 0; i_c < selector->getNCategories(cateScheme); i_c++) {
     
-    if (weighted) {
+    if (isWeighted) {
       args->add(wt);
       cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),cateIndex),
+					  cateScheme.Data(),i_c),
 				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),cateIndex),
-				     RooArgSet(*m_yy,wt), WeightVar(wt)); 
+					  cateScheme.Data(),i_c),
+				     RooArgSet(*m_yy,wt), 
+				     RooFit::WeightVar(wt)); 
     }
     else {
       cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),cateIndex),
+					  cateScheme.Data(),i_c),
 				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),cateIndex),
+					  cateScheme.Data(),i_c),
 				     *m_yy);
     }
     
-    data_category->defineType(Form("%s_%d",cateScheme.Data(),i_c));
+    Categories->defineType(Form("%s_%d",cateScheme.Data(),i_c));
     //data_category->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
     
     double readMass; double readWeight;
     ifstream massFile(getMassPointsFileName(i_c));
-    if (weighted) {
+    if (isWeighted) {
       while (massFile >> readMass >> readWeight) {
 	wt.setVal(readWeight);
 	m_yy->setVal(readMass);
@@ -236,6 +248,6 @@ void DMMassPoints::loadMassPointsFromFile() {
   // Create combined data set from individual categories:
   combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
 			    Form("combData_%s",cateScheme.Data()),
-			    *args, Index(*Categories),Import(dataMap),
-			    WeightVar(wt));
+			    *args, RooFit::Index(*Categories),
+			    RooFit::Import(dataMap), RooFit::WeightVar(wt));
 }

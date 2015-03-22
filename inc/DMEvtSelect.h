@@ -27,13 +27,16 @@
 // Package includes:
 #include "DMTree.h"
 
+using std::vector;
+
 class DMEvtSelect 
 {
   
  public:
   
+  DMEvtSelect();
   DMEvtSelect(DMTree *newTree);
-  ~DMEvtSelect();
+  virtual ~DMEvtSelect() {};
   
   // Accessors:
   int getEventsPerCate(TString cateName, int cate);
@@ -54,7 +57,8 @@ class DMEvtSelect
   int getCategoryNumber(TString cateName, double weight);
   bool passesCut(TString cutName);
   bool passesCut(TString cutName, double weight);
-  
+  void setTree(DMTree *newTree);
+
  private:
   
   // Member methods:
@@ -67,7 +71,7 @@ class DMEvtSelect
   std::map<TString,int> evtCountPass;
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;
-  std::map<TString,double> evtCountTotalWt;
+  std::map<TString,double> evtCountTotWt;
   //bool recursiveCall;
   
   std::map<TString,int> cateNamesAndSizes;

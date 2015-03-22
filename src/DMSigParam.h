@@ -30,8 +30,9 @@
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "DMEvtSelect.h"
-#include "DMHeader.h"
 #include "DMTree.h"
+#include "DMMassPoints.h"
+#include "statistics.h"
 
 class DMSigParam 
 {
@@ -48,8 +49,8 @@ class DMSigParam
   RooAddPdf* getCateSigPDF(int cateIndex, TString process);
   double getCateSigYield(int cateIndex, TString process);
   double getCombSigYield(TString process);
-  double getSignalParameter(TString process, TString param, int cateIndex);
-  TString getSigParamFileName(int cateIndex, TString process, TString fileType);
+  double getSigParam(TString process, TString param, int cateIndex);
+  TString getSigParamFileName(TString process, TString fileType);
   
  private:
   
@@ -63,10 +64,10 @@ class DMSigParam
   TString options;
   TString outputDir;
   
-  std::map<TString,std::vector<RooCBShape*>> sigCB;
-  std::map<TString,std::vector<RooGaussian*>> sigGA;
-  std::map<TString,std::vector<RooAddPdf*>> sigPDF;
-  std::map<TString,std::vector<double>> sigYield;
+  std::map<TString,std::vector<RooCBShape*> > sigCB;
+  std::map<TString,std::vector<RooGaussian*> > sigGA;
+  std::map<TString,std::vector<RooAddPdf*> > sigPDF;
+  std::map<TString,std::vector<double> > sigYield;
   
 };
 

@@ -22,7 +22,7 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   std::cout << std::endl << "DMSigParam::Initializing..." << std::endl;
   
   // Assign member variables:
-  jobName = newJobname;
+  jobName = newJobName;
   sampleName = newSampleName;
   cateScheme = newCateScheme;
   options = newOptions;
@@ -38,7 +38,7 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   
   // Load the signal parameterization from file or start from scratch:
   for (int i_p = 0; i_p < nProdModes; i_p++) {
-    createSigParam(sigProdModes[i_p], (!option.Contains("FromFile")));
+    createSigParam(sigProdModes[i_p], (!options.Contains("FromFile")));
   }
   return;
 }
@@ -87,8 +87,7 @@ double DMSigParam::getCombSigYield(TString process) {
    Get the value of a particular parameter of the signal PDF. Options for the param argument are: "mu", "sigmaCB", "sigmaGA", "alpha", "nCB", "frac"
 
 */
-double DMSigParam::getSignalParameter(TString process, TString param,
-				      int cateIndex) {
+double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
   RooArgSet *currArgs = ((sigPDF[process])[cateIndex])->getVariables();
   TIterator *iterArgs = currArgs->createIterator();
   RooRealVar* currIter = NULL;
@@ -107,7 +106,7 @@ double DMSigParam::getSignalParameter(TString process, TString param,
    can either be "fit" or "yield".
 */
 TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
-  TString name = Form("%s/%s/%s_%s_%d.txt",outputDir.Data(),process.Data(),
+  TString name = Form("%s/%s/%s_%s.txt",outputDir.Data(),process.Data(),
 		      fileType.Data(),cateScheme.Data());
   return name;
 }
@@ -115,7 +114,7 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
 /**
    Create new masspoints by looping over the TTree.
 */
-void DMSigParam::createNewSigParam(TString process, bool makeNew) {
+void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
   
   // Create output file or load input file.
@@ -136,7 +135,7 @@ void DMSigParam::createNewSigParam(TString process, bool makeNew) {
   std::vector<RooCBShape*> vectorCB; vectorCB.clear();
   std::vector<RooGaussian*> vectorGA; vectorGA.clear();
   std::vector<RooAddPdf*> vectorSignal; vectorSignal.clear();
-  std::vector<double> vectorYield; vectorYields.clear();
+  std::vector<double> vectorYield; vectorYield.clear();
   
   // Load the RooDataSet corresponding to the sample
   TString sampleName = prodToSample[process];
@@ -173,52 +172,55 @@ void DMSigParam::createNewSigParam(TString process, bool makeNew) {
       m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
     }
 
+    // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
+    
     // Define the fit variables (Can't avoid using >80 char per line...):
-    RooRealVar *currMu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c));
-    RooRealVar *currSigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c));
-    RooRealVar *currSigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c));
-    RooRealVar *currAlpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c));
-    RooRealVar *currNCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c));
-    RooRealVar *currFrac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c));
+    RooRealVar currMu(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currSigmaCB(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currSigmaGA(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currAlpha(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currNCB(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currFrac(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0);
     
     // Define the PDFs:
     RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),
 					Form("CB_%s_%d",process.Data(),i_c),
-					m_yy, mu, sigmaCB, alpha, nCB);
+					*m_yy, currMu, currSigmaCB, currAlpha,
+					currNCB);
     
     RooGaussian *currGA = new RooGaussian(Form("GA_%s_%d",process.Data(),i_c),
 					  Form("GA_%s_%d",process.Data(),i_c),
-					  m_yy, mu, sigmaGA);
+					  *m_yy, currMu, currSigmaGA);
     
     RooAddPdf *currSignal = new RooAddPdf(Form("Sig_%s_%d",process.Data(),i_c),
 					  Form("Sig_%s_%d",process.Data(),i_c),
-					  currCB, currGA, frac);
+					  currCB, currGA, currFrac);
     
     if (makeNew) {
       // Perform the fits:
       statistics::setDefaultPrintLevel(0);
-      RooNLLVar *nLL = (RooNLLVar*)currSignal.createNLL(currData);
+      RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(currData);
       statistics::minimize(nLL);
       
       // Then save the fitted parameters to file:
-      outputFitFile << i_c << " " << mu->getVal() << " " << sigmaCB->getVal()
-		    << " " << alpha->getVal() << " " << nCB->getVal() << " "
-		    << sigmaGA->getVal() << " " << frac->getVal() << std::endl;
+      outputFitFile << i_c << " " << currMu->getVal() << " "
+		    << currSigmaCB->getVal() << " " << currAlpha->getVal()
+		    << " " << currNCB->getVal() << " " << currSigmaGA->getVal()
+		    << " " << currFrac->getVal() << std::endl;
       outputYieldFile << i_c << " " << currData->sumEntries() << " " 
 		      << currData->numEntries() << std::endl;
     }
     else {
-      // THIS MUST BE FIXED ASAP!
       double rC, rMu, rSigmaCB, rAlpha, rNCB, rSigmaGA, rFrac;
       while (!inputFitFile.eof()) {
 	inputFitFile >> rC >> rMu >> rSigmaCB >> rAlpha >> rNCB >> rSigmaGA
 		     >> rFrac;
-	mu->setVal(rMu);
-	sigmaCB->setVal(rSigmaCB);
-	alpha->setVal(rAlpha);
-	nCB->setVal(rNCB);
-	sigmaGA->setVal(rSigmaGA);
-	frac->setVal(rFrac);
+	currMu->setVal(rMu);
+	currSigmaCB->setVal(rSigmaCB);
+	currAlpha->setVal(rAlpha);
+	currNCB->setVal(rNCB);
+	currSigmaGA->setVal(rSigmaGA);
+	currFrac->setVal(rFrac);
 	break;
       }
       double rSum, rNum;

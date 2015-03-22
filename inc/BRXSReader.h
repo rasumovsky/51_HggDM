@@ -27,8 +27,8 @@ class BRXSReader
  public:
   
   BRXSReader(TString inputDirectory);
-  ~BRXSReader();
-  
+  virtual ~BRXSReader() {};
+
   // Accessors:
   float getBR(double mass, TString decay, TString value);
   float getXS(double mass, TString production, TString value);

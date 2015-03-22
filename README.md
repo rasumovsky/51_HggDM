@@ -13,7 +13,17 @@ General analysis strategy:
      4) Pseudoexperiment ensemble generator and analyzer 
      5) CLs and p0 calculators
      
-Update March 19: Step 1 complete, Step 2 under development.
+Update March 21: Step 1 complete, Step 2 under development.
+
+OPEN ISSUES: 
+     * DMMassPoints does not compile. There is a problem with the linking...
+     
+     * DMSigParam - need to choose RooRealVar ranges for fits. Also, need to
+     consider using modified mass variable to prevent errors in the matrix used
+     for the fit. Another problem exists in obtaining RooRealVariables from the
+     RooDataSet. 
+     
+     *
 
 Analysis Header:
 

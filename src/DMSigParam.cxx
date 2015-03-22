@@ -152,7 +152,8 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
    @param makeNew - Set true if make parameterization from scratch. Else false.
    @returns void.
 */
-void DMSigParam::createSigParam(TString process, bool makeNew) {
+void DMSigParam::createSigParam(TString process, bool makeNew, 
+				RooRealVar *m_yy) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
   
   // Create output file or load input file.

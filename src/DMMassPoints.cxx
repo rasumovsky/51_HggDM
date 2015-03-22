@@ -20,7 +20,7 @@
 #include "DMMassPoints.h"
 
 /**
-   Initialize the MassPoint class.
+   Initialize the MassPoint class without an observable RooRealVar.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -29,6 +29,58 @@
 */
 DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
 			   TString newCateScheme, TString newOptions) {
+  RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
+					     DMMyyRangeHi);
+  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions, 
+	       newObservable);
+}
+
+/**
+   Initialize the MassPoint class.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @param newObservable - The RooRealVar to be used in the datasets (m_yy).
+   @returns void.
+*/
+DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
+			   TString newCateScheme, TString newOptions,
+			   RooRealVar *newObservable) {
+  
+  // Load the selector to get category information.
+  DMEvtSelect *selector = new DMEvtSelect();
+  
+  // Define a new RooCategory for the dataset, since none was provided:
+  RooCategory newCategories = new RooCategory(Form("categories_%s",
+						   newCateScheme.Data()),
+					      Form("categories_%s",
+						   newCateScheme.Data()));
+  // Loop over categories to define categories:
+  for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
+    cat->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
+    //categories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+  }
+  
+  // Then call the full initializer:
+  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions, 
+	       newObservable, newCategories);
+}
+
+/**
+   Initialize the MassPoint class.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @param newObservable - The RooRealVar to be used in the datasets (m_yy).
+   @param newCategories - The RooCategory to be used in the combined dataset.
+   @returns void.
+*/
+DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
+			   TString newCateScheme, TString newOptions,
+			   RooRealVar *newObservable,
+			   RooCategory *newCategories) {
   std::cout << std::endl << "DMMassPoints::Initializing..." << std::endl;
   
   // Assign member variables:
@@ -37,28 +89,21 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
   cateScheme = newCateScheme;
   options = newOptions;
   
+  // Assign the observable and categorization based on inputs:
+  setMassObservable(newObservable);
+  setRooCategory(newCategories);
+
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/DMMassPoints",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
   
   // Check if data should be weighted:
   isWeighted = sampleName.Contains("MC");
-    
+  
   // Either load the masspoints from file or create new ones:
   if (options.Contains("FromFile")) loadMassPointsFromFile();
   else createNewMassPoints();
   return;
-}
-
-/**
-   Get the name of the output textfile for the given category index.
-   @param cateIndex - The index of the category for which we want the .txt name.
-   @returns The full path of the mass points text file.
-*/
-TString DMMassPoints::getMassPointsFileName(int cateIndex) {
-  TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),
-		      cateIndex);
-  return name;
 }
 
 /**
@@ -79,7 +124,52 @@ RooDataSet* DMMassPoints::getCombDataSet() {
   combData->Print("v");
   return combData;
 }
-   
+
+/**
+   Returns a pointer to the mass observable used in the dataset.
+   @returns pointer to the observable (m_yy).
+*/
+RoORealVar* DMMassPoints::getMassObservable() {
+  return m_yy;
+}
+
+/**
+   Get the name of the output textfile for the given category index.
+   @param cateIndex - The index of the category for which we want the .txt name.
+   @returns The full path of the mass points text file.
+*/
+TString DMMassPoints::getMassPointsFileName(int cateIndex) {
+  TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),
+		      cateIndex);
+  return name;
+}
+
+/**
+   Returns a pointer to the RooCategory used in the combined dataset.
+   @returns pointer to the RooCategory object.
+*/
+RoORealVar* DMMassPoints::getRooCategory() {
+  return categories;
+}
+
+/**
+   Set the pointer to the RooCategory object. 
+   @param newCategories - The new RooCategory to use for the combined dataset. 
+   @returns void.
+ */
+void DMMassPoints::setRooCategory(RooCategory *newCategories) {
+  categories = newCategories;
+}
+
+/**
+   Set the pointer to the observable. 
+   @param newObservable - The new RooRealVar observable to use for datasets. 
+   @returns void.
+ */
+void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
+  m_yy = newObservable;
+}
+
 /**
    Create new mass points by looping over the TTree.
    @returns void.
@@ -96,15 +186,9 @@ void DMMassPoints::createNewMassPoints() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt);
   
-  // RooFit stuff:
-  RooCategory *Categories = new RooCategory(Form("Categories_%s",
-						 cateScheme.Data()),
-					    Form("Categories_%s",
-						 cateScheme.Data()));
-
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
-  RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
+  
   RooRealVar wt("wt","wt",1);
   RooArgSet *args = new RooArgSet();
   args->add(*m_yy);
@@ -132,10 +216,6 @@ void DMMassPoints::createNewMassPoints() {
 					  cateScheme.Data(),i_c),
 				     *m_yy);
     }
-    
-    Categories->defineType(Form("%s_%d",cateScheme.Data(),i_c));
-    //Categories->setRange(Form("rangeName_",i_b,i_r),
-    //                     Form("%s_%d",cateScheme.Data(),i_c));
     dataMap[Form("%s_%d",cateScheme.Data(),i_c)] = cateData[i_c];
   }
     
@@ -189,7 +269,7 @@ void DMMassPoints::createNewMassPoints() {
   // Create combined data set from individual categories:
   combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
 			    Form("combData_%s",cateScheme.Data()),
-			    *args, RooFit::Index(*Categories),
+			    *args, RooFit::Index(*categories),
 			    RooFit::Import(dataMap),
 			    RooFit::WeightVar(wt));
 }
@@ -206,17 +286,11 @@ void DMMassPoints::loadMassPointsFromFile() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect();
   
-  // RooFit stuff:
-  RooCategory *Categories = new RooCategory(Form("Categories_%s",
-						 cateScheme.Data()),
-					    Form("Categories_%s",
-						 cateScheme.Data())
-					    );
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
-  RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
-  RooRealVar wt("wt","wt",1);
+  
   RooArgSet *args = new RooArgSet();
+  RooRealVar wt("wt","wt",1);
   args->add(*m_yy);
   
   // Loop over categories to define datasets and mass files:
@@ -238,11 +312,7 @@ void DMMassPoints::loadMassPointsFromFile() {
 					  cateScheme.Data(),i_c),
 				     *m_yy);
     }
-    
-    Categories->defineType(Form("%s_%d",cateScheme.Data(),i_c));
-    //Categories->setRange(Form("rangeName_",i_b,i_r),
-    //                     Form("%s_%d",cateScheme.Data(),i_c));
-    
+        
     double readMass; double readWeight;
     ifstream massFile(getMassPointsFileName(i_c));
     if (isWeighted) {
@@ -265,6 +335,6 @@ void DMMassPoints::loadMassPointsFromFile() {
   // Create combined data set from individual categories:
   combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
 			    Form("combData_%s",cateScheme.Data()),
-			    *args, RooFit::Index(*Categories),
+			    *args, RooFit::Index(*categories),
 			    RooFit::Import(dataMap), RooFit::WeightVar(wt));
 }

@@ -153,21 +153,21 @@ RoORealVar* DMMassPoints::getRooCategory() {
 }
 
 /**
-   Set the pointer to the RooCategory object. 
-   @param newCategories - The new RooCategory to use for the combined dataset. 
-   @returns void.
- */
-void DMMassPoints::setRooCategory(RooCategory *newCategories) {
-  categories = newCategories;
-}
-
-/**
    Set the pointer to the observable. 
    @param newObservable - The new RooRealVar observable to use for datasets. 
    @returns void.
  */
 void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
   m_yy = newObservable;
+}
+
+/**
+   Set the pointer to the RooCategory object. 
+   @param newCategories - The new RooCategory to use for the combined dataset. 
+   @returns void.
+ */
+void DMMassPoints::setRooCategory(RooCategory *newCategories) {
+  categories = newCategories;
 }
 
 /**

@@ -7,23 +7,20 @@ decay is identified by a diphoton resonance, while the dark matter particle
 would manifest as missing transverse energy.
 
 General analysis strategy:
-     1) Produce mini-MxAODs from xAODs using the tools provided by Hgamma WG.
-     2) Produce mass points and parameterization of the SM and DM signals.
-     3) Generate workspace to store models and PDFs.
-     4) Pseudoexperiment ensemble generator and analyzer 
-     5) CLs and p0 calculators
+     1) mini-MxAODs from xAODs using the tools provided by Hgamma WG.
+     2) mass points for data, backgrounds, and signal.
+     3) parameterization of the SM and DM signals.
+     4) background modeling.
+     5) workspace to store models and PDFs.
+     6) pseudoexperiment ensemble generation and analysis 
+     7) CLs and p0 calculators
      
-Update March 21: Step 1 complete, Step 2 under development.
-
-OPEN ISSUES: 
-     * DMMassPoints does not compile. There is a problem with the linking...
-     
+OPEN ISSUES 22/03/2015: 
+     * DMMassPoints only compiles on lxplus (not OSX Yosemite...). Why?
+               
      * DMSigParam - need to choose RooRealVar ranges for fits. Also, need to
      consider using modified mass variable to prevent errors in the matrix used
-     for the fit. Another problem exists in obtaining RooRealVariables from the
-     RooDataSet. 
-     
-     *
+     for the fit.
 
 Analysis Header:
 

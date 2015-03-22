@@ -10,12 +10,16 @@
 //  the SM and DM production modes. For now, the program uses a single mass   //
 //  point (125 GeV), and only has the SM production modes.                    //
 //                                                                            //
+//  NOTE: functionality for a RooCategory has been provided, but has not yet  //
+//  been utilized. Consider implementing for easy access to combined PDF.     //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMSigParam.h"
 
 /**
-   Initialize the SigParam class.
+   Initialize the SigParam class with new observable RooRealVar and RooCategory
+   classes (instead of importing them).
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -24,6 +28,58 @@
 */
 DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
 		       TString newCateScheme, TString newOptions) {
+  RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
+					     DMMyyRangeHi);
+  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions,
+	       newObservable);
+}
+
+/**
+   Initialize the SigParam class with a new observable RooRealVar.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @param newObservable - The RooRealVar to be used in fits (m_yy).
+   @returns void.
+*/
+DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
+		       TString newCateScheme, TString newOptions,
+		       RooRealVar *newObservable, RooCategory *newCategories) {
+  
+  // Load the selector to get category information.
+  DMEvtSelect *selector = new DMEvtSelect();
+  
+  // Define a new RooCategory for the dataset, since none was provided:
+  RooCategory newCategories = new RooCategory(Form("categories_%s",
+						   newCateScheme.Data()),
+					      Form("categories_%s",
+						   newCateScheme.Data()));
+  // Loop over categories to define categories:
+  for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
+    cat->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
+    //categories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+  }
+  
+  // Then call the full initializer:
+  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions,
+	       newObservable, newCategories);
+}
+
+/**
+   Initialize the SigParam class using previously defined observable RooRealVar
+   and RooCategory classes.
+   @param newJobName - The name of the job 
+   @param newSampleName - The name of the data/MC sample
+   @param newCateScheme - The name of the event categorization
+   @param newOptions - The job options ("New", "FromFile")
+   @param newObservable - The RooRealVar to be used in fits (m_yy).
+   @param newCategories = The RooCategory to be used in the combined PDF.
+   @returns void.
+*/
+DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
+		       TString newCateScheme, TString newOptions,
+		       RooRealVar *newObservable, RooCategory *newCategories) {
   std::cout << std::endl << "DMSigParam::Initializing..." << std::endl;
   
   // Assign member variables:
@@ -31,6 +87,10 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   sampleName = newSampleName;
   cateScheme = newCateScheme;
   options = newOptions;
+  
+  // Assign the observable and categorization based on inputs:
+  m_yy = newObservable;
+  categories = newCategories;
   
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/SigParam",masterOutput.Data(),jobName.Data());
@@ -109,6 +169,22 @@ double DMSigParam::getCombSigYield(TString process) {
 }
 
 /**
+   Returns a pointer to the mass observable used in the dataset.
+   @returns pointer to the observable (m_yy).
+*/
+RoORealVar* DMMassPoints::getMassObservable() {
+  return m_yy;
+}
+
+/**
+   Returns a pointer to the RooCategory used in the combined dataset.
+   @returns pointer to the RooCategory object.
+*/
+RoORealVar* DMMassPoints::getRooCategory() {
+  return categories;
+}
+
+/**
    Get the value of a particular parameter of the signal PDF. 
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
@@ -146,14 +222,31 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
 }
 
 /**
+   Set the pointer to the observable. 
+   @param newObservable - The new RooRealVar observable to use for datasets. 
+   @returns void.
+ */
+void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
+  m_yy = newObservable;
+}
+
+/**
+   Set the pointer to the RooCategory object. 
+   @param newCategories - The new RooCategory to use for the combined dataset. 
+   @returns void.
+ */
+void DMMassPoints::setRooCategory(RooCategory *newCategories) {
+  categories = newCategories;
+}
+
+/**
    Create new masspoints by looping over the TTree.
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
    @param makeNew - Set true if make parameterization from scratch. Else false.
    @returns void.
 */
-void DMSigParam::createSigParam(TString process, bool makeNew, 
-				RooRealVar *m_yy) {
+void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
   
   // Create output file or load input file.
@@ -179,38 +272,13 @@ void DMSigParam::createSigParam(TString process, bool makeNew,
   // Load the RooDataSet corresponding to the sample
   TString sampleName = nameToSample[process];
   DMMassPoints *dmmp;
-  if (makeNew) dmmp = new DMMassPoints(jobName,sampleName,cateScheme,"New");
+  // Important to provide pointer to m_yy and categories!
+  if (makeNew) dmmp = new DMMassPoints(jobName,sampleName,cateScheme,"New",
+				       m_yy,categories);
   
   // Loop over categories and process modes:
   for (int i_c = 0; i_c < ncategories; i_c++) {
     
-    // Use DMMassPoints class to construct the RooDataSet:
-    RooRealVar *m_yy;
-    RooDataSet *currData;
-    if (makeNew) {
-      currData = dmmp->getCateDataSet(i_c);
-      
-      // Save the signal yields:
-      vectorYield.push_back(currData->sumEntries());
-    
-      // Get the observable from the dataset:
-      /*
-	THIS IS VERY WRONG. HONGTAO SAID THERE IS A SIMPLE WAY TO GET OBS.
-
-	TIterator *iterArgs = ((RooArgSet*)currData->get())->createIterator();
-	RooRealVar* currIter = NULL;
-	while ((currIter = (RooRealVar*)iterArgs->Next())) {
-	if (((TString)currIter->GetName()).EqualTo("m_yy")) {
-	m_yy = currIter;
-	break;
-	}
-	}
-      */
-    }
-    else {
-      m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,DMMyyRangeHi);
-    }
-
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
     
     // Define the fit variables (Can't avoid using >80 char per line...):
@@ -235,13 +303,19 @@ void DMSigParam::createSigParam(TString process, bool makeNew,
 					  Form("Sig_%s_%d",process.Data(),i_c),
 					  currCB, currGA, currFrac);
     
+    // If making from scratch, se DMMassPoints to construct the RooDataSet:
     if (makeNew) {
-      // Perform the fits:
+      RooDataSet *currData = dmmp->getCateDataSet(i_c);
+      
+      // Store the signal yields in memory:
+      vectorYield.push_back(currData->sumEntries());
+      
+      // Perform the fit:
       statistics::setDefaultPrintLevel(0);
       RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(currData);
       statistics::minimize(nLL);
       
-      // Then save the fitted parameters to file:
+      // Save the fitted parameters to file:
       outputFitFile << i_c << " " << currMu->getVal() << " "
 		    << currSigmaCB->getVal() << " " << currAlpha->getVal()
 		    << " " << currNCB->getVal() << " " << currSigmaGA->getVal()
@@ -249,6 +323,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew,
       outputYieldFile << i_c << " " << currData->sumEntries() << " " 
 		      << currData->numEntries() << std::endl;
     }
+    // If using previous parameterization, just load params from .txt file.
     else {
       double rC, rMu, rSigmaCB, rAlpha, rNCB, rSigmaGA, rFrac;
       while (!inputFitFile.eof()) {

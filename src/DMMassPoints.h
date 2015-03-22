@@ -55,8 +55,8 @@ class DMMassPoints
   RooCategory* getRooCategory();
 
   // Mutators:
-  void setRooCategory(RooCategory *newCategories);
   void setMassObservable(RooRealVar *newObservable);
+  void setRooCategory(RooCategory *newCategories);
   
  private:
   

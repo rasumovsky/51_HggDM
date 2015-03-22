@@ -41,6 +41,12 @@ class DMSigParam
   
   DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
 	     TString newOptions);
+	     RooCategory *newCategories);
+  DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
+	     TString newOptions, RooRealVar *newObservable);
+  DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
+	     TString newOptions, RooRealVar *newObservable, 
+	     RooCategory *newCategories);
   virtual ~DMSigParam() {};
   
   // Accessors:
@@ -49,8 +55,14 @@ class DMSigParam
   RooAddPdf* getCateSigPDF(int cateIndex, TString process);
   double getCateSigYield(int cateIndex, TString process);
   double getCombSigYield(TString process);
+  RooRealVar* getMassObservable(); 
+  RooCategory* getRooCategory();
   double getSigParam(TString process, TString param, int cateIndex);
   TString getSigParamFileName(TString process, TString fileType);
+  
+  // Mutators:
+  void setRooCategory(RooCategory *newCategories);
+  void setMassObservable(RooRealVar *newObservable);
   
  private:
   
@@ -63,6 +75,9 @@ class DMSigParam
   TString cateScheme;
   TString options;
   TString outputDir;
+  
+  RooRealVar *m_yy;
+  RooCategory *categories;
   
   std::map<TString,std::vector<RooCBShape*> > sigCB;
   std::map<TString,std::vector<RooGaussian*> > sigGA;

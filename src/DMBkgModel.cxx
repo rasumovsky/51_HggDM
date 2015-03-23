@@ -138,6 +138,10 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   RooBernsteinM *bern;
   RooGenericPdf *exppol;
   
+  if (fitFunc.Contains("Exppol")) {
+    bkgArgs->add(*m_yy);
+  }
+  
   // Loop over the order of the function to define parameters:
   for (int i_p = 0; i_p <= order; i_p++) {
     // Parameters for Bernstein polynomial:
@@ -173,7 +177,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   else if (fitFunc.Contains("Exppol")) {
     //bkgArgs has m_yy included as first variable in list:
     //exppol = new RooGenericPdf(fitName, expFitFormat, bkgArgs);
-    exppol = new RooGenericPdf(fitName, expFitFormat, *m_yy, *bkgArgs);
+    exppol = new RooGenericPdf(fitName, expFitFormat, *bkgArgs);
     background = exppol;
   }
   
@@ -193,7 +197,7 @@ RooRealVar* DMBkgModel::getMassObservable() {
    Returns a pointer to the RooCategory used in the combined dataset.
    @returns pointer to the RooCategory object.
 */
-RooRealVar* DMBkgModel::getRooCategory() {
+RooCategory* DMBkgModel::getRooCategory() {
   return categories;
 }
 

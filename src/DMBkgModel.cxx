@@ -173,7 +173,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   else if (fitFunc.Contains("Exppol")) {
     //bkgArgs has m_yy included as first variable in list:
     //exppol = new RooGenericPdf(fitName, expFitFormat, bkgArgs);
-    exppol = new RooGenericPdf(fitName, expFitFormat, *m_yy, bkgArgs);
+    exppol = new RooGenericPdf(fitName, expFitFormat, *m_yy, *bkgArgs);
     background = exppol;
   }
   

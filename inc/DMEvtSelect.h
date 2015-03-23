@@ -39,9 +39,9 @@ class DMEvtSelect
   virtual ~DMEvtSelect() {};
   
   // Accessors:
-  int getEventsPerCate(TString cateName, int cate);
-  double getEventsPerCateWt(TString cateName, int cate);
-  int getNCategories(TString cateName);
+  int getEventsPerCate(TString cateScheme, int cate);
+  double getEventsPerCateWt(TString cateScheme, int cate);
+  int getNCategories(TString cateScheme);
   int getPassingEvents(TString cutName);
   double getPassingEventsWt(TString cutName);
   int getTotalEvents(TString cutName);
@@ -53,8 +53,8 @@ class DMEvtSelect
 
   // Mutators
   void clearCounters();
-  int getCategoryNumber(TString cateName);
-  int getCategoryNumber(TString cateName, double weight);
+  int getCategoryNumber(TString cateScheme);
+  int getCategoryNumber(TString cateScheme, double weight);
   bool passesCut(TString cutName);
   bool passesCut(TString cutName, double weight);
   void setTree(DMTree *newTree);
@@ -63,7 +63,7 @@ class DMEvtSelect
   
   // Member methods:
   bool cutExists(TString cutName);
-  bool cateExists(TString cateName);
+  bool cateExists(TString cateScheme);
 
   // Member objects:
   DMTree *evtTree;
@@ -74,7 +74,7 @@ class DMEvtSelect
   std::map<TString,double> evtCountTotWt;
   //bool recursiveCall;
   
-  std::map<TString,int> cateNamesAndSizes;
+  std::map<TString,int> cateSchemesAndSizes;
   std::map<TString,int> cateCount;
   std::map<TString,double> cateCountWt;
   

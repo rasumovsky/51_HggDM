@@ -49,9 +49,9 @@ class DMBkgModel
   // Accessors:
   //void fitCateBkgPDF(int cateIndex);
   //void fitCombBkgPDF();
-  getCateBkgPDF(int cateIndex);
-  getCombBkgPDF();
-  getBkgPDFByName(TString funcName);
+  RooAbsPdf* getCateBkgPDF(int cateIndex);
+  RooSimultaneous* getCombBkgPDF();
+  RooAbsPdf* getBkgPDFByName(TString name, TString fitFunc);
   RooRealVar* getMassObservable();
   RooCategory* getRooCategory();
   
@@ -62,8 +62,7 @@ class DMBkgModel
  private:
   
   // Member methods:
-  void createNewMassPoints();
-  void loadMassPointsFromFile();
+  int getOrderFromFunc(TString fitFunc);
   
   // Member variables:
   TString jobName;

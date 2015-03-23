@@ -28,6 +28,10 @@ double DMMyyRangeHi = 160.0;
 int const nProdModes = 6;
 TString sigProdModes[nProdModes];// = {"ggH","VBF","WH","ZH","ttH","bbH"};
 
+// map categories to function types.
+//Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
+std::map<TString,TString> cateToBkgFunc;
+
 //std::map<TString,TString> nameToSample;// = { {"ggH", "sampleName_ggH"}, 
 // {"VBF", "sampleName_VBF"},
 //					  {"WH", "sampleName_WH"},

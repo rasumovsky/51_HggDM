@@ -16,7 +16,7 @@
 //                                                                            //
 //  Similarly, you will need to update category definitions in the locations  //
 //  identified with the tag "ADD CATE HERE":                                  //
-//    - add to the list of cateNames in DMEvtSelect()                         //
+//    - add to the list of cateSchemes in DMEvtSelect()                       //
 //    - add to the implementation of categories in getCategory()              //
 //                                                                            //
 //  Note: the counter is a bit finnicky. Either check each step of the        //
@@ -51,9 +51,9 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   cutList.push_back("allCuts");
     
   // ADD CATE HERE ([name] = # categories):
-  cateNamesAndSizes.clear();
-  cateNamesAndSizes["inclusive"] = 1;
-  cateNamesAndSizes["splitETMiss"] = 2;
+  cateSchemesAndSizes.clear();
+  cateSchemesAndSizes["inclusive"] = 1;
+  cateSchemesAndSizes["splitETMiss"] = 2;
   
   evtTree = newTree;
 
@@ -65,9 +65,9 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
 /**
    Get the (integer) number of events in the specified category.
 */
-int DMEvtSelect::getEventsPerCate(TString cateName, int cate) {
-  if (cateExists(cateName)) {
-    return cateCount[Form("%s_%d",cateName.Data(),cate)];
+int DMEvtSelect::getEventsPerCate(TString cateScheme, int cate) {
+  if (cateExists(cateScheme)) {
+    return cateCount[Form("%s_%d",cateScheme.Data(),cate)];
   }
   else return -1;
 }
@@ -75,9 +75,9 @@ int DMEvtSelect::getEventsPerCate(TString cateName, int cate) {
 /**
    Get the weighted number of events in the specified category.
 */
-double DMEvtSelect::getEventsPerCateWt(TString cateName, int cate) {
-  if (cateExists(cateName)) {
-    return cateCountWt[Form("%s_%d",cateName.Data(),cate)];
+double DMEvtSelect::getEventsPerCateWt(TString cateScheme, int cate) {
+  if (cateExists(cateScheme)) {
+    return cateCountWt[Form("%s_%d",cateScheme.Data(),cate)];
   }
   else return -1;
 }
@@ -85,8 +85,8 @@ double DMEvtSelect::getEventsPerCateWt(TString cateName, int cate) {
 /**
    Get the number of categories in the named categorization scheme.
 */
-int DMEvtSelect::getNCategories(TString cateName) {
-  if (cateExists(cateName)) return cateNamesAndSizes[cateName];
+int DMEvtSelect::getNCategories(TString cateScheme) {
+  if (cateExists(cateScheme)) return cateSchemesAndSizes[cateScheme];
   else return -1;
 }
 
@@ -149,7 +149,7 @@ void DMEvtSelect::printCategorization(bool weighted) {
   std::cout << "Printing Categories: " << std::endl;
   // iterate over category names:
   std::map<TString,int>::iterator it;
-  for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
+  for (it = cateSchemesAndSizes.begin(); it != cateSchemesAndSizes.end(); it++){
     std::cout << "\t" << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
@@ -193,7 +193,7 @@ void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
   ofstream outFile(fileName);
   // iterate over category names:
   std::map<TString,int>::iterator it;
-  for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
+  for (it = cateSchemesAndSizes.begin(); it != cateSchemesAndSizes.end(); it++){
     outFile << "\t" << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
@@ -230,7 +230,7 @@ void DMEvtSelect::clearCounters() {
   }
   // Then initialize all category counters to zero:
   std::map<TString,int>::iterator it;
-  for (it = cateNamesAndSizes.begin(); it != cateNamesAndSizes.end(); it++) {
+  for (it = cateSchemesAndSizes.begin(); it != cateSchemesAndSizes.end(); it++) {
     for (int j = 0; j < it->second; j++) {
       cateCount[Form("%s_%d",(it->first).Data(),it->second)] = 0;
       cateCountWt[Form("%s_%d",(it->first).Data(),it->second)] = 0.0;
@@ -241,33 +241,33 @@ void DMEvtSelect::clearCounters() {
 /**
    Find the category in which this event belongs. 
 */
-int DMEvtSelect::getCategoryNumber(TString cateName) {
-  return getCategoryNumber(cateName, 1.0);
+int DMEvtSelect::getCategoryNumber(TString cateScheme) {
+  return getCategoryNumber(cateScheme, 1.0);
 }
 
 /**
    Find the category in which this weighted event belongs. 
 */
-int DMEvtSelect::getCategoryNumber(TString cateName, double weight) {
+int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   
   // check that the category is defined first. 
-  if (!cateExists(cateName)) return -1;
+  if (!cateExists(cateScheme)) return -1;
   
   // ADD CATE HERE:
   int currCate = -1;
   // Inclusive categorization - only 1 category.
-  if (cateName.Contains("inclusive")) {
+  if (cateScheme.Contains("inclusive")) {
     return 0;
   }
   // Split MET - low and high MET categories.
-  else if (cateName.Contains("splitETMiss")) {
+  else if (cateScheme.Contains("splitETMiss")) {
     if (evtTree->EventInfoAuxDyn_metref_final > 180.0) currCate = 0;
     else currCate = 1;
   }
   
   // Add to category counters:
-  cateCount[Form("%s_%d",cateName.Data(),currCate)]++;
-  cateCountWt[Form("%s_%d",cateName.Data(),currCate)] += weight;
+  cateCount[Form("%s_%d",cateScheme.Data(),currCate)]++;
+  cateCountWt[Form("%s_%d",cateScheme.Data(),currCate)] += weight;
   
   // Print error message before returning bad category value.
   if (currCate == -1) { 
@@ -365,9 +365,9 @@ bool DMEvtSelect::cutExists(TString cutName) {
 /** 
     Check whether the specified category has been defined.
 */
-bool DMEvtSelect::cateExists(TString cateName) {
-  // Checks if there is a key corresponding to cateName in the map: 
-  bool exists = (cateCount.find(Form("%s_0",cateName.Data()))
+bool DMEvtSelect::cateExists(TString cateScheme) {
+  // Checks if there is a key corresponding to cateScheme in the map: 
+  bool exists = (cateCount.find(Form("%s_0",cateScheme.Data()))
 		 == cateCount.end());
   if (!exists) {
     std::cout << "DMEvtSelect: Category not defined!" << std::endl;

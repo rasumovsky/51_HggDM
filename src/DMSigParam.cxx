@@ -180,7 +180,7 @@ double DMSigParam::getCombSigYield(TString process) {
    Returns a pointer to the mass observable used in the dataset.
    @returns pointer to the observable (m_yy).
 */
-RooRealVar* DMMassPoints::getMassObservable() {
+RooRealVar* DMSigParam::getMassObservable() {
   return m_yy;
 }
 
@@ -188,7 +188,7 @@ RooRealVar* DMMassPoints::getMassObservable() {
    Returns a pointer to the RooCategory used in the combined dataset.
    @returns pointer to the RooCategory object.
 */
-RooCategory* DMMassPoints::getRooCategory() {
+RooCategory* DMSigParam::getRooCategory() {
   return categories;
 }
 
@@ -234,7 +234,7 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
    @param newObservable - The new RooRealVar observable to use for datasets. 
    @returns void.
  */
-void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
+void DMSigParam::setMassObservable(RooRealVar *newObservable) {
   m_yy = newObservable;
 }
 
@@ -243,12 +243,12 @@ void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
    @param newCategories - The new RooCategory to use for the combined dataset. 
    @returns void.
  */
-void DMMassPoints::setRooCategory(RooCategory *newCategories) {
+void DMSigParam::setRooCategory(RooCategory *newCategories) {
   categories = newCategories;
 }
 
 /**
-   Create new masspoints by looping over the TTree.
+   Create new signal parameterization using a call to DMMassPoints for input MC.
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
    @param makeNew - Set true if make parameterization from scratch. Else false.
@@ -307,8 +307,8 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 					  Form("GA_%s_%d",process.Data(),i_c),
 					  *m_yy, currMu, currSigmaGA);
     
-    RooAddPdf *currSignal = new RooAddPdf(Form("Sig_%s_%d",process.Data(),i_c),
-					  Form("Sig_%s_%d",process.Data(),i_c),
+    RooAddPdf *currSignal = new RooAddPdf(Form("sig_%s_%d",process.Data(),i_c),
+					  Form("sig_%s_%d",process.Data(),i_c),
 					  currCB, currGA, currFrac);
     
     // If making from scratch, se DMMassPoints to construct the RooDataSet:

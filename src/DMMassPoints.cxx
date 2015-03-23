@@ -20,7 +20,8 @@
 #include "DMMassPoints.h"
 
 /**
-   Initialize the MassPoint class without an observable RooRealVar.
+   Initialize the DMMassPoint class and make a new observable RooRealVar and
+   RooCategory.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -36,7 +37,7 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 }
 
 /**
-   Initialize the MassPoint class.
+   Initialize the DMMassPoint class and make a new RooCategory.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -68,7 +69,8 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 }
 
 /**
-   Initialize the MassPoint class.
+   Initialize the DMMassPoint class using previously defined observable
+   RooRealVar and RooCategory classes.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization

@@ -18,7 +18,8 @@
 #include "DMSigParam.h"
 
 /**
-   Initialize the SigParam class with new observable RooRealVar and RooCategory
+   Initialize the DMSigParam class with new observable RooRealVar and
+   RooCategory.
    classes (instead of importing them).
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
@@ -30,12 +31,12 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
 		       TString newCateScheme, TString newOptions) {
   RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
 					     DMMyyRangeHi);
-  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions,
-	       newObservable);
+  DMSigParam(newJobName, newSampleName, newCateScheme, newOptions,
+	     newObservable);
 }
 
 /**
-   Initialize the SigParam class with a new observable RooRealVar.
+   Initialize the DMSigParam class with a new RooCategory.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -63,13 +64,13 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   }
   
   // Then call the full initializer:
-  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions,
-	       newObservable, newCategories);
+  DMSigParam(newJobName, newSampleName, newCateScheme, newOptions,
+	     newObservable, newCategories);
 }
 
 /**
-   Initialize the SigParam class using previously defined observable RooRealVar
-   and RooCategory classes.
+   Initialize the DMSigParam class using previously defined observable
+   RooRealVar and RooCategory classes.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
@@ -90,8 +91,8 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   options = newOptions;
   
   // Assign the observable and categorization based on inputs:
-  m_yy = newObservable;
-  categories = newCategories;
+  setMassObservable(newObservable);
+  setRooCategory(newCategories);
   
   // Get the number of analysis categories if not already done:
   if (!selector) {
@@ -289,12 +290,12 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
     
     // Define the fit variables (Can't avoid using >80 char per line...):
-    RooRealVar currMu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currSigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar currSigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar currAlpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar currNCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar currFrac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *currMu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar *currSigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *currSigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *currAlpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *currNCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *currFrac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0,0);
     
     // Define the PDFs:
     RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),

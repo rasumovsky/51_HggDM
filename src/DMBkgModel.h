@@ -55,7 +55,6 @@ class DMBkgModel
   RooRealVar* getMassObservable();
   RooCategory* getRooCategory();
   
-  
   // Mutators:
   void setRooCategory(RooCategory *newCategories);
   void setMassObservable(RooRealVar *newObservable);
@@ -72,8 +71,10 @@ class DMBkgModel
   TString cateScheme;
   TString options;
   
+  int nCategories;
   RooRealVar *m_yy;
   RooCategory *categories;
+  DMEvtSelect *selector;
   
 };
 

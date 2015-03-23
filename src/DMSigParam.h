@@ -75,7 +75,7 @@ class DMSigParam
   TString options;
   TString outputDir;
   
-  double nCategories;
+  int nCategories;
   RooRealVar *m_yy;
   RooCategory *categories;
   DMEvtSelect *selector;

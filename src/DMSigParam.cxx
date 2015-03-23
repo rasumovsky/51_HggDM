@@ -333,7 +333,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       
       // Perform the fit:
       statistics::setDefaultPrintLevel(0);
-      RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(currData);
+      RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(*currData);
       statistics::minimize(nLL);
       
       // After the fit, set parameters constant:

@@ -143,11 +143,12 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
     // Parameters for Bernstein polynomial:
     if (fitFunc.Contains("Bern")) {
       if (i_p == 0) {
-	pVar[i_p] = new RooRealVar(Form("pVar%d",order),Form("pVar%d",order),1);
+	pVar[i_p] = new RooRealVar(Form("pVar%d",order), 
+				   Form("pVar%d",order), 1);
       }
       else {
-	pVar[i_p] = new RooRealVar(Form("pVar%d",order),Form("pVar%d",order),
-				   0.1, 0,0, 10.0);
+	pVar[i_p] = new RooRealVar(Form("pVar%d",order), Form("pVar%d",order),
+				   0.1, 0.0, 10.0);
       }
       bkgArgs->add(*pVar[i_p]);
     }
@@ -155,7 +156,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
     else if (fitFunc.Contains("Exppol") && i_p < order) {
       cVar[i_p] = new RooRealVar(Form("cVar%d",order), Form("cVar%d",order),
 				 0.0, -1.0, 1.0 );
-      bkgArgs->add(cVar[i_p]);
+      bkgArgs->add(*cVar[i_p]);
       expFitFormat += Form("@%d",i_p+1);
       for (int i_t = 0; i_t <= i_p; i_t++) {
 	expFitFormat += "*(@0-100)";
@@ -166,7 +167,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   
   // Construct the desired PDF:
   if (fitFunc.Contains("Bern")) {
-    bern = new RooBernsteinM(fitName, fitName, *m_yy, bkgArgs, &min, &max);
+    bern = new RooBernsteinM(fitName, fitName, *m_yy, *bkgArgs, &min, &max);
     background = bern;
   }
   else if (fitFunc.Contains("Exppol")) {

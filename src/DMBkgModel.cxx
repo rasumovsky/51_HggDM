@@ -39,8 +39,39 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
 /**
    Get the name of the output textfile for the given category index.
 */
-TString DMBkgModel::getMassPointsFileName(int cateIndex) {
-  TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),
-		      cateIndex);
-  return name;
+//DMBkgModel
+
+
+/**
+   Returns a pointer to the mass observable used in the dataset.
+   @returns pointer to the observable (m_yy).
+*/
+RooRealVar* DMMassPoints::getMassObservable() {
+  return m_yy;
+}
+
+/**
+   Returns a pointer to the RooCategory used in the combined dataset.
+   @returns pointer to the RooCategory object.
+*/
+RooRealVar* DMMassPoints::getRooCategory() {
+  return categories;
+}
+
+/**
+   Set the pointer to the observable. 
+   @param newObservable - The new RooRealVar observable to use for datasets. 
+   @returns void.
+ */
+void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
+  m_yy = newObservable;
+}
+
+/**
+   Set the pointer to the RooCategory object. 
+   @param newCategories - The new RooCategory to use for the combined dataset. 
+   @returns void.
+ */
+void DMMassPoints::setRooCategory(RooCategory *newCategories) {
+  categories = newCategories;
 }

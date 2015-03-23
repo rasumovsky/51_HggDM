@@ -37,13 +37,28 @@ class DMBkgModel
  public:
   
   DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
-	       TString newOptions);
+	     TString newOptions);
+  DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
+	     TString newOptions, RooRealVar *newObservable);
+  DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
+	     TString newOptions, RooRealVar *newObservable,
+	     RooCategory *newCategories);
+  
   virtual ~DMBkgModel() {};
   
   // Accessors:
-  TString getMassPointsFileName(int cateIndex);
-  RooDataSet* getCateDataSet(int cateIndex);
-  RooDataSet* getCombDataSet();
+  //void fitCateBkgPDF(int cateIndex);
+  //void fitCombBkgPDF();
+  getCateBkgPDF(int cateIndex);
+  getCombBkgPDF();
+  getBkgPDFByName(TString funcName);
+  RooRealVar* getMassObservable();
+  RooCategory* getRooCategory();
+  
+  
+  // Mutators:
+  void setRooCategory(RooCategory *newCategories);
+  void setMassObservable(RooRealVar *newObservable);
       
  private:
   
@@ -57,7 +72,8 @@ class DMBkgModel
   TString cateScheme;
   TString options;
   
-  TString outputDir;
+  RooRealVar *m_yy;
+  RooCategory *categories;
   
 };
 

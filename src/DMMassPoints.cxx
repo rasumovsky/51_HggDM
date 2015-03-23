@@ -129,7 +129,7 @@ RooDataSet* DMMassPoints::getCombDataSet() {
    Returns a pointer to the mass observable used in the dataset.
    @returns pointer to the observable (m_yy).
 */
-RoORealVar* DMMassPoints::getMassObservable() {
+RooRealVar* DMMassPoints::getMassObservable() {
   return m_yy;
 }
 
@@ -148,7 +148,7 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex) {
    Returns a pointer to the RooCategory used in the combined dataset.
    @returns pointer to the RooCategory object.
 */
-RoORealVar* DMMassPoints::getRooCategory() {
+RooCategory* DMMassPoints::getRooCategory() {
   return categories;
 }
 

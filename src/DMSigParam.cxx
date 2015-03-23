@@ -172,7 +172,7 @@ double DMSigParam::getCombSigYield(TString process) {
    Returns a pointer to the mass observable used in the dataset.
    @returns pointer to the observable (m_yy).
 */
-RoORealVar* DMMassPoints::getMassObservable() {
+RooRealVar* DMMassPoints::getMassObservable() {
   return m_yy;
 }
 
@@ -180,7 +180,7 @@ RoORealVar* DMMassPoints::getMassObservable() {
    Returns a pointer to the RooCategory used in the combined dataset.
    @returns pointer to the RooCategory object.
 */
-RoORealVar* DMMassPoints::getRooCategory() {
+RooCategory* DMMassPoints::getRooCategory() {
   return categories;
 }
 
@@ -314,6 +314,14 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       statistics::setDefaultPrintLevel(0);
       RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(currData);
       statistics::minimize(nLL);
+
+      // After the fit, set parameters constant:
+      currMu->setConstant(true);
+      currSigmaCB->setConstant(true);
+      currSigmaGA->setConstant(true);
+      currAlpha->setConstant(true);
+      currNCB->setConstant(true);
+      currFrac->setConstant(true);
       
       // Save the fitted parameters to file:
       outputFitFile << i_c << " " << currMu->getVal() << " "

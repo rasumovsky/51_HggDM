@@ -290,26 +290,42 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
     
     // Define the fit variables (Can't avoid using >80 char per line...):
-    RooRealVar *currMu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar *currSigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar *currSigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar *currAlpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar *currNCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0,0);
-    RooRealVar *currFrac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar *mu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),
+				    Form("mu_%s_%d",process.Data(),i_c),
+				    0,0,0);
+    RooRealVar *sigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),
+					      i_c),
+					 Form("sigmaCB_%s_%d",process.Data(),
+					      i_c),
+					 0,0,0);
+    RooRealVar *sigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),
+					      i_c),
+					 Form("sigmaGA_%s_%d",process.Data(),
+					      i_c),
+					 0,0,0);
+    RooRealVar *alpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),
+				       Form("alpha_%s_%d",process.Data(),i_c),
+				       0,0,0);
+    RooRealVar *nCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),
+				     Form("nCB_%s_%d",process.Data(),i_c),
+				     0,0,0);
+    RooRealVar *frac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),
+				      Form("frac_%s_%d",process.Data(),i_c),
+				      0,0,0);
     
     // Define the PDFs:
     RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),
 					Form("CB_%s_%d",process.Data(),i_c),
-					*m_yy, currMu, currSigmaCB, currAlpha,
-					currNCB);
+					*m_yy, mu, sigmaCB, alpha,
+					nCB);
     
     RooGaussian *currGA = new RooGaussian(Form("GA_%s_%d",process.Data(),i_c),
 					  Form("GA_%s_%d",process.Data(),i_c),
-					  *m_yy, currMu, currSigmaGA);
+					  *m_yy, mu, sigmaGA);
     
     RooAddPdf *currSignal = new RooAddPdf(Form("sig_%s_%d",process.Data(),i_c),
 					  Form("sig_%s_%d",process.Data(),i_c),
-					  currCB, currGA, currFrac);
+					  currCB, currGA, frac);
     
     // If making from scratch, se DMMassPoints to construct the RooDataSet:
     if (makeNew) {
@@ -322,20 +338,19 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       statistics::setDefaultPrintLevel(0);
       RooNLLVar *nLL = (RooNLLVar*)currSignal->createNLL(currData);
       statistics::minimize(nLL);
-
+      
       // After the fit, set parameters constant:
-      currMu->setConstant(true);
-      currSigmaCB->setConstant(true);
-      currSigmaGA->setConstant(true);
-      currAlpha->setConstant(true);
-      currNCB->setConstant(true);
-      currFrac->setConstant(true);
+      mu->setConstant(true);
+      sigmaCB->setConstant(true);
+      sigmaGA->setConstant(true);
+      alpha->setConstant(true);
+      nCB->setConstant(true);
+      frac->setConstant(true);
       
       // Save the fitted parameters to file:
-      outputFitFile << i_c << " " << currMu->getVal() << " "
-		    << currSigmaCB->getVal() << " " << currAlpha->getVal()
-		    << " " << currNCB->getVal() << " " << currSigmaGA->getVal()
-		    << " " << currFrac->getVal() << std::endl;
+      outputFitFile << i_c << " " << mu->getVal() << " " << sigmaCB->getVal()
+		    << " " << alpha->getVal() << " " << nCB->getVal() << " "
+		    << sigmaGA->getVal() << " " << frac->getVal() << std::endl;
       outputYieldFile << i_c << " " << currData->sumEntries() << " " 
 		      << currData->numEntries() << std::endl;
     }
@@ -345,12 +360,12 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       while (!inputFitFile.eof()) {
 	inputFitFile >> rC >> rMu >> rSigmaCB >> rAlpha >> rNCB >> rSigmaGA
 		     >> rFrac;
-	currMu->setVal(rMu);
-	currSigmaCB->setVal(rSigmaCB);
-	currAlpha->setVal(rAlpha);
-	currNCB->setVal(rNCB);
-	currSigmaGA->setVal(rSigmaGA);
-	currFrac->setVal(rFrac);
+	mu->setVal(rMu);
+	sigmaCB->setVal(rSigmaCB);
+	alpha->setVal(rAlpha);
+	nCB->setVal(rNCB);
+	sigmaGA->setVal(rSigmaGA);
+	frac->setVal(rFrac);
 	break;
       }
       double rSum, rNum;

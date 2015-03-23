@@ -81,7 +81,7 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
   std::cout << std::endl << "DMBkgModel::Initializing..." << std::endl;
   
   // Assign member variables:
-  jobName = newJobname;
+  jobName = newJobName;
   sampleName = newSampleName;
   cateScheme = newCateScheme;
   options = newOptions;
@@ -95,14 +95,6 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
     selector = new DMEvtSelect();
     nCategories = selector->getNCategories(newCateScheme);
   }
-  
-  // Assign output directory, and make sure it exists:
-  outputDir = Form("%s/%s/DMBkgModel",masterOutput.Data(),jobName.Data());
-  system(Form("mkdir -vp %s",outputDir.Data()));
-      
-  // Either load the masspoints from file or create new ones:
-  if (options.Contains("FromFile")) loadMassPointsFromFile();
-  else createNewMassPoints();
   return;
 }
 
@@ -112,8 +104,9 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
    @returns The corresponding background PDF for the analysis.
 */
 RooAbsPdf* DMBkgModel::getCateBkgPDF(int cateIndex) {
-  return getBkgPDFByName(Form("bkg_%d",cateIndex),
-			 cateToBkgFunc[Form("%s_%d",cateScheme,cateIndex)]);
+  TString currFunction = cateToBkgFunc[Form("%s_%d",cateScheme,cateIndex)];
+  TString currFuncName = Form("bkg_%d",cateIndex);
+  return getBkgPDFByName(currFuncName, currFunction);
 }
 
 /**
@@ -125,11 +118,10 @@ RooAbsPdf* DMBkgModel::getCateBkgPDF(int cateIndex) {
    @param order - The order of the function to use.
    @returns The background PDF as a pointer to a RooAbsPdf. 
 */
-RooAbsPdf* DMBkgModel::getBkgPDFByName(TString name, TString fitFunc) {
-  TString fitName = Form("%s_%sO%d",name.Data(),fitFunc.Data(),order);
+RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   
-  int order = getOrderFromName(fitFunc);
-
+  int order = getOrderFromFunc(fitFunc);
+    
   // Set the range of the m_yy variable from DMHeader.h:
   RooConstVar min("min","min",DMMyyRangeLo);
   RooConstVar max("max","max",DMMyyRangeHi);
@@ -148,7 +140,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString name, TString fitFunc) {
   // Loop over the order of the function to define parameters:
   for (int i_p = 0; i_p <= order; i_p++) {
     // Parameters for Bernstein polynomial:
-    if (fitFunc.EqualTo("Bern")) {
+    if (fitFunc.Contains("Bern")) {
       if (i_p == 0) {
 	pVar[i_p] = new RooRealVar(Form("pVar%d",order),Form("pVar%d",order),1);
       }
@@ -156,10 +148,10 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString name, TString fitFunc) {
 	pVar[i_p] = new RooRealVar(Form("pVar%d",order),Form("pVar%d",order),
 				   0.1, 0,0, 10.0);
       }
-      bkgArgs->add(pVar[i_p]);
+      bkgArgs->add(*pVar[i_p]);
     }
     // Parameters for exponential polynomial:
-    else if (fitFunc.EqualTo("Exppol") && i_p < order) {
+    else if (fitFunc.Contains("Exppol") && i_p < order) {
       cVar[i_p] = new RooRealVar(Form("cVar%d",order), Form("cVar%d",order),
 				 0.0, -1.0, 1.0 );
       bkgArgs->add(cVar[i_p]);
@@ -172,11 +164,11 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString name, TString fitFunc) {
   expFitFormat += ")";
   
   // Construct the desired PDF:
-  if (fitFunc.EqualTo("Bern")) {
+  if (fitFunc.Contains("Bern")) {
     bern = new RooBernsteinM(fitName, fitName, *m_yy, bkgArgs, &min, &max);
     background = bern;
   }
-  else if (fitFunc.EqualTo("Exppol")) {
+  else if (fitFunc.Contains("Exppol")) {
     //bkgArgs has m_yy included as first variable in list:
     //exppol = new RooGenericPdf(fitName, expFitFormat, bkgArgs);
     exppol = new RooGenericPdf(fitName, expFitFormat, *m_yy, bkgArgs);

@@ -30,6 +30,7 @@
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "DMHeader.h"
+#include "DMEvtSelect.h"
 
 class DMBkgModel 
 {

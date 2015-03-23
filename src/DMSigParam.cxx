@@ -292,40 +292,37 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     // Define the fit variables (Can't avoid using >80 char per line...):
     RooRealVar *mu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),
 				    Form("mu_%s_%d",process.Data(),i_c),
-				    0,0,0);
+				    125.4,123.0,128.0);
     RooRealVar *sigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),
 					      i_c),
 					 Form("sigmaCB_%s_%d",process.Data(),
 					      i_c),
-					 0,0,0);
+					 1.5,0.1,10.0);
     RooRealVar *sigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),
 					      i_c),
 					 Form("sigmaGA_%s_%d",process.Data(),
 					      i_c),
-					 0,0,0);
+					 3,0.1,10.0);
     RooRealVar *alpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),
 				       Form("alpha_%s_%d",process.Data(),i_c),
-				       0,0,0);
+				       1.4,0.1,10.0);
     RooRealVar *nCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),
 				     Form("nCB_%s_%d",process.Data(),i_c),
-				     0,0,0);
+				     10,0.001,20);
     RooRealVar *frac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),
 				      Form("frac_%s_%d",process.Data(),i_c),
-				      0,0,0);
+				      0.9,0.001,1.0);
     
     // Define the PDFs:
     RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),
 					Form("CB_%s_%d",process.Data(),i_c),
-					*m_yy, mu, sigmaCB, alpha,
-					nCB);
-    
+					*m_yy, *mu, *sigmaCB, *alpha, *nCB);
     RooGaussian *currGA = new RooGaussian(Form("GA_%s_%d",process.Data(),i_c),
 					  Form("GA_%s_%d",process.Data(),i_c),
-					  *m_yy, mu, sigmaGA);
-    
+					  *m_yy, *mu, *sigmaGA);
     RooAddPdf *currSignal = new RooAddPdf(Form("sig_%s_%d",process.Data(),i_c),
 					  Form("sig_%s_%d",process.Data(),i_c),
-					  currCB, currGA, frac);
+					  *currCB, *currGA, *frac);
     
     // If making from scratch, se DMMassPoints to construct the RooDataSet:
     if (makeNew) {

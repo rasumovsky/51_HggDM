@@ -31,6 +31,7 @@
 #include "RooFitHead.h"
 #include "DMHeader.h"
 #include "DMEvtSelect.h"
+#include "RooBernsteinM.h"
 
 class DMBkgModel 
 {

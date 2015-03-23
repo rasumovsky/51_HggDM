@@ -14,7 +14,7 @@
 #include "DMBkgModel.h"
 
 /**
-   Initialize the MassPoint class.
+   Initialize the DMBkgModel class. 
 */
 DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName, 
 			   TString newCateScheme, TString newOptions) {

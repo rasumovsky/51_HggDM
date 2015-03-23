@@ -41,7 +41,6 @@ class DMSigParam
   
   DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
 	     TString newOptions);
-	     RooCategory *newCategories);
   DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
 	     TString newOptions, RooRealVar *newObservable);
   DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
@@ -76,9 +75,11 @@ class DMSigParam
   TString options;
   TString outputDir;
   
+  double nCategories;
   RooRealVar *m_yy;
   RooCategory *categories;
-  
+  DMEvtSelect *selector;
+
   std::map<TString,std::vector<RooCBShape*> > sigCB;
   std::map<TString,std::vector<RooGaussian*> > sigGA;
   std::map<TString,std::vector<RooAddPdf*> > sigPDF;

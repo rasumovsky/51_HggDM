@@ -52,14 +52,14 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
   DMEvtSelect *selector = new DMEvtSelect();
   
   // Define a new RooCategory for the dataset, since none was provided:
-  RooCategory newCategories = new RooCategory(Form("categories_%s",
-						   newCateScheme.Data()),
-					      Form("categories_%s",
-						   newCateScheme.Data()));
+  RooCategory *newCategories = new RooCategory(Form("categories_%s",
+						    newCateScheme.Data()),
+					       Form("categories_%s",
+						    newCateScheme.Data()));
   // Loop over categories to define categories:
   for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
-    cat->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-    //categories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
+    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
   }
   
   // Then call the full initializer:

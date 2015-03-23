@@ -45,20 +45,21 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
 */
 DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
 		       TString newCateScheme, TString newOptions,
-		       RooRealVar *newObservable, RooCategory *newCategories) {
+		       RooRealVar *newObservable) {
   
   // Load the selector to get category information.
-  DMEvtSelect *selector = new DMEvtSelect();
+  selector = new DMEvtSelect();
+  nCategories = selector->getNCategories(newCateScheme);
   
   // Define a new RooCategory for the dataset, since none was provided:
-  RooCategory newCategories = new RooCategory(Form("categories_%s",
-						   newCateScheme.Data()),
-					      Form("categories_%s",
-						   newCateScheme.Data()));
+  RooCategory *newCategories = new RooCategory(Form("categories_%s",
+						    newCateScheme.Data()),
+					       Form("categories_%s",
+						    newCateScheme.Data()));
   // Loop over categories to define categories:
-  for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
-    cat->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-    //categories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+  for (int i_c = 0; i_c < nCategories; i_c++) {
+    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
+    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
   }
   
   // Then call the full initializer:
@@ -91,6 +92,12 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   // Assign the observable and categorization based on inputs:
   m_yy = newObservable;
   categories = newCategories;
+  
+  // Get the number of analysis categories if not already done:
+  if (!selector) {
+    selector = new DMEvtSelect();
+    nCategories = selector->getNCategories(newCateScheme);
+  }
   
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/SigParam",masterOutput.Data(),jobName.Data());
@@ -162,7 +169,7 @@ double DMSigParam::getCateSigYield(int cateIndex, TString process) {
 */
 double DMSigParam::getCombSigYield(TString process) {
   double sum = 0;
-  for (int i_c = 0; i_c < ncategories; i_c++) {
+  for (int i_c = 0; i_c < nCategories; i_c++) {
     sum += getCateSigYield(i_c, process);
   }
   return sum;
@@ -277,17 +284,17 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 				       m_yy,categories);
   
   // Loop over categories and process modes:
-  for (int i_c = 0; i_c < ncategories; i_c++) {
+  for (int i_c = 0; i_c < nCategories; i_c++) {
     
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
     
     // Define the fit variables (Can't avoid using >80 char per line...):
-    RooRealVar currMu(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currSigmaCB(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currSigmaGA(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currAlpha(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currNCB(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0);
-    RooRealVar currFrac(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currMu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),Form("mu_%s_%d",process.Data(),i_c),0,0);
+    RooRealVar currSigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),i_c),Form("sigmaCB_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar currSigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),i_c),Form("sigmaGA_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar currAlpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),Form("alpha_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar currNCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),Form("nCB_%s_%d",process.Data(),i_c),0,0,0);
+    RooRealVar currFrac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),Form("frac_%s_%d",process.Data(),i_c),0,0,0);
     
     // Define the PDFs:
     RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),

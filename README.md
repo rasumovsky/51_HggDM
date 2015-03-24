@@ -22,6 +22,19 @@ OPEN ISSUES 22/03/2015:
      consider using modified mass variable to prevent errors in the matrix used
      for the fit.
 
+NOTES 24/03/2015:
+      Need to think more about handling communication between analysis classes.
+      For example, should DMSigParam have its own instance of DMMassPoints, or
+      should DMMaster pass a reference during initialization? Same issue will 
+      arise for workspace generation.
+      
+      Another issue: have instance of DMMassPoints for each sample? Yes. So then
+      what about DMSigParam? I am inclined to do all of the signals in one shot,
+      just because it is less cumbersome. 
+
+      
+      
+
 Analysis Header:
 
      * DMHeader.h

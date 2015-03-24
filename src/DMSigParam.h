@@ -70,7 +70,6 @@ class DMSigParam
   
   // Member variables:
   TString jobName;
-  TString sampleName;
   TString cateScheme;
   TString options;
   TString outputDir;

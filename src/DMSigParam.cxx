@@ -22,31 +22,27 @@
    RooCategory.
    classes (instead of importing them).
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @returns void.
 */
-DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions) {
+DMSigParam::DMSigParam(TString newJobName, TString newCateScheme, 
+		       TString newOptions) {
   RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
 					     DMMyyRangeHi);
-  DMSigParam(newJobName, newSampleName, newCateScheme, newOptions,
-	     newObservable);
+  DMSigParam(newJobName, newCateScheme, newOptions, newObservable);
 }
 
 /**
    Initialize the DMSigParam class with a new RooCategory.
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @param newObservable - The RooRealVar to be used in fits (m_yy).
    @returns void.
 */
-DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions,
-		       RooRealVar *newObservable) {
+DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
+		       TString newOptions, RooRealVar *newObservable) {
   
   // Load the selector to get category information.
   selector = new DMEvtSelect();
@@ -64,29 +60,27 @@ DMSigParam::DMSigParam(TString newJobName, TString newSampleName,
   }
   
   // Then call the full initializer:
-  DMSigParam(newJobName, newSampleName, newCateScheme, newOptions,
-	     newObservable, newCategories);
+  DMSigParam(newJobName, newCateScheme, newOptions, newObservable,
+	     newCategories);
 }
 
 /**
    Initialize the DMSigParam class using previously defined observable
    RooRealVar and RooCategory classes.
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @param newObservable - The RooRealVar to be used in fits (m_yy).
    @param newCategories = The RooCategory to be used in the combined PDF.
    @returns void.
 */
-DMSigParam::DMSigParam(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions,
-		       RooRealVar *newObservable, RooCategory *newCategories) {
+DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
+		       TString newOptions, RooRealVar *newObservable,
+		       RooCategory *newCategories) {
   std::cout << std::endl << "DMSigParam::Initializing..." << std::endl;
   
   // Assign member variables:
   jobName = newJobName;
-  sampleName = newSampleName;
   cateScheme = newCateScheme;
   options = newOptions;
   
@@ -279,10 +273,10 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   
   // Load the RooDataSet corresponding to the sample
   TString sampleName = nameToSample[process];
-  DMMassPoints *dmmp;
+  DMMassPoints *mp;
   // Important to provide pointer to m_yy and categories!
-  if (makeNew) dmmp = new DMMassPoints(jobName,sampleName,cateScheme,"New",
-				       m_yy,categories);
+  if (makeNew) mp = new DMMassPoints(jobName, sampleName, cateScheme, "New",
+				     m_yy, categories);
   
   // Loop over categories and process modes:
   for (int i_c = 0; i_c < nCategories; i_c++) {
@@ -326,7 +320,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     
     // If making from scratch, se DMMassPoints to construct the RooDataSet:
     if (makeNew) {
-      RooDataSet *currData = dmmp->getCateDataSet(i_c);
+      RooDataSet *currData = mp->getCateDataSet(i_c);
       
       // Store the signal yields in memory:
       vectorYield.push_back(currData->sumEntries());

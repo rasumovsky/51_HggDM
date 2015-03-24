@@ -12,6 +12,17 @@
 //  classes (mass points, signal parameterization), while others will use     //
 //  system commands to submit jobs to various clusters.                       //
 //                                                                            //
+//  MasterOption - Note: Each can be followed by the suffix "New"             //
+//    - MassPoints                                                            //
+//    - SigParam                                                              //
+//    - BkgModel                                                              //
+//    - Workspace                                                             //
+//    - ToyMC                                                                 //
+//    - CalcCLs                                                               //
+//                                                                            //
+//  Need to rethink the DMSigParam handling of the RooDataSet. Maybe we       //
+//  should just hand it a RooDataSet?                                         //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMaster.h"
@@ -22,43 +33,72 @@
 int main( int argc, char **argv ) {
   // Check arguments:
   if (argc < 3) {
-    printf("\nUsage: %s <jobname> <option>\n\n",argv[0]);
+    printf("\nUsage: %s <MasterJobName> <MasterOption>\n\n",argv[0]);
     exit(0);
   }
   
-  TString MasterJobName = argv[1];
-  TString MasterOption = argv[2];
-  
+  // The job name and options (which analysis steps to perform):
+  TString masterJobName = argv[1];
+  TString masterOption = argv[2];
+    
   //--------------------------------------//
-  // Set the analysis components to execute:
-  bool MakeMassPoints = MasterOption.Contains("MakeMassPoints");
-  bool MakeSigParam = MasterOption.Contains("MakeSigParam");
-  
+  // Analysis tools to be initialized depending on options:
+  DMMassPoints *mp;// May need an array, unlike sig param. 
+  DMSigParam *sp;
+  RooRealVar *m_yy = new RooRealVar("m_yy","m_yy",DMMyyRangeLo, DMMyyRangeHi);
+  RooCategory *cate = new RooCategory(Form("categories_%s", cateScheme.Data()),
+				      Form("categories_%s", cateScheme.Data()));
+  // Loop over categories to define categories:
+  for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
+    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
+    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
+  }
+    
   //--------------------------------------//
-  // Compile all relevant executables:
-  TString exe_MassPoints = "DMMassPoints";
-  TString exe_SigParam = "DMSigParam";
-  if (MakeMassPoints) { MakeExe( exe_MassPoints ); }
-  if (MakeSigParam) { MakeExe( exe_SigParam ); }
-  
-  //--------------------------------------//
-  // Step 1: Make mass points:
-  if (MakeMassPoints) {
+  // Step 1: Make or load mass points:
+  if (masterOption.Contains("MassPoints")) {
     cout << "DMMaster: Step 1 - Make mass points." << endl;
+    
+    // NOTE: WANT TO LOOP OVER FILES OR SAMPLES...
+    for (int i_s = 0; i_s < (int)sampleNames.size(); i_s++) {
+     
+      if (masterOption.Contains("MassPointsNew")) {
+	mp = new DMMassPoints(masterJobName, file, cateScheme, 
+			      "New", m_yy, cate);
+      }
+      else {
+	mp = new DMMassPoints(masterJobName, file, cateScheme, 
+			      "FromFile", m_yy, cate);
+      }
+    }
   }
   
   //--------------------------------------//
-  // Step 2: Make the signal parameterization:
-  if (MakeSigParam) {
+  // Step 2: Make or load the signal parameterization:
+  if (masterOption.Contains("SigParam")) {
     cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
+  
+    if (masterOption.Contains("SigParamNew")) {
+      sp = new DMSigParam(masterJobName, cateScheme, "New", m_yy, cate);
+    }
+    else {
+      sp = new DMSigParam(masterJobName, cateScheme, "FromFile", m_yy, cate);
+    }
+  }
+  
+  //--------------------------------------//
+  // Step 3: Make the workspace:
+  if (masterOption.Contains()) {
+    cout << "DMMaster: Step 3 - Make the workspace for fits." << endl;
+    
   }
   
   return 0;
 }
 
-/**
-   Compiles the executable required by the job options.
-*/
+/*
+//   Compiles the executable required by the job options.
+
 void MakeExe(TString exename) {
   
   // recompile all executables before running...
@@ -66,9 +106,9 @@ void MakeExe(TString exename) {
   system(Form("make bin/%s",exename.Data()));
 }
 
-/**
-   Submits the workspace jobs via bsub.
-*/
+
+//   Submits the workspace jobs via bsub.
+
 void SubmitWSViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_lambda, int executable_lifetime) {
   
   // Make directories for job info:
@@ -101,9 +141,9 @@ void SubmitWSViaBsub(TString executable_name, TString executable_jobname, TStrin
   system(Form("bsub -q wisc -o %s -e %s %s",name_outfile.Data(),name_errfile.Data(),name_jscript.Data()));
 }
 
-/**
-   Submits toy MC jobs via bsub.
-*/
+
+//   Submits toy MC jobs via bsub.
+
 void SubmitToysViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_seed, int executable_toys_per_job, int chosen_lambda, int chosen_lifetime) {
   
   // Make directories for job info:

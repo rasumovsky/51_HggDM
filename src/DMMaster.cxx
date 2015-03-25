@@ -87,11 +87,29 @@ int main( int argc, char **argv ) {
   }
   
   //--------------------------------------//
-  // Step 3: Make the workspace:
-  if (masterOption.Contains()) {
-    cout << "DMMaster: Step 3 - Make the workspace for fits." << endl;
-    
+  // Step 4: Create the background model (spurious signal calculation):
+  if (masterOption.Contains("BkgModel")) {
+    cout << "DMMaster: Step 4 - Making the background model." << endl;
   }
+  
+  //--------------------------------------//
+  // Step 5: Create the workspace for fitting:
+  if (masterOption.Contains("Workspace")) {
+    cout << "DMMaster: Step 5 - Making the workspace for fits." << endl;
+  }
+  
+  //--------------------------------------//
+  // Step 6: Create pseudoexperiment ensemble (use NPP example):
+  if (masterOption.Contains("ToyMC")) {
+    cout << "DMMaster: Step 6 - Creating pseudoexperiments." << endl;
+  }
+  
+  //--------------------------------------//
+  // Step 7: Make the workspace:
+  if (masterOption.Contains("CalcCLs")) {
+    cout << "DMMaster: Step 7 - Calculating the CLs exclusion." << endl;
+  }
+  
   
   return 0;
 }

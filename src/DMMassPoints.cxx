@@ -181,10 +181,15 @@ void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
 
   // Load the input TFile and TTree here:
-  TFile *myFile = new TFile(nameToSample[sampleName]);
-  TTree *myTree = (TTree*)myFile->Get("treename");
-  DMTree *dmt = new DMTree(myTree);
-
+  //TFile *myFile = new TFile(nameToFileList(sampleName));
+  //TTree *myTree = (TTree*)myFile->Get("treename");
+  //DMTree *dmt = new DMTree(myTree);
+  
+  // Alternative: use file list:
+  TString listname = nameToFileList(sampleName);
+  TChain *chain = MakeChain("", listName, "badfile");
+  DMTree *dmt = new DMTree(chain);
+  
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt);
   

@@ -16,13 +16,13 @@ const double B0S  = SignificanceToPValue(0);;
 const double UB1S = SignificanceToPValue(-1);
 const double UB2S = SignificanceToPValue(-2);
 
-const double SIG1 =SignificanceToPValue(1);
-const double SIG2 =SignificanceToPValue(2);
-const double SIG3 =SignificanceToPValue(3);
-const double SIG4 =SignificanceToPValue(4);
-const double SIG5 =SignificanceToPValue(5);
-const double SIG6 =SignificanceToPValue(6);
-const double SIG7 =SignificanceToPValue(7);
+const double SIG1 = SignificanceToPValue(1);
+const double SIG2 = SignificanceToPValue(2);
+const double SIG3 = SignificanceToPValue(3);
+const double SIG4 = SignificanceToPValue(4);
+const double SIG5 = SignificanceToPValue(5);
+const double SIG6 = SignificanceToPValue(6);
+const double SIG7 = SignificanceToPValue(7);
 
 class statistics : public TObject{
 public:

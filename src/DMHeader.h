@@ -13,7 +13,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////
-// GLOBAL PARAMETERS
+//         GLOBAL PARAMETERS          //
 ////////////////////////////////////////
 
 // Set True for final analysis on data:
@@ -26,51 +26,55 @@ double DMMyyRangeLo = 105.0;
 double DMMyyRangeHi = 160.0;
 
 int const nProdModes = 6;
-TString sigProdModes[nProdModes];// = {"ggH","VBF","WH","ZH","ttH","bbH"};
+TString sigProdModes[nProdModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
 
-// map categories to function types.
-//Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
-std::map<TString,TString> cateToBkgFunc;
-
-//std::map<TString,TString> nameToSample;// = { {"ggH", "sampleName_ggH"}, 
-// {"VBF", "sampleName_VBF"},
-//					  {"WH", "sampleName_WH"},
-//					  {"ZH", "sampleName_ZH"},
-//					  {"ttH", "sampleName_ttH"},
-//					  {"bbH","sampleName_bbH"} };
+TString cateToBkgFunc(TString category) {
+  TString result = "";
+  result = "Exppol01";
+  //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
+  return result;
+}
 
 ////////////////////////////////////////
-// INPUT AND OUTPUT DIRECTORIES
+//    INPUT AND OUTPUT DIRECTORIES    //
 ////////////////////////////////////////
 
 // Location of global input files:
 TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
-
 // Location of output directory:
 TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 
 ////////////////////////////////////////
-// FILE LOCATIONS
+//           FILE LOCATIONS           //
 ////////////////////////////////////////
 
-// Ntuple locations:
-std::map<TString,TString> nameToSample;
-/*
- = { {"ggH","sampleName_ggH"},
-					  {"VBF","sampleName_VBF"},
-					  {"WH","~lkashif/public/for_andrew/H2yyMETAnalysis_WH/data-outputLabel/sample.root"},
-					  {"ZH","~lkashif/public/for_andrew/H2yyMETAnalysis_ZH/data-outputLabel/sample.root"},
-					  {"ttH","~lkashif/public/for_andrew/H2yyMETAnalysis_ttH/data-outputLabel/sample.root"},
-					  {"shxx_gg_ms100_mx100","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx100/data-outputLabel/sample.root"},
-					  {"shxx_gg_ms100_mx500","~lkashif/public/for_andrew/H2yyMETAnalysis_shxx_gg_ms100_mx500/data-outputLabel/sample.root"}
-};
-*/
+TString nameToRootFile(TString name) {
+  TString result = "";
+  if (name.EqualTo("ggH")) result = "sampleName_ggH";
+  else if (name.EqualTo("VBF")) result = "sampleName_VBF";
+  else if (name.EqualTo("WH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_WH/data-outputLabel/sample.root";
+  else if (name.EqualTo("ZH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_ZH/data-outputLabel/sample.root";
+  else if (name.EqualTo("ttH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_ttH/data-outputLabel/sample.root";
+  else if (name.EqualTo("bbH")) result = "sampleName_bbH";
+  else std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+  return result;
+}
 
+TString nameToFileList(TString name) {
+  TString result = Form("%s/FileLists/",masterInput.Data());
+  if (name.EqualTo("ggH")) result += "fileList_ggH.txt";
+  else if (name.EqualTo("VBF")) result += "fileList_VBF.txt";
+  else if (name.EqualTo("WH")) result += "fileList_WH.txt";
+  else if (name.EqualTo("ZH")) result += "fileList_ZH.txt";
+  else if (name.EqualTo("ttH")) result += "fileList_ttH.txt";
+  else if (name.EqualTo("bbH")) result += "fileList_bbH.txt";
+  else std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+  return result;
+}
 
 ////////////////////////////////////////
-// SCRIPT LOCATIONS
+//          SCRIPT LOCATIONS          //
 ////////////////////////////////////////
 
-// Various job scripts:
 //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
 //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";

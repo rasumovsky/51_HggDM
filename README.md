@@ -15,14 +15,8 @@ General analysis strategy:
      6) pseudoexperiment ensemble generation and analysis 
      7) CLs and p0 calculators
      
-OPEN ISSUES 22/03/2015: 
-     * DMMassPoints only compiles on lxplus (not OSX Yosemite...). Why?
-               
-     * DMSigParam - need to choose RooRealVar ranges for fits. Also, need to
-     consider using modified mass variable to prevent errors in the matrix used
-     for the fit.
-
 NOTES 24/03/2015:
+
       Need to think more about handling communication between analysis classes.
       For example, should DMSigParam have its own instance of DMMassPoints, or
       should DMMaster pass a reference during initialization? Same issue will 
@@ -33,7 +27,14 @@ NOTES 24/03/2015:
       just because it is less cumbersome. 
 
       
-      
+OPEN ISSUES 22/03/2015: 
+
+     * DMMassPoints only compiles on lxplus (not OSX Yosemite...). Why?
+               
+     * DMSigParam - need to choose RooRealVar ranges for fits. Also, need to
+       consider using modified mass variable to prevent errors in the matrix	
+       used for the fit.
+
 
 Analysis Header:
 

@@ -39,13 +39,11 @@ class DMSigParam
   
  public:
   
-  DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions);
-  DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions, RooRealVar *newObservable);
-  DMSigParam(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions, RooRealVar *newObservable, 
-	     RooCategory *newCategories);
+  DMSigParam(TString newJobName, TString newCateScheme, TString newOptions);
+  DMSigParam(TString newJobName, TString newCateScheme, TString newOptions, 
+	     RooRealVar *newObservable);
+  DMSigParam(TString newJobName, TString newCateScheme, TString newOptions,
+	     RooRealVar *newObservable, RooCategory *newCategories);
   virtual ~DMSigParam() {};
   
   // Accessors:

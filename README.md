@@ -15,6 +15,12 @@ General analysis strategy:
      6) pseudoexperiment ensemble generation and analysis 
      7) CLs and p0 calculators
      
+NOTES 03/04/2015:
+
+      The "FromFile" option should be modified. First, the program looks for the
+      desired file. If it exists, open. Otherwise, call the 'createNew' method.
+
+
 NOTES 24/03/2015:
 
       Need to think more about handling communication between analysis classes.

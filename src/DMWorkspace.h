@@ -40,7 +40,7 @@ class DMWorkspace
   
   void backgroundPdfBuilder(RooWorkspace *&w, RooArgSet *&nuispara,
 		       TString channelname);
-  RooWorkspace* newChannelWS(TString channelName);
+  RooWorkspace* newCategoryWS(TString channelName);
   void createNewWS();
   void loadWSFromFile();
   
@@ -62,10 +62,19 @@ class DMWorkspace
   TString options;
   
   TString outputDir;
-
-  ESSReader *ess_tool;
-  ResReader* res_tool;
-
+  
+  // Helper classes:
+  DMEvtSelect *selector;
+  DMSigParam *sigParam;
+  DMMassPoints *massPoints;
+  DMBkgModel *bkgModel;
+  //ESSReader *ess_tool;
+  //ResReader* res_tool;
+  
+  // The RooWorkspace and ModelConfig:
+  RooWorkspace* combination;
+  ModelConfig *mconfig;
+  
 };
 
 #endif

@@ -34,8 +34,6 @@
 #include "DMHeader.h"
 #include "DMTree.h"
 
-//using namespace CommonFunc;
-
 class DMMassPoints 
 {
   

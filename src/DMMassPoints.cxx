@@ -2,7 +2,7 @@
 //                                                                            //
 //  Name: DMMassPoints.cxx                                                    //
 //                                                                            //
-//  Created: Andrew Hard                                                      //
+//  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
 //  Date: 10/03/2015                                                          //
 //                                                                            //
@@ -186,7 +186,7 @@ void DMMassPoints::createNewMassPoints() {
   //DMTree *dmt = new DMTree(myTree);
   
   // Alternative: use file list:
-  TString listname = nameToFileList(sampleName);
+  TString listName = nameToFileList(sampleName);
   TChain *chain = MakeChain("", listName, "badfile");
   DMTree *dmt = new DMTree(chain);
   

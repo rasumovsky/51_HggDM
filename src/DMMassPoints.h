@@ -27,11 +27,14 @@
 #include "TString.h"
 
 // Package includes:
+#include "CommonFunc.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "DMEvtSelect.h"
 #include "DMHeader.h"
 #include "DMTree.h"
+
+//using namespace CommonFunc;
 
 class DMMassPoints 
 {

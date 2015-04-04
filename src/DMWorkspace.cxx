@@ -758,6 +758,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 ///////////////////////////////////////////////////////////////////////////////
 ////////// signalPdfBuilder:
 
+/**
+   Need to figure out the best interface method for the SigParam class. 
+*/
 void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vector<TString> parNamesESS, vector<TString> parNamesRes, TString procname )
 {
   //----------------------------------------//
@@ -815,6 +818,8 @@ void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vect
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ////////// backgroundPdfBuilder:
+
+// Also need to figure out how to interface with BkgModel class. Probably need to pass it the workspace. 
 
 //void DMWorkspace::backgroundPdfBuilder( RooWorkspace *&w, RooArgSet *&nuispara, TString currCateName )
 void DMWorkspace::backgroundPdfBuilder(RooArgSet *nuisParams) {

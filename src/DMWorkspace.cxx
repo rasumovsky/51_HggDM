@@ -71,9 +71,11 @@ void DMWorkspace::createNewWS() {
   std::cout << "  Number of categories = " << nCategories << std::endl;
   
   vector<TString> cateNames; cateNames.clear();
+  vector<string> cateNamesS; cateNamesS.clear();
   for (int i_c = 0; i_c < nCategories; i_c++) {
-    TString currCateName = Form("%s_%d",newCateScheme.Data(),i_c);
+    currCateName = Form("%s_%d",newCateScheme.Data(),i_c);
     cateNames.push_back(currCateName);
+    cateNamesS.push_back((string)currCateName);
     std::cout << "  \t" << currCateName << std::endl;
   }
   std::cout << "Luminosity at 13 TeV:" << analysisLuminosity << std::endl;
@@ -84,21 +86,18 @@ void DMWorkspace::createNewWS() {
   //ess_tool = new ESSReader( file_name_ESS_values, nCategories);
   //res_tool = new ResReader( file_name_Res_values, nCategories);
   //ss_tool  = new SigShapeReader( file_name_SS_values, nCategories);
-  sigParam = new DMSigParam(jobName, cateScheme, "FromFile");
-  massPoints = new DMMassPoints(jobName, "data", cateScheme, "FromFile");
   
   //--------------------------------------//
   // Initialize classes relevant to workspace:
   // Everything for simultaneous fit:
-  vector<string> catName;
   RooWorkspace* cateWS[nCategories];
   RooCategory* categories = new RooCategory(Form("categories_%s",
 						 newCateScheme.Data()),
 					    Form("categories_%s",
 						 newCateScheme.Data()));
   
-  combination = new RooWorkspace("combination");
-  combination->importClassCode();
+  combinedWS = new RooWorkspace("combinedWS");
+  combinedWS->importClassCode();
   RooSimultaneous combinedPdf("combinedPdf","",*categories);
   
   // Parameter sets:
@@ -117,8 +116,11 @@ void DMWorkspace::createNewWS() {
   std::cout << "DMWorkspace: Loop over categories to define WS" << std::endl;
   for (int i_c = 0; i_c < nCategories; i_c++) {
     
-    cateWS[i_c] = newCategoryWS(cateNames[i_c]);
-    
+    currCateIdex = i_c;
+    currCateName = cateNames[i_c];
+
+    // Create the workspace for a single category:
+    cateWS[i_c] = createNewCategoryWS();
     categories->defineType(cateNames[i_c]);
     
     // Add PDF and parameters from category to global collections:
@@ -128,17 +130,17 @@ void DMWorkspace::createNewWS() {
     observables->add(*cateWS[i_c]->set("observables"));
     
     // Retrieve the datasets produced for each category:
-    dataMap[catName[i_c]] = (RooDataSet*)w[i_c]->data("obsData");
-    dataMapBinned[catName[i_c]] = (RooDataSet*)w[i_c]->data("obsDataBinned");
-    dataMapAsimov[catName[i_c]] = (RooDataSet*)w[i_c]->data("asimovBinned");
+    dataMap[cateNamesS[i_c]] = (RooDataSet*)w[i_c]->data("obsData");
+    dataMapBinned[cateNamesS[i_c]] = (RooDataSet*)w[i_c]->data("obsDataBinned");
+    dataMapAsimov[cateNamesS[i_c]] = (RooDataSet*)w[i_c]->data("asimovBinned");
   }
   
   // Import PDFs and parameters to combined workspace:
-  combination->import(combinedPdf);
-  combination->defineSet("nuisanceParameters",*nuisanceParameters);
-  combination->defineSet("observables",*observables);
-  combination->defineSet("globalObservables",*globalObservables);
-  combination->defineSet("poi",RooArgSet(*combination->var("mu")));   
+  combinedWS->import(combinedPdf);
+  combinedWS->defineSet("nuisanceParameters",*nuisanceParameters);
+  combinedWS->defineSet("observables",*observables);
+  combinedWS->defineSet("globalObservables",*globalObservables);
+  combinedWS->defineSet("poi",RooArgSet(*combinedWS->var("mu")));   
   
   RooRealVar wt("wt","wt",1);
   RooArgSet *args = new RooArgSet();
@@ -156,18 +158,18 @@ void DMWorkspace::createNewWS() {
 					  *args, Index(*categories), 
 					  Import(dataMapAsimov), WeightVar(wt));
  
-  combination->import(*obsData);
-  combination->import(*obsDataBinned);
-  combination->import(*asimovData);
+  combinedWS->import(*obsData);
+  combinedWS->import(*obsDataBinned);
+  combinedWS->import(*asimovData);
   
   // Define the ModelConfig:
-  mconfig = new ModelConfig("mconfig",combination);
-  mconfig->SetPdf(*combination->pdf("combinedPdf"));
-  mconfig->SetObservables(*combination->set("observables"));
-  mconfig->SetParametersOfInterest((*combination->set("poi")));
-  mconfig->SetNuisanceParameters((*combination->set("nuisanceParameters")));
-  mconfig->SetGlobalObservables((*combination->set("globalObservables")));
-  combination->import(*mconfig);
+  mconfig = new ModelConfig("mconfig",combinedWS);
+  mconfig->SetPdf(*combinedWS->pdf("combinedPdf"));
+  mconfig->SetObservables(*combinedWS->set("observables"));
+  mconfig->SetParametersOfInterest((*combinedWS->set("poi")));
+  mconfig->SetNuisanceParameters((*combinedWS->set("nuisanceParameters")));
+  mconfig->SetGlobalObservables((*combinedWS->set("globalObservables")));
+  combinedWS->import(*mconfig);
   
   // Start profiling the data:
   cout << "Start profiling data" << endl;
@@ -177,7 +179,7 @@ void DMWorkspace::createNewWS() {
   RooArgSet* globs = (RooArgSet*)mconfig->GetGlobalObservables();
   poiAndNuis->add(*poi);
   poiAndNuis->Print();
-  combination->saveSnapshot("paramsOrigin",*poiAndNuis);
+  combinedWS->saveSnapshot("paramsOrigin",*poiAndNuis);
   RooAbsPdf *pdf = mconfig->GetPdf();
   
   can = new TCanvas("can","can",800,800);
@@ -191,11 +193,11 @@ void DMWorkspace::createNewWS() {
   poi->setConstant(true);
   RooFitResult* resMu1;
   if (options.Contains("fitasimov")) {
-    resMu1 = pdf->fitTo(*combination->data("asimovMu1"), PrintLevel(0),
+    resMu1 = pdf->fitTo(*combinedWS->data("asimovMu1"), PrintLevel(0),
 			Save(true));
   }
   else {
-    resMu1 = pdf->fitTo(*combination->data("obsData"), PrintLevel(0),
+    resMu1 = pdf->fitTo(*combinedWS->data("obsData"), PrintLevel(0),
 			Save(true));
   }
   
@@ -203,36 +205,36 @@ void DMWorkspace::createNewWS() {
   if (resMu1->status() != 0) AllGoodFits = false;
   
   double nllMu1 = resMu1->minNll();
-  combination->saveSnapshot("paramsProfileMu1",*poiAndNuis);
+  combinedWS->saveSnapshot("paramsProfileMu1",*poiAndNuis);
   
   // Plots of invariant mass and nuisance parameters:
   if (!option.Contains("noplot")) {
     if (options.Contains("fitasimov")) {
-      PlotFinalFits(combination,"asimovMu1","mu1");
+      PlotFinalFits(combinedWS,"asimovMu1","mu1");
     }
     else {
-      PlotFinalFits(combination,"obsData","mu1");
+      PlotFinalFits(combinedWS,"obsData","mu1");
     }
     if (!options.Contains("nosys")) {
-      PlotNuisParams(*combination->set("ModelConfig_NuisParams"), "mu1");
+      PlotNuisParams(*combinedWS->set("ModelConfig_NuisParams"), "mu1");
     }
   }
   
   //----------------------------------------//
   // Profile and save snapshot for mu=0 fixed:
   std::cout << "\nProfile mu = 0:" << std::endl;
-  combination->loadSnapshot("paramsOrigin");
+  combinedWS->loadSnapshot("paramsOrigin");
   statistics::constSet(poiAndNuis, false);
   statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(true);
   RooFitResult* resMu0;
   if (options.Contains("fitasimov")) {
-    resMu0 = pdf->fitTo(*combination->data("asimovMu1"), PrintLevel(0),
+    resMu0 = pdf->fitTo(*combinedWS->data("asimovMu1"), PrintLevel(0),
 			Save(true));
   }
   else {
-    resMu0 = pdf->fitTo(*combination->data("obsData"), PrintLevel(0),
+    resMu0 = pdf->fitTo(*combinedWS->data("obsData"), PrintLevel(0),
 			Save(true));
   }
   
@@ -240,36 +242,36 @@ void DMWorkspace::createNewWS() {
   if (resMu0->status() != 0) AllGoodFits = false;
   
   double nllMu0 = resMu0->minNll();
-  combination->saveSnapshot("paramsProfileMu0",*poiAndNuis);
+  combinedWS->saveSnapshot("paramsProfileMu0",*poiAndNuis);
 
   // Plots of invariant mass and nuisance parameters:
   if (!options.Contains("noplot")) {
     if (options.Contains("fitasimov")) {
-      PlotFinalFits(combination, "asimovMu1", "mu0");
+      PlotFinalFits(combinedWS, "asimovMu1", "mu0");
     }
     else {
-      PlotFinalFits(combination, "obsData", "mu0");
+      PlotFinalFits(combinedWS, "obsData", "mu0");
     }
     if (!options.Contains("nosys")) {
-      PlotNuisParams(*combination->set("ModelConfig_NuisParams"), "mu0");
+      PlotNuisParams(*combinedWS->set("ModelConfig_NuisParams"), "mu0");
     }
   }
   
   //----------------------------------------//
   // Profile and save snapshot for mu floating:
   std::cout << "\nProfile mu floating:" << std::endl;
-  combination->loadSnapshot("paramsOrigin");
+  combinedWS->loadSnapshot("paramsOrigin");
   statistics::constSet(poiAndNuis, false);
   statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(false);
   RooFitResult* resMuFree;
   if (options.Contains("fitasimov")) {
-    resMuFree = pdf->fitTo(*combination->data("asimovMu1"), PrintLevel(0),
+    resMuFree = pdf->fitTo(*combinedWS->data("asimovMu1"), PrintLevel(0),
 			    Save(true));
   }
   else {
-    resMuFree = pdf->fitTo(*combination->data("obsData"), PrintLevel(0), 
+    resMuFree = pdf->fitTo(*combinedWS->data("obsData"), PrintLevel(0), 
 			    Save(true));
   }
   
@@ -278,22 +280,22 @@ void DMWorkspace::createNewWS() {
   
   double nllMuFree = resMuFree->minNll();
   double profiledMuValue = poi->getVal();
-  combination->saveSnapshot("paramsProfile_muFree",*poiAndNuis);
+  combinedWS->saveSnapshot("paramsProfile_muFree",*poiAndNuis);
  
   // Plots of invariant mass and nuisance parameters:
   if (!option.Contains("noplot")) {
     if (option.Contains("fitasimov")) {
-      PlotFinalFits(combination, "asimovMu1", "mufree");
+      PlotFinalFits(combinedWS, "asimovMu1", "mufree");
     }
     else {
-      PlotFinalFits(combination, "obsData", "mufree");
+      PlotFinalFits(combinedWS, "obsData", "mufree");
     }
     if (!option.Contains("nosys")) {
-      PlotNuisParams(*combination->set("ModelConfig_NuisParams"), "mufree");
+      PlotNuisParams(*combinedWS->set("ModelConfig_NuisParams"), "mufree");
     }
   }
   
-  combination->loadSnapshot("paramsOrigin");
+  combinedWS->loadSnapshot("paramsOrigin");
   statistics::constSet(poiAndNuis, false);
   statistics::constSet(globs, true);
   
@@ -317,18 +319,18 @@ void DMWorkspace::createNewWS() {
   //file_muprof.close();
   
   // Write workspace to file:
-  combination->writeToFile(Form("%s/workspaceDM.root",outputDir.Data()));
+  combinedWS->writeToFile(Form("%s/workspaceDM.root",outputDir.Data()));
 }
 
 /**
    Create the workspace for a single analysis category.
    @param currCategory
 */
-RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
+RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // The bools that control the systematic uncertainties:
-  bool inclusive = currCategory == "inclusive";
-  bool channel_constraints_attached = (currCategory == leadingchannel);
+  bool inclusive = currCateName == "inclusive";
+  bool channel_constraints_attached = (currCateName == leadingchannel);
   bool m_norm = !options.Contains("nonorm");
   bool m_ess = !options.Contains("noess");
   bool m_res = !options.Contains("nores");
@@ -354,7 +356,7 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
   
   //--------------------------------------//
   // Create the individual channel workspace:
-  RooWorkspace* currWS = new RooWorkspace(currCategory);
+  currWS = new RooWorkspace(currCateName);
   
   // nuispara:
   RooArgSet *nuisParams = new RooArgSet();
@@ -373,21 +375,16 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
   RooArgSet *globalObsProc = new RooArgSet();
   // expected:
   RooArgSet *expected = new RooArgSet();
-  RooArgSet *expected_spin0p = new RooArgSet();
-  RooArgSet *expected_spin2p = new RooArgSet();
-  RooArgSet *expected_shape = new RooArgSet();
-  RooArgSet *expected_bias = new RooArgSet();
-  RooArgSet *expected_proc_ggF = new RooArgSet();
-  RooArgSet *expected_non_ggF = new RooArgSet();
-  RooArgSet *expected_proc_VHttH = new RooArgSet();
-  RooArgSet *expected_proc_VBF = new RooArgSet();
-  RooArgSet *expected_proc_WH = new RooArgSet();
-  RooArgSet *expected_proc_ZH = new RooArgSet();
-  RooArgSet *expected_proc_ttH = new RooArgSet();
-  
-  // an energy-dependent index, 0 inclusive, 1-11 categories:
-  int cateIndex = CatNameToBinNumber(currCategory);
-  
+  RooArgSet *expectedSM = new RooArgSet();
+  RooArgSet *expectedDM = new RooArgSet();
+  RooArgSet *expectedShape = new RooArgSet();
+  RooArgSet *expectedBias = new RooArgSet();
+  RooArgSet *expectedProc_ggF = new RooArgSet();
+  RooArgSet *expectedProc_VBF = new RooArgSet();
+  RooArgSet *expectedProc_WH = new RooArgSet();
+  RooArgSet *expectedProc_ZH = new RooArgSet();
+  RooArgSet *expectedProc_ttH = new RooArgSet();
+    
   // array setup[5] is used to configure a nuisance parameter
   // [0]    [1]       [2]   [3]      [4]
   // sigma, sigmalow, beta, nominal, nonATLAS
@@ -416,22 +413,21 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
   // Migration systematics:
   /*
   if (m_mig) {
-    int bin_index = CatNameToBinNumber( currCategory );
     int number_SS_sources = ss_tool->GetNumberOfSources(energy);
     // loop over ss sources.
     for( int i_s = 0; i_s < number_SS_sources; i_s++ )
     {
       TString current_SS_source_name = ss_tool->GetNameOfSource( i_s, energy );
       TString ss_np_name = Form("shape_%s",current_SS_source_name.Data());
-      double current_ss_value = ss_tool->GetValue( current_SS_source_name, bin_index, energy );
-      int current_ss_sign = ss_tool->GetSign( current_SS_source_name, bin_index, energy );
+      double current_ss_value = ss_tool->GetValue( current_SS_source_name, currCateIndex, energy );
+      int current_ss_sign = ss_tool->GetSign( current_SS_source_name, currCateIndex, energy );
       
       // Asymmetric migration uncertainties:
       double setup_ss_current[5] = {current_ss_value, 0, current_ss_sign, 1, 1};
       if( current_SS_source_name.Contains("_up") )
       {
 	TString current_SS_source_name_down = ss_tool->GetNameOfSource( i_s+1, energy );
-	double current_ss_value_down = ss_tool->GetValue( current_SS_source_name_down, bin_index, energy );
+	double current_ss_value_down = ss_tool->GetValue( current_SS_source_name_down, currCateIndex, energy );
 	setup_ss_current[1] = current_ss_value_down;
 	ss_np_name.ReplaceAll("_up","");
       }
@@ -447,18 +443,17 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
   //--------------------------------------//
   // SYSTEMATICS: Spurious signal
   if (m_bgm) {
-    double ss_events = spurious_signal(currCategory);
+    double ss_events = spurious_signal(currCateName);
     double setup_bias[5] = {ss_events, -999, 1, 0, 1}; //Gaussian constraint
-    NPmaker("bias", setup_bias, *&nuisParamsUncorrelated, *&constraints_bias,
-	    *&globalObs, *&expected_bias);
+    NPmaker("bias", setup_bias, *&nuisParamsUncorrelated, *&constraintsBias,
+	    *&globalObs, *&expectedBias);
   }
-  else currWS->factory("atlas_expected_bias[0]");
+  else currWS->factory("expectedBias[0]");
   
   //--------------------------------------//
   // SYSTEMATICS: Resolution:
   vector<TString> resList; resList.clear();
   if (m_res) {
-  
     double setup_AllRes[5] = {0.0, 0, 1, 1, 1};
     
     // Loop over sources of resolution systematic uncertainty:
@@ -466,12 +461,12 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
       TString currResSource = res_tool->GetNameOfSource(i_s);
       TString currResName = Form("EM_%s",currResSource.Data());
       resList.push_back(currResName);
-      setupRes[0] = res_tool->GetValue(currResSource, cateIndex);
-      setupRes[2] = res_tool->GetSign(currResSource, cateIndex);
+      setupRes[0] = res_tool->GetValue(currResSource, currCateIndex);
+      setupRes[2] = res_tool->GetSign(currResSource, currCateIndex);
       
       // resolution on the inclusive shape:
       shapeNPmaker(currResName, "_inc", setupRes, *&nuisParams, *&constraints,
-		   *&globalObs, *&expected_shape);
+		   *&globalObs, *&expectedShape);
     }
   }
   
@@ -487,375 +482,319 @@ RooWorkspace* DMWorkspace::newChannelWS(TString currCategory) {
       TString currESSSource = ess_tool->GetNameOfSource(i_s);
       TString currESSName = Form("EM_%s",currESSSource.Data());
       essList.push_back(currESSName);
-      setupESS[0] = ess_tool->GetValue(currESSSource, cateIndex);
-      setupESS[2] = ess_tool->GetSign(currESSSource, cateIndex);
+      setupESS[0] = ess_tool->GetValue(currESSSource, currCateIndex);
+      setupESS[2] = ess_tool->GetSign(currESSSource, currCateIndex);
       NPmaker(currESSName, setupESS, *&nuisParams, *&constraints, *&globalObs,
-	      *&expected_shape);
+	      *&expectedShape);
     }
   }
   
   //--------------------------------------//
   // Parameters of interest (POIs):
-  RooRealVar *mu = new RooRealVar("mu","mu",1,-100,100);
+  //RooRealVar *mu_DM = new RooRealVar("mu_DM","mu_DM",1,-100,100);
+  //RooRealVar *mu_SM = new RooRealVar("mu_SM","mu_SM",1,-100,100);
   RooRealVar *mu_BR_gg = new RooRealVar("mu_BR_gg","mu_BR_gg",1,-100,100);
   RooRealVar *mu_ggF = new RooRealVar("mu_ggF","mu_ggF",1,-100,100);
   RooRealVar *mu_VBF = new RooRealVar("mu_VBF","mu_VBF",1,-100,100);
   RooRealVar *mu_WH = new RooRealVar("mu_WH","mu_WH",1,-100,100);
   RooRealVar *mu_ZH = new RooRealVar("mu_ZH","mu_ZH",1,-100,100);
-  RooRealVar *mu_VH = new RooRealVar("mu_VH","mu_VH",1,-100,100);
-  RooRealVar *mu_tH = new RooRealVar("mu_tH","mu_tH",1,-100,100);
   RooRealVar *mu_ttH = new RooRealVar("mu_ttH","mu_ttH",1,-100,100);
-  RooRealVar *mu_VBFVH = new RooRealVar("mu_VBFVH","mu_VBFVH",1,-100,100);
-  expected->add(RooArgSet(*mu, *mu_BR_gg));
-  expected_proc_ggF->add(RooArgSet(*mu_ggF, *mu_tH));
-  expected_proc_VBF->add(RooArgSet(*mu_VBF, *mu_VBFVH));
-  expected_proc_WH->add(RooArgSet(*mu_WH, *mu_VH, *mu_VBFVH));
-  expected_proc_ZH->add(RooArgSet(*mu_ZH, *mu_VH, *mu_VBFVH));
-  expected_proc_ttH->add(RooArgSet(*mu_ttH, *mu_tH));
+  //expected->add(RooArgSet(*mu, *mu_BR_gg));NO
+  expectedSM->add(RooArgSet(*mu_SM, *mu_BR_gg));
+  expectedDM->add(RooArgSet(*mu_DM, *mu_BR_gg));
+  expectedProc_ggF->add(RooArgSet(*mu_ggF));
+  expectedProc_VBF->add(RooArgSet(*mu_VBF));
+  expectedProc_WH->add(RooArgSet(*mu_WH));
+  expectedProc_ZH->add(RooArgSet(*mu_ZH));
+  expectedProc_ttH->add(RooArgSet(*mu_ttH));
   
   // Expectation values:
-  RooProduct expectation_proc_VHttH("expectation_proc_VHttH",
-				    "expectation_proc_VHttH",
-				    *expected_proc_VHttH);
-  RooProduct expectation_common("expectation_common","expectation_common",
-				*expected);
-  RooProduct expectation_spin0p("expectation_spin0p","expectation_spin0p",
-				*expected_spin0p);
-  RooProduct expectation_spin2p("expectation_spin2p","expectation_spin2p",
-				*expected_spin2p);
-  RooProduct expectation_proc_ggF("expectation_proc_ggF","expectation_proc_ggF",
-				  *expected_proc_ggF);
-  RooProduct expectation_proc_VBF("expectation_proc_VBF","expectation_proc_VBF",
-				  *expected_proc_VBF);
-  RooProduct expectation_proc_WH("expectation_proc_WH","expectation_proc_WH",
-				 *expected_proc_WH);
-  RooProduct expectation_proc_ZH("expectation_proc_ZH","expectation_proc_ZH",
-				 *expected_proc_ZH);
-  RooProduct expectation_proc_ttH("expectation_proc_ttH","expectation_proc_ttH",
-				  *expected_proc_ttH);
+  RooProduct expectationSM("expectationSM","expectationSM", *expectedSM);
+  RooProduct expectationDM("expectationDM","expectationDM", *expectedDM);
+  RooProduct expectationCommon("expectationCommon","expectationCommon",
+			       *expected);
+  RooProduct expectationProc_ggF("expectationProc_ggF","expectationProc_ggF",
+				 *expectedProc_ggF);
+  RooProduct expectationProc_VBF("expectationProc_VBF","expectationProc_VBF",
+				 *expectedProc_VBF);
+  RooProduct expectationProc_WH("expectationProc_WH","expectationProc_WH",
+				*expectedProc_WH);
+  RooProduct expectationProc_ZH("expectationProc_ZH","expectationProc_ZH",
+				*expectedProc_ZH);
+  RooProduct expectationProc_ttH("expectationProc_ttH","expectationProc_ttH",
+				 *expectedProc_ttH);
   
   // Spurious signal term will assume the shape of "inclusive" pdf.
-  currWS->import(expectation_proc_VHttH);
-  currWS->import(expectation_common);
-  //currWS->import(expectation_spin0p);
-  //currWS->import(expectation_spin2p);
-  currWS->import(expectation_proc_ggF);
-  currWS->import(expectation_proc_VBF);
-  currWS->import(expectation_proc_WH);
-  currWS->import(expectation_proc_ZH);
-  currWS->import(expectation_proc_ttH);
-  
-  currWS->import(*expected_shape);
-  currWS->import(*expected_bias);
+  currWS->import(expectationSM);
+  currWS->import(expectationDM);
+  currWS->import(expectationCommon);
+  currWS->import(expectationProc_ggF);
+  currWS->import(expectationProc_VBF);
+  currWS->import(expectationProc_WH);
+  currWS->import(expectationProc_ZH);
+  currWS->import(expectationProc_ttH);
+  currWS->import(*expectedShape);
+  currWS->import(*expectedBias);
   
   // Declare the observable m_yy, and the observables set:
   currWS->factory(Form("m_yy[%f,%f]",DMMyyRangeLo,DMMyyRangeHi));
   currWS->defineSet("observables","m_yy");
   
-  // Set the observables for the various input classes:
-  sigParam->setMassObservable(currWS->("m_yy"));
-  massPoints->setMassObservable(currWS->var("m_yy"));
-  bkgModel->setMassObservable(currWS->var("m_yy"));
+  // Instantiate the signal parameterization class using the observable:
+  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile",
+				currWS->var("m_yy"));
+  // Construct the signal PDF:
+  signalPdfBuilder(essList, resList, "SM");
+  signalPdfBuilder(essList, resList, "DM");
+  signalPdfBuilder(essList, resList, "Inc");
   
-  ////////
-  ////////
-  // Construct the signal and background PDFs:
-  currWS->factory("epsilon[0.5,0,1]");
-  currWS->factory("sum::epsilon_min_1(plusone[1.], prod::mineps(minusone[-1.],epsilon))");
-  signalPdfBuilder(*&currWS, essList, resList, "_inc");
-  backgroundPdfBuilder(*&currWS, *&nuisParamsBkg, currCategory);
+  // Instantiate the background parameterization class using the observable:
+  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile",
+				currWS->var("m_yy"));
+  // Construct the background PDF:
+  backgroundPdfBuilder(nuisParamsBkg, currCateName);
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
   
   // build the signal normalization
-  TString nSM_0p = Form("%f", value_0p[1]);
-  TString nSM_2p = Form("%f", value_2p[1]);
-  cout << "  nSM_0p for " << currCategory << " = " << nSM_0p << endl;
-  cout << "  nSM_2p for " << currCategory << " = " << nSM_2p << endl;
-  
+  TString nSM = Form("%f", currSigParam->getCateSigYield(currCateIndex,"SM"));
+  TString nDM = Form("%f", currSigParam->getCateSigYield(currCateIndex,"DM"));
+  std::cout << "\tnSM for " << currCateName << " = " << nSM << std::endl;
+  std::cout << "\tnDM for " << currCateName << " = " << nDM << std::endl;
   
   // Normalization for each process follows such pattern:
-  // mu*isEM*lumi*migr => expectation_common
-  w->factory((TString)"prod::atlas_nsig_spin0p(atlas_nSM_spin0p["+nSM_0p+(TString)"],expectation_common,expectation_spin0p,epsilon)");
-  w->factory((TString)"prod::atlas_nsig_spin2p(atlas_nSM_spin2p["+nSM_2p+(TString)"],expectation_common,expectation_spin2p,epsilon_min_1)");
-  w->factory("SUM::modelSB(atlas_nsig_spin0p*signalPdf_spin0p,atlas_nsig_spin2p*signalPdf_spin2p,atlas_expected_bias*signalPdf_inc,atlas_nbkg*bkgPdf)");
+  // mu*isEM*lumi*migr => expectationCommon
+  w->factory((TString)"prod::nSigSM(nSM["+nDM+(TString)"],expectationCommon,expectationSM)");
+  w->factory((TString)"prod::nSigDM(nDM["+nSM_2p+(TString)"],expectationCommon,expectationDM)");
+  w->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
   w->Print();
   
-    
-  if( currCategory == leadingchannel )
-  {
+  // Only attach constraint term to first category. If constraint terms were
+  // attached to each category, constraints would effectively be multiplied.
+  if (currCateIndex == 0) {
     constraints->add(*constraints_bias);
-    RooProdPdf constraint( "constraint", "constraint", *constraints );
+    RooProdPdf constraint("constraint", "constraint", *constraints);
     w->import(constraint);
     w->factory("PROD::model(modelSB,constraint)");
   }
-  else
-  {
-    RooProdPdf constraint( "constraint", "constraint", *constraints_bias );
+  // Except in the case where the constraints are uncorrelated between
+  // categories, as with the spurious signal:
+  else {
+    RooProdPdf constraint("constraint","constraint",*constraintsBias);
     w->import(constraint);
     w->factory("PROD::model(modelSB,constraint)");
   }
   
-  // Specify the group of nuisance parameters that are correlated between sub-channels.
-  // Technically, this is done by sharing the same name for nuisance parameter between sub-channels.
-  // Their respective global observables should also share the same name.
-  // nuispara should contain all correlated nuisance parameters.
-  // all uncorrelated nuisance parameters should be included in nuisParamsUncorrelated.
-  TString correlated;
-  
-  if( m_decorr_mu ) correlated = "epsilon";
-  else
-  {
-    if( currCategory.Contains("8TeV") ) correlated = "mu_8TeV,epsilon,mu_BR_gg_8TeV";
-    else correlated = "mu_7TeV,epsilon,mu_BR_gg_7TeV";
-  }
+  /*
+    Specify the group of nuisance parameters that are correlated between
+    categories. Technically, this is done by sharing the same name for nuisance
+    parameter between sub-channels. Their respective global observables should
+    also share the same name. nuisParams should contain all correlated nuisance
+    parameters. All uncorrelated nuisance parameters should be included in
+    nuisParamsUncorrelated.
+  */
+  TString corrNPNames = "mu_DM,mu_SM,mu_BR_gg";
   
   // Iterate over nuisance parameters:
-  TIterator *iter_nui = nuispara->createIterator();
-  RooRealVar* parg_nui = NULL;
-  while( (parg_nui=(RooRealVar*)iter_nui->Next()) )
-  {
-    cout << parg_nui->GetName() << endl;
-    correlated = correlated +","+parg_nui->GetName()+",R_"+parg_nui->GetName();
+  TIterator *iterNuis = nuisParams->createIterator();
+  RooRealVar* currNuis;
+  while ((currNuis = (RooRealVar*)iterNuis->Next())) {
+    std::cout << "\t" << currNuis->GetName() << std::endl;
+    corrNPNames += ("," + currNuis->GetName() + ",R_" + currNuis->GetName());
   }
-  cout << " For channel " << currCategory << " the following variables will not be renamed : " << correlated << endl;
-  
-  // sub-channel labeling
-  // import the workspace w to another workspace and add currCategory as a suffix to all nodes and variables of w.
-  // the correlated nuisance parameters and their respective global observables will not be renamed.
-  RooWorkspace* wchannel = new RooWorkspace("wchannel"+currCategory);
-  wchannel->import( (*w->pdf("model")), RenameAllNodes(currCategory), RenameAllVariablesExcept(currCategory,correlated), Silence() );
+  std::cout << "For category " << currCateName
+	    << " the following variables will be correlated: "
+	    << corrNPNames << std::endl;
+  /*
+    Sub-channel labeling
+    Import the workspace currWS to another workspace and add currCateName as a 
+    suffix to all nodes and variables of w. the correlated nuisance parameters
+    and their respective global observables will not be renamed.
+  */
+  RooWorkspace* categoryWS = new RooWorkspace("workspace"+currCateName);
+  categoryWS->import( (*currWS->pdf("model")), RenameAllNodes(currCateName),
+		      RenameAllVariablesExcept(currCateName,corrNPNames),
+		      Silence());
   
   // Adding correlated nuisance parameters to nuisanceParameters:
-  //     From nuispara
-  RooArgSet* nuisance_wchannel = new RooArgSet();
-  iter_nui->Reset();
-  cout << " Adding correlated nuisance parameters to nuisanceParameters RooArgSet"<< endl;
-  while( (parg_nui=(RooRealVar*)iter_nui->Next()) )
-  {
-    cout << " Adding variable : " << parg_nui->GetName() << endl;
-    cout << (bool)wchannel->obj(parg_nui->GetName()) << endl;
-    nuisance_wchannel->add( *(RooRealVar*)wchannel->obj(parg_nui->GetName()) );
+  RooArgSet* nuisance_categoryWS = new RooArgSet();
+  iterNuis->Reset();
+  while ((currNuis = (RooRealVar*)iterNuis->Next())) {
+    nuisance_categoryWS->add(*(RooRealVar*)categoryWS->obj(currNuis->GetName()));
   }
   
   // Adding uncorrelated nuisance parameters to nuisanceParameters:
-  //   From nuisParamsUncorrelated:
-  cout << " Adding uncorrelated nuisance parameters to nuisanceParameters RooArgSet" << endl;
-  TIterator *iter_nui_uncorrelated = nuisParamsUncorrelated->createIterator();
-  RooRealVar* parg_nui_uncorrelated = NULL;
-  while( (parg_nui_uncorrelated = (RooRealVar*)iter_nui_uncorrelated->Next()) )
-  {
-    TString name_of_nuisance = parg_nui_uncorrelated->GetName()+(TString)"_"+currCategory;
-    nuisance_wchannel->add( *(RooRealVar*)wchannel->obj(name_of_nuisance) );
+  TIterator *iterNuisUncorrelated = nuisParamsUncorrelated->createIterator();
+  RooRealVar* currNuisUncorrelated;
+  while ((currNuisUncorrelated = (RooRealVar*)iterNuisUncorrelated->Next())) {
+    TString nuisName = (currNuisUncorrelated->GetName() 
+			+ (TString)"_" + currCateName);
+    nuisance_categoryWS->add(*(RooRealVar*)categoryWS->obj(currNuisName));
   }
   
-  // The following are nps from background pdf, which don't have constraints: 
-  //   From nuispara_bkg:
-  RooArgSet* nuispara_bkg_wchannel = new RooArgSet();
-  TIterator *iter_nui_bkg = nuispara_bkg->createIterator();
-  RooRealVar* parg_nui_bkg = NULL;
-  while( (parg_nui_bkg = (RooRealVar*)iter_nui_bkg->Next()) )
-  {
-    TString name_of_parameter = parg_nui_bkg->GetName()+(TString)"_"+currCategory;
-    nuispara_bkg_wchannel->add( *wchannel->var(name_of_parameter) );
+  // Adding unconstrained NPs from the background pdf:
+  RooArgSet* nuispara_bkg_categoryWS = new RooArgSet();
+  TIterator *iterNuisBkg = nuisParamsBkg->createIterator();
+  RooRealVar* currNuisBkg;
+  while ((currNuisBkg = (RooRealVar*)iterNuisBkg->Next())) {
+    TString parName = currNuisBkg->GetName()+(TString)"_"+currCateName;
+    nuispara_bkg_categoryWS->add(*categoryWS->var(parName));
   }
   
-  // Global observables:
-  // Global observables only appear in the constraint terms.
-  // All constraint terms of correlated nuisance parameters are attached to the pdf of the first subchannel.
-  // For those global observables, their names should be the same as those in the w.
-  // For other subchannels, only the bias constraint term is attached.
-  
-  RooArgSet *global_wchannel = new RooArgSet();
-  TIterator *iter_global = globobs->createIterator();
-  RooRealVar *parg_global;
-  while( (parg_global = (RooRealVar*)iter_global->Next()) )//&& (currCategory==channel_constraints_attached) )
-  {
-    TString name_of_global = parg_global->GetName()+(TString)"_"+currCategory;
-    cout << " Channel Name " << currCategory << " getting global observable " << parg_global->GetName() << endl;
+  /*
+    Global observables:
+    Global observables only appear in the constraint terms. All constraint terms
+    of correlated nuisance parameters are attached to the pdf of the first
+    subchannel. For those global observables, their names should be the same as
+    those in the w. For other subchannels, only the bias constraint term is
+    attached.
+  */  
+  RooArgSet *global_categoryWS = new RooArgSet();
+  TIterator *iterGlobs = globalObs->createIterator();
+  RooRealVar *currGlobs;
+  while ((currGlobs = (RooRealVar*)iterGlobs->Next())) {
     
-    if( (bool)wchannel->obj(name_of_global) == true )
-    {
-      global_wchannel->add( *(RooRealVar*)wchannel->obj(name_of_global) );
-      wchannel->var(name_of_global)->setConstant();
+    TString globName = currGlobs->GetName()+(TString)"_"+currCateName;
+    if ((bool)categoryWS->obj(globName)) {
+      global_categoryWS->add(*(RooRealVar*)categoryWS->obj(globName));
+      categoryWS->var(globName)->setConstant();
     }
-    else if( (bool)wchannel->obj(parg_global->GetName()) == true )
-    {
-      global_wchannel->add( *(RooRealVar*)wchannel->obj(parg_global->GetName()) );
-      wchannel->var(parg_global->GetName())->setConstant();
+    else if ((bool)categoryWS->obj(currGlobs->GetName())) {
+      global_categoryWS->add(*(RooRealVar*)categoryWS->obj(currGlobs->GetName()));
+      categoryWS->var(currGlobs->GetName())->setConstant();
     }
   }
   
-  RooArgSet *observable_wchannel = new RooArgSet();
-  TIterator *iter_observable = w->set("observables")->createIterator();
-  RooRealVar *parg_observable;
-  while( (parg_observable = (RooRealVar*)iter_observable->Next()) )
-  {
-    TString name_of_observable = parg_observable->GetName()+(TString)"_"+currCategory;
-    if( (bool)wchannel->obj(name_of_observable) == true )
-      observable_wchannel->add( *(RooRealVar*)wchannel->obj(name_of_observable) );
-    else
-      observable_wchannel->add( *(RooRealVar*)wchannel->obj(parg_observable->GetName()) );
+  RooArgSet *observable_categoryWS = new RooArgSet();
+  TIterator *iterObs = currWS->set("observables")->createIterator();
+  RooRealVar *currObs;
+  while (currObs = (RooRealVar*)iterObs->Next()) {
+    TString obsName = currObs->GetName()+(TString)"_"+currCateName;
+    if ((bool)categoryWS->obj(obsName)) {
+      observable_categoryWS->add(*(RooRealVar*)categoryWS->obj(obsName));
+    }
+    else {
+      observable_categoryWS->add(*(RooRealVar*)categoryWS->obj(currObs->GetName()));
+    }
   }
   
-  RooArgSet* muconstants_wchannel = new RooArgSet();
-  if( currCategory.Contains("7TeV") )
-  {
-    muconstants_wchannel->add(*wchannel->var("mu_ggF_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VBF_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_WH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_ZH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_ttH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_tH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VBFVH_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_muo_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_ele_7TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_BR_gg_7TeV"));
-  }
-  else if( currCategory.Contains("8TeV") )
-  {
-    muconstants_wchannel->add(*wchannel->var("mu_ggF_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VBF_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_WH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_ZH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_ttH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_tH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VBFVH_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_muo_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_VH_ele_8TeV"));
-    muconstants_wchannel->add(*wchannel->var("mu_BR_gg_8TeV"));
+  RooArgSet* muConstants_categoryWS = new RooArgSet();
+  muConstants_categoryWS->add(*categoryWS->var("mu_ggF"));
+  muConstants_categoryWS->add(*categoryWS->var("mu_VBF"));
+  muConstants_categoryWS->add(*categoryWS->var("mu_WH"));
+  muConstants_categoryWS->add(*categoryWS->var("mu_ZH"));
+  muConstants_categoryWS->add(*categoryWS->var("mu_ttH"));
+  muConstants_categoryWS->add(*categoryWS->var("mu_BR_gg"));
+  
+  TIterator *iterMuConst = muConstants_categoryWS->createIterator();
+  RooRealVar *currMuConst;
+  while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
+    currMuConst->setConstant();
   }
   
-  TIterator *iter_muconst = muconstants_wchannel->createIterator();
-  RooRealVar* parg_muconst;
-  while( (parg_muconst=(RooRealVar*)iter_muconst->Next()) )
-  {
-    parg_muconst->setConstant();
-  }
+  categoryWS->defineSet("muConstants", *muConstants_categoryWS);
+  categoryWS->defineSet("observables", *observable_categoryWS);
+  categoryWS->defineSet("nuisanceParameters", *nuisance_categoryWS);
+  categoryWS->defineSet("globalObservables", *global_categoryWS);
   
-  wchannel->defineSet("muConstants", *muconstants_wchannel);
-  wchannel->defineSet("observables", *observable_wchannel);
-  wchannel->defineSet("nuisanceParameters", *nuisance_wchannel);
-  wchannel->defineSet("globalObservables", *global_wchannel);
+  // Import the observed data set:
+  currMassPoints = new DMMassPoints(jobName, "obsData", cateScheme, "FromFile",
+				currWS->var("m_yy_"+currCateName));
+  RooDataSet *obsData = currMassPoints->getCateDataSet(currCateIndex);
+  obsData->SetNameTitle("obsData","obsData");
   
-  //--------------------------------------//
-  // Import data set and set up the background related nuisance parameter values
-  dataInputDir = Form("%s/%s/mass_points_%iTeV/",master_output.Data(),jobname.Data(),energy);
-  RooDataSet *obsdata = RooDataSet::read(dataInputDir+(TString)"mass_"+currCategory+(TString)".txt",RooArgList(*wchannel->var("atlas_invMass_"+currCategory)));
-  obsdata->SetNameTitle("obsdata","obsdata");
-  (*wchannel->var("atlas_nbkg_"+currCategory) ).setVal(obsdata->numEntries() );
-  (*wchannel->pdf("bkgPdf_"+currCategory)).fitTo( *obsdata, Minos(RooArgSet(*nuispara_bkg_wchannel ) ) );
-  (*wchannel->var("atlas_nbkg_"+currCategory) ).setVal(obsdata->numEntries() );
-  nuispara_bkg_wchannel->Print("v");
-  wchannel->import(*obsdata);
+  // Set the background normalization parameter:
+  (*categoryWS->var("nBkg_"+currCateName) ).setVal(obsdata->numEntries());
+  (*categoryWS->pdf("bkgPdf_"+currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuispara_bkg_categoryWS)));
+  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsdata->numEntries());
+  nuispara_bkg_categoryWS->Print("v");
+  categoryWS->import(*obsData);
   
-  //--------------------------------------//
-  // Create a binned data set:
+  // Create a binned observed data set:
   RooRealVar wt("wt","wt",1);
-  RooArgSet* obs_plus_wt = new RooArgSet();
-  obs_plus_wt->add(wt);
-  obs_plus_wt->add(*wchannel->var("atlas_invMass_"+currCategory));
+  RooArgSet* obsPlusWt = new RooArgSet();
+  obsPlusWt->add(wt);
+  obsPlusWt->add(*categoryWS->var("m_yy_"+currCateName));
   
-  // histogram to store binned data:
-  TH1F* h_data = new TH1F("h_data", "", 240, DMMyyRangeLo, DMMyyRangeHi );
-  RooArgSet* obs = (RooArgSet*)obsdata->get();
-  RooRealVar* xdata = (RooRealVar*)obs->find("atlas_invMass_"+currCategory);
-  for( int i = 0; i < obsdata->numEntries(); i++ )
-  {
-    obsdata->get(i);
-    h_data->Fill( xdata->getVal() );
+  // Create a histogram to store binned data:
+  TH1F* h_data = new TH1F("h_data", "h_data", 240, DMMyyRangeLo, DMMyyRangeHi);
+  RooArgSet* obsArgSet = (RooArgSet*)obsData->get();
+  RooRealVar* massVar = (RooRealVar*)obsArgSet->find("m_yy_"+currCateName);
+  for (int i_e = 0; i_e < obsData->numEntries(); i_e++) {
+    obsData->get(i_e);
+    h_data->Fill(massVar->getVal());
   }
-  // fill obsdatabinned dataset with binned data:
-  RooDataSet *obsdatabinned = new RooDataSet( "obsdatabinned", "obsdatabinned", *obs_plus_wt, WeightVar(wt) );
-  int nbin = h_data->GetNbinsX();
-  for( int ibin = 1; ibin < nbin; ibin++ )
-  {
+  
+  // Fill obsdatabinned dataset with binned data:
+  RooDataSet *obsdatabinned = new RooDataSet("obsDataBinned", "obsDataBinned",
+					     *obsPlusWt, WeightVar(wt));
+  int nBin = h_data->GetNbinsX();
+  for (int i_b = 1; i_b < nBin; i_b++) {
     // 240 bins -> 0.25 GeV per bin
-    double mass_val = h_data->GetBinCenter(ibin);
-    wchannel->var("atlas_invMass_"+currCategory)->setVal( mass_val );
-    double weight = h_data->GetBinContent(ibin);
-    wt.setVal(weight);
-    obsdatabinned->add( RooArgSet(*wchannel->var("atlas_invMass_"+currCategory), wt), weight );
-    mass_val += 0.25;
+    double massVal = h_data->GetBinCenter(i_b);
+    double weightVal = h_data->GetBinContent(i_b);
+    categoryWS->var("atlas_invMass_"+currCateName)->setVal(massVal);
+    wt.setVal(weightVal);
+    obsDataBinned->add(RooArgSet(*categoryWS->var("m_yy_"+currCateName),wt),
+		       weightVal);
   }
-  wchannel->import(*obsdatabinned);
+  categoryWS->import(*obsDataBinned);
   
-  //--------------------------------------//
-  // Create a binned Asimov dataset:
-  // Create Asimov spin 0+ data:
-  CreateAsimovData( currCategory, wchannel, obsdata, wt, DMMyyRangeLo, DMMyyRangeHi, 1, option );
-  // Create Asimov spin 2+ data:
-  CreateAsimovData( currCategory, wchannel, obsdata, wt, DMMyyRangeLo, DMMyyRangeHi, 0, option );
+  // Create Asimov mu DM = 1 data:
+  createAsimovData(currCateName, categoryWS, obsData, wt, 1);
+  // Create Asimov mu_DM = 0 data:
+  createAsimovData(currCateName, categoryWS, obsData, wt, 0);
   
   //--------------------------------------//
   // Plot the single-channel fit:
-  plotBackgroundOnlyFit( wchannel, currCategory );
+  plotFit(currCateName, categoryWS);
   
   delete h_data;
-  return wchannel;
+  return categoryWS;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-////////// readinput:
-
-vector<double> DMWorkspace::readinput( TString currCategory, TString signal_name )
-{
-  paramInputDir = Form("%s/%s/parameterization_%iTeV/FinalSignal/",master_output.Data(),jobName.Data(),CatNameToEnergy(currCategory));
-  TString SignalFileName = Form("%s/fitpars_%s_%s.txt",paramInputDir.Data(),currCategory.Data(),signal_name.Data());
-  cout << "Reading file " << SignalFileName.Data() << endl;
-  ifstream file_to_read(SignalFileName.Data(),ios::in);
-  assert(file_to_read);
-  double value[9];
-  while( !file_to_read.eof() )
-    file_to_read >> value[0] >> value[1] >> value[2] >> value[3] >> value[4] >> value[5] >> value[6] >> value[7] >> value[8];
-  file_to_read.close();
-  
-  // The signal yield we use now correspond to 1 fb-1. Scaling to current luminosity.
-  if( currCategory.Contains("7TeV") ) value[1] *= luminosity_7TeV;
-  else value[1] *= luminosity_8TeV;
-  
-  vector<double> result;
-  for( int i = 0; i < 9; i++ ) result.push_back(value[i]);
-  return result;
-}
-
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ////////// signalPdfBuilder:
 
-void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vector<TString> ess_parnames, vector<TString> res_parnames, TString procname )
+void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vector<TString> parNamesESS, vector<TString> parNamesRes, TString procname )
 {
   //----------------------------------------//
   // Create list of ess to multiply:
-  TString list_of_ess = "";
-  for( int i_e = 0; i_e < (int)ess_parnames.size(); i_e++ )
-  {
-    TString atlas_exp_name_ess = Form("atlas_expected_%s",ess_parnames[i_e].Data());
-    if( (bool)w->obj(atlas_exp_name_ess) != true ) w->factory(Form("%s[1]",atlas_exp_name_ess.Data()));
-  
-    if( i_e < ((int)ess_parnames.size()-1) ) list_of_ess.Append(Form("%s,",atlas_exp_name_ess.Data()));
-    else list_of_ess.Append(Form("%s",atlas_exp_name_ess.Data()));
+  TString listESS = "";
+  for (int i_e = 0; i_e < (int)parNamesESS.size(); i_e++) {
+    TString atlas_exp_name_ess = Form("atlas_expected_%s",parNamesESS[i_e].Data());
+    if (!(bool)w->obj(atlas_exp_name_ess)) {
+      w->factory(Form("%s[1]",atlas_exp_name_ess.Data()));
+    }
+    
+    if (i_e < ((int)parNamesESS.size()-1)) {
+      listESS.Append(Form("%s,",atlas_exp_name_ess.Data()));//added comma
+    }
+    else {
+      listESS.Append(Form("%s",atlas_exp_name_ess.Data()));
+    }
   }
+  
   //----------------------------------------//
   // Create list of res to multiply:
   // one important difference from ESS: it is atlas_expected_mRes+procname, where procname = _inc,...
-  TString list_of_res = "";
-  for( int i_r = 0; i_r < (int)res_parnames.size(); i_r++ )
-  {
-    TString atlas_exp_name_res = Form("atlas_expected_%s",res_parnames[i_r].Data());
+  TString listRes = "";
+  for (int i_r = 0; i_r < (int)parNamesRes.size(); i_r++) {
+    TString atlas_exp_name_res = Form("atlas_expected_%s",parNamesRes[i_r].Data());
     // fix this here:
-    if( (bool)w->obj(atlas_exp_name_res) != true ) w->factory(Form("%s%s[1]",atlas_exp_name_res.Data(),procname.Data()));
-    
-    if( i_r < ((int)res_parnames.size()-1) ) list_of_res.Append(Form("%s%s,",atlas_exp_name_res.Data(),procname.Data()));
-    else list_of_res.Append(Form("%s%s",atlas_exp_name_res.Data(),procname.Data()));
+    if (!(bool)w->obj(atlas_exp_name_res)) {
+      w->factory(Form("%s%s[1]",atlas_exp_name_res.Data(),procname.Data()));
+    }
+    if (i_r < ((int)parNamesRes.size()-1)) {
+      listRes.Append(Form("%s%s,",atlas_exp_name_res.Data(),procname.Data()));
+    }
+    else {
+      listRes.Append(Form("%s%s",atlas_exp_name_res.Data(),procname.Data()));
+    }
   }
   
-  cout << "Building a signal pdf " << endl;
   TString mHiggs = Form("%f", value[2]);
   TString mResVal = Form("%f", value[3]);
   TString tailAlpha = Form("%f", value[4]);
@@ -864,11 +803,11 @@ void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vect
   TString frac = Form("%f", value[8]);
 
   // Previous code before modifying resolution systematics:
-  //w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass , prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+list_of_ess+(TString)") , atlas_expected_mRes"+procname+(TString)", tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
-  //w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+list_of_ess+(TString)+"), prod::sigTail"+procname+(TString)"(atlas_expected_mRes"+procname+(TString)","+sigTail+"))");
+  //w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass , prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+listESS+(TString)") , atlas_expected_mRes"+procname+(TString)", tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
+  //w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+listESS+(TString)+"), prod::sigTail"+procname+(TString)"(atlas_expected_mRes"+procname+(TString)","+sigTail+"))");
   
-  w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass, prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+list_of_ess+(TString)"), prod::mRes"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+list_of_res+(TString)"), tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
-  w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+list_of_ess+(TString)+"), prod::sigTail"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+list_of_res+(TString)","+sigTail+"))");
+  w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass, prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+listESS+(TString)"), prod::mRes"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+listRes+(TString)"), tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
+  w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+listESS+(TString)+"), prod::sigTail"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+listRes+(TString)","+sigTail+"))");
   // the implementation of sigTail above scales the resolution of the CB component to that of the GA component.
   w->factory((TString)"SUM::signalPdf"+procname+(TString)"(frac"+procname+(TString)"["+frac+(TString)"]*peakPdf"+procname+(TString)",tailPdf"+procname+(TString)")");
 }
@@ -877,48 +816,35 @@ void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vect
 ///////////////////////////////////////////////////////////////////////////////
 ////////// backgroundPdfBuilder:
 
-void DMWorkspace::backgroundPdfBuilder( RooWorkspace *&w, RooArgSet *&nuispara, TString currCategory )
-{
-  int cate = CatNameToIndex( currCategory );
+//void DMWorkspace::backgroundPdfBuilder( RooWorkspace *&w, RooArgSet *&nuispara, TString currCateName )
+void DMWorkspace::backgroundPdfBuilder(RooArgSet *nuisParams) {
   
-  if( cate == 0 )
-  {
-    cout << "Building a 4th order Bernstein polynomials background model for category " << cate << endl;
-    w->factory((TString)"RooBernstein::bkgPdf(atlas_invMass,{pconst[1],p0[0.1,-10,10],p1[0.1,-10,10],p2[0.1,-10,10],p3[0.1,-10,10]})");
-    nuispara->add(*w->var("p0"));
-    nuispara->add(*w->var("p1"));
-    nuispara->add(*w->var("p2"));
-    nuispara->add(*w->var("p3"));
-  }
-  else if( ( cate >= 1 && cate <= 9 ) || ( cate >= 12 && cate <= 20 ) )// for first 9 cos(theta*) categories, 2nd order exponential poly works:
-  {
-    cout << "Building exponentiated 2nd order polynomial background model " << endl;
-    w->factory("EXPR::bkgPdf('exp(@1*(@0-100)/100.0+@2*(@0-100)*(@0-100)/10000.0 )',atlas_invMass, p0[-0.02,-500000.,-0.00005], p1[-0.25,-1000.5,1000.5])" );
-    nuispara->add(*w->var("p0"));
-    nuispara->add(*w->var("p1"));
-  }
-  else// simple exponential works fine
-  {
-    cout << "Building exponential background model " << endl;
-    w->factory("EXPR::bkgPdf('exp(@1*(@0-100)/100.0)',atlas_invMass, p0[-0.02,-500000.,-0.00005])" );
-    nuispara->add(*w->var("p0"));
-  }
+  RooAbsPdf *cateBkgPdf = DMBkgModel->getCateBkgPdf(currCateIndex);
+  currWS->add(cateBkgPdf);
+  // now add the associated parameters;
+  RooArgSet *cateBkgPdfArgs = DMBkgModel->getCateBkgPars(currCateIndex);
   
-  w->factory("atlas_nbkg[500,0,1000000]");
-  nuispara->add(*w->var("atlas_nbkg"));
+  // THE LINE BELOW MUST BE FIXED. Maybe get from currWS by name... 
+  nuisParams->add();
+  
+  //w->factory((TString)"RooBernstein::bkgPdf(m_yy,{pconst[1],p0[0.1,-10,10],p1[0.1,-10,10],p2[0.1,-10,10],p3[0.1,-10,10]})");
+  //nuisParams->add(*currWS->var("p0"));
+  //nuisParams->add(*currWS->var("p1"));
+  
+  // Declare the background normalziation parameter:
+  w->factory("nBkg[100,0,1000000]");
+  nuisParams->add(*currWS->var("nBkg"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ////////// spurious_signal:
 
-double DMWorkspace::spurious_signal( TString currCategory )
+double DMWorkspace::spurious_signal();
 {
   // first entry [0] is inclusive 7 and 8 TeV!
   double spurious[23] = { 1.6, 0.17, 0.12, 0.03, 0.03, 0.05, 0.15, 0.08, 0.20, 0.04, 0.03, 0.03, 0.13, 0.10, 0.02, 0.02, 0.04, 0.1, 0.06, 0.14, 0.02, 0.02, 0.02 };
-  int cate = CatNameToIndex( currCategory ); 
-  double result = ( currCategory.Contains("8TeV") ) ? spurious[cate]*luminosity_8TeV : spurious[cate]*luminosity_7TeV;
-  return result;
+  return spurious[currCateIndex] * analysisLuminosity;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1119,7 +1045,7 @@ void DMWorkspace::shapeNPmaker( const char* varnameNP, const char* proc, double 
 ///////////////////////////////////////////////////////////////////////////////
 ////////// CreateAsimovData:
 
-void DMWorkspace::CreateAsimovData( TString currCategory, RooWorkspace* wchannel, RooDataSet *obsdata, RooRealVar wt, double xmin, double DMMyyRangeHi, int epsilon, TString option )
+void DMWorkspace::createAsimovData( TString currCateName, RooWorkspace* categoryWS, RooDataSet *obsdata, RooRealVar wt, double xmin, double DMMyyRangeHi, int epsilon, TString option )
 {
   TString spin = ( epsilon == 1 ) ? "0p" : "2p";
   cout << "CreateAsimovData( " << spin << " )" << endl;
@@ -1127,30 +1053,30 @@ void DMWorkspace::CreateAsimovData( TString currCategory, RooWorkspace* wchannel
   int npoints_Asimov = 275;
   
   // This is the dataset to be returned:
-  RooDataSet *AsimovData = new RooDataSet( Form("asimovdatabinned%s",spin.Data()), Form("asimovdatabinned%s",spin.Data()), RooArgSet(*wchannel->var("atlas_invMass_"+currCategory),wt), WeightVar(wt) );
+  RooDataSet *AsimovData = new RooDataSet( Form("asimovdatabinned%s",spin.Data()), Form("asimovdatabinned%s",spin.Data()), RooArgSet(*categoryWS->var("atlas_invMass_"+currCateName),wt), WeightVar(wt) );
     
   // Load the PDF from the workspace:
-  //wchannel->Print("v");
-  RooAbsPdf *current_pdf = (RooAbsPdf*)(wchannel->pdf("modelSB_"+currCategory));
-  double initial_epsilon = (wchannel->var("epsilon"))->getVal();
-  (wchannel->var("epsilon"))->setVal(epsilon);
+  //categoryWS->Print("v");
+  RooAbsPdf *current_pdf = (RooAbsPdf*)(categoryWS->pdf("modelSB_"+currCateName));
+  double initial_epsilon = (categoryWS->var("epsilon"))->getVal();
+  (categoryWS->var("epsilon"))->setVal(epsilon);
   double initial_mu;
   if( option.Contains("decorrmu") )
   {
-    initial_mu = (wchannel->var(Form("mu_%s",currCategory.Data())))->getVal();
-    (wchannel->var(Form("mu_%s",currCategory.Data())))->setVal(1.0);
+    initial_mu = (categoryWS->var(Form("mu_%s",currCateName.Data())))->getVal();
+    (categoryWS->var(Form("mu_%s",currCateName.Data())))->setVal(1.0);
   }
   else
   {
-    if( currCategory.Contains("7TeV") )
+    if( currCateName.Contains("7TeV") )
     {
-      initial_mu = (wchannel->var("mu_7TeV"))->getVal();
-      (wchannel->var("mu_7TeV"))->setVal(1.0);
+      initial_mu = (categoryWS->var("mu_7TeV"))->getVal();
+      (categoryWS->var("mu_7TeV"))->setVal(1.0);
     }
-    else if( currCategory.Contains("8TeV") )
+    else if( currCateName.Contains("8TeV") )
     {
-      initial_mu = (wchannel->var("mu_8TeV"))->getVal();
-      (wchannel->var("mu_8TeV"))->setVal(1.0);
+      initial_mu = (categoryWS->var("mu_8TeV"))->getVal();
+      (categoryWS->var("mu_8TeV"))->setVal(1.0);
     }
   }
   
@@ -1163,23 +1089,23 @@ void DMWorkspace::CreateAsimovData( TString currCategory, RooWorkspace* wchannel
   for( int i_p = 0; i_p < npoints_Asimov; i_p++ )
   {
     double mass_value = DMMyyRangeLo + ( 0.5 * width ) + ( width * (double)i_p );
-    (wchannel->var("atlas_invMass_"+currCategory))->setRange("range_Integral", mass_value-(0.5*width), mass_value+(0.5*width));
-    RooAbsReal *integral = (RooAbsReal*)current_pdf->createIntegral(RooArgSet(*wchannel->var("atlas_invMass_"+currCategory)), NormSet(*wchannel->var("atlas_invMass_"+currCategory)), Range("range_Integral"));
+    (categoryWS->var("atlas_invMass_"+currCateName))->setRange("range_Integral", mass_value-(0.5*width), mass_value+(0.5*width));
+    RooAbsReal *integral = (RooAbsReal*)current_pdf->createIntegral(RooArgSet(*categoryWS->var("atlas_invMass_"+currCateName)), NormSet(*categoryWS->var("atlas_invMass_"+currCateName)), Range("range_Integral"));
     double weight_value = total_BkgEvents * integral->getVal();
     count_Asimov += weight_value;
-    (wchannel->var("atlas_invMass_"+currCategory))->setVal(mass_value);
+    (categoryWS->var("atlas_invMass_"+currCateName))->setVal(mass_value);
     wt.setVal(weight_value);
-    AsimovData->add( RooArgSet( *wchannel->var("atlas_invMass_"+currCategory), wt ), weight_value );
+    AsimovData->add( RooArgSet( *categoryWS->var("atlas_invMass_"+currCateName), wt ), weight_value );
   }
   if( fabs((count_Asimov-obsdata->sumEntries())/count_Asimov) > 0.04 ){ cout << "Bad Asimov Data: D=" << obsdata->sumEntries() << " A=" << count_Asimov << endl; exit(0); }
-  wchannel->import(*AsimovData);
-  (wchannel->var("epsilon"))->setVal(initial_epsilon);
+  categoryWS->import(*AsimovData);
+  (categoryWS->var("epsilon"))->setVal(initial_epsilon);
 
-  if( option.Contains("decorrmu") ) (wchannel->var(Form("mu_%s",currCategory.Data())))->setVal(initial_mu);
+  if( option.Contains("decorrmu") ) (categoryWS->var(Form("mu_%s",currCateName.Data())))->setVal(initial_mu);
   else
   {
-    if( currCategory.Contains("7TeV") )(wchannel->var("mu_7TeV"))->setVal(initial_mu);
-    else if( currCategory.Contains("8TeV") )(wchannel->var("mu_8TeV"))->setVal(initial_mu);
+    if( currCateName.Contains("7TeV") )(categoryWS->var("mu_7TeV"))->setVal(initial_mu);
+    else if( currCateName.Contains("8TeV") )(categoryWS->var("mu_8TeV"))->setVal(initial_mu);
   }
 }
 
@@ -1190,12 +1116,12 @@ void DMWorkspace::CreateAsimovData( TString currCategory, RooWorkspace* wchannel
 */
 void DMWorkspace::plotFit(TString plotOptions)
 {
-  cout << "plotBackgroundOnlyFit( " << currCategory << " )" << endl;
+  cout << "plotBackgroundOnlyFit( " << currCateName << " )" << endl;
   TCanvas *c = new TCanvas();
-  RooPlot* frame =  (*wchannel->var("atlas_invMass_"+currCategory)).frame(55);
-  wchannel->data("obsdata")->plotOn(frame);
-  (*wchannel->pdf("model_"+currCategory)).plotOn(frame, LineColor(2));
-  (*wchannel->pdf("model_"+currCategory)).plotOn(frame,Components( (*wchannel->pdf("bkgPdf_"+currCategory)) ) , LineColor(4));
+  RooPlot* frame =  (*categoryWS->var("atlas_invMass_"+currCateName)).frame(55);
+  categoryWS->data("obsdata")->plotOn(frame);
+  (*categoryWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
+  (*categoryWS->pdf("model_"+currCateName)).plotOn(frame,Components( (*categoryWS->pdf("bkgPdf_"+currCateName)) ) , LineColor(4));
   double chi2 = frame->chiSquare() ;
   frame->SetYTitle("Events / GeV");
   frame->SetXTitle("M_{#gamma#gamma} [GeV]");
@@ -1204,10 +1130,10 @@ void DMWorkspace::plotFit(TString plotOptions)
   TLatex lresult3;
   lresult3.SetNDC();
   lresult3.SetTextColor(1);
-  lresult3.DrawLatex(0.5,0.78, currCategory);
+  lresult3.DrawLatex(0.5,0.78, currCateName);
   
   system(Form("mkdir -vp %s/figures/",outputDir.Data()));
-  PrintCanvas(c, Form("%s/figures/data_fit_%s",outputDir.Data(),currCategory.Data()));
+  PrintCanvas(c, Form("%s/figures/data_fit_%s",outputDir.Data(),currCateName.Data()));
   delete c;
 }
 

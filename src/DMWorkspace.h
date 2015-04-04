@@ -39,8 +39,11 @@ class DMWorkspace
  private:
   
   void backgroundPdfBuilder(RooWorkspace *&w, RooArgSet *&nuispara,
-		       TString channelname);
-  RooWorkspace* newCategoryWS(TString channelName);
+		       TString cateName);
+  void createAsimovData(TString cateName, RooWorkspace *currWS, 
+			RooDataSet *currData, RooRealVar currWeightVar, 
+			double valuePOI);
+  RooWorkspace* createNewCategoryWS();
   void createNewWS();
   void loadWSFromFile();
   
@@ -50,31 +53,35 @@ class DMWorkspace
   void makeShapeNP(const char* varnameNP, const char* proc, double setup[5],
 		   RooArgSet *&nuispara, RooArgSet *&constraints,
 		   RooArgSet *&globobs, RooArgSet *&expected);
-  double spuriousSignal(TString channelname);
+  double spuriousSignal(TString cateName);
   
-  void plotFit(TString plotOptions);
-  void plotNuisParams(TString plotOptions);
+  void plotFit(TString cateName, RooWorkspace *workspace);
+  void plotNuisParams();
   
   // Member variables:
   TString jobName;
   TString sampleName;
   TString cateScheme;
   TString options;
-  
   TString outputDir;
   
   // Helper classes:
   DMEvtSelect *selector;
-  DMSigParam *sigParam;
-  DMMassPoints *massPoints;
-  DMBkgModel *bkgModel;
+  
   //ESSReader *ess_tool;
   //ResReader* res_tool;
   
   // The RooWorkspace and ModelConfig:
-  RooWorkspace* combination;
+  RooWorkspace *combinedWS;
   ModelConfig *mconfig;
   
+  // Updated inside each call to createNewCategoryWS():
+  int currCateIndex;
+  TString currCateName;
+  RooWorkspace *currWS;
+  DMSigParam *currSigParam;
+  DMBkgModel *currBkgModel;
+  DMMassPoints *currMassPoints;
 };
 
 #endif

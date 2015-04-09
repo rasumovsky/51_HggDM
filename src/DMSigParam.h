@@ -47,6 +47,9 @@ class DMSigParam
   virtual ~DMSigParam() {};
   
   // Accessors:
+  void addSigToCateWS(RooWorkspace *&workspace, std::vector<TString> namesESS,
+		      std::vector<TString> namesRes, TString process,
+		      int cateIndex);
   RooCBShape* getCateCrystalBall(int cateIndex, TString process);
   RooGaussian* getCateGaussian(int cateIndex, TString process);
   RooAddPdf* getCateSigPDF(int cateIndex, TString process);
@@ -56,7 +59,7 @@ class DMSigParam
   RooCategory* getRooCategory();
   double getSigParam(TString process, TString param, int cateIndex);
   TString getSigParamFileName(TString process, TString fileType);
-  
+
   // Mutators:
   void setRooCategory(RooCategory *newCategories);
   void setMassObservable(RooRealVar *newObservable);

@@ -111,6 +111,82 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 }
 
 /**
+   Add the signal PDF for a particular process and category to the workspace.
+   Also include the important energy scale and energy resolution systematic
+   uncertainties. 
+   @param workspace - The workspace to which we are adding the signal PDF.
+   @param namesESS - The names of the energy scale systematic uncertainties.
+   @param namesRes - The names of the resolution systematic uncertainties.
+   @param process - The signal production process.
+   @param cateIndex - The index of the current analysis category in cateScheme. 
+   @returns void. 
+*/
+void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
+				std::vector<TString> namesESS,
+				std::vector<TString> namesRes, TString process, 
+				int cateIndex) {
+  
+  // Create list of ess to multiply:
+  TString listESS = "";
+  for (int i_e = 0; i_e < (int)namesESS.size(); i_e++) {
+    TString atlasExpNameESS = Form("atlas_expected_%s", namesESS[i_e].Data());
+    if (!(bool)w->obj(atlasExpNameESS)) {
+      w->factory(Form("%s[1]",atlasExpNameESS.Data()));
+    }
+    if (i_e < ((int)namesESS.size()-1)) {
+      listESS.Append(Form("%s,",atlasExpNameESS.Data()));//added comma
+    }
+    else {
+      listESS.Append(Form("%s",atlasExpNameESS.Data()));//no comma
+    }
+  }
+  
+  // Create list of res to multiply (process dependent implementation):
+  TString listRes = "";
+  for (int i_r = 0; i_r < (int)namesRes.size(); i_r++) {
+    TString atlasExpNameRes = Form("atlas_expected_%s",namesRes[i_r].Data());
+    if (!(bool)w->obj(atlasExpNameRes)) {
+      w->factory(Form("%s%s[1]",atlasExpNameRes.Data(),procname.Data()));
+    }
+    if (i_r < ((int)namesRes.size()-1)) {
+      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),procname.Data()));
+    }
+    else {
+      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),procname.Data()));
+    }
+  }
+  
+  //Options are: "mu", "sigmaCB", "sigmaGA", "alpha", "nCB", "frac"
+  TString mHiggs = Form("%f", getSigParam(process, "mu", cateIndex));
+  TString mResVal = Form("%f", getSigParam(process, "sigmaCB", cateIndex));
+  TString tailAlpha = Form("%f", getSigParam(process, "alpha", cateIndex));
+  
+  TString mTail = Form("%f", getSigParam(process, "mu", cateIndex));
+  TString sigTail = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
+  TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
+  
+  w->factory((TString)"RooCBShape::peakPdf" + procname
+	     + (TString)"(m_yy, prod::mHiggs" + procname
+	     + (TString)"(mHiggs0" + procname + (TString)"[" + mHiggs
+	     + (TString)"]," + listESS + (TString)"), prod::mRes" + procname
+	     + (TString)"(mRes0" + procname + (TString)"[" + mResVal
+	     + (TString)"]," + listRes + (TString)"), tailAlpha" + procname
+	     + (TString)"[" + tailAlpha + (TString)"], 10)");
+  
+  w->factory((TString)"RooGaussian::tailPdf" + procname
+	     + (TString)"(atlas_invMass, prod::mTail" + procname
+	     + (TString)"(mTail0" + procname + (TString)"[" + mTail
+	     + (TString)"]," + listESS + (TString) + "), prod::sigTail"
+	     + procname + (TString)"(mRes0" + procname + (TString)"[" + mResVal
+	     + (TString)"]," + listRes + (TString)"," + sigTail + "))");
+  
+  // the implementation of sigTail above scales the resolution of the CB component to that of the GA component. IS THIS STILL TRUE?
+  w->factory((TString)"SUM::signalPdf" + procname + (TString)"(frac" + procname
+	     + (TString)"[" + frac + (TString)"]*peakPdf" + procname
+	     + (TString)",tailPdf" + procname + (TString)")");
+}
+
+/**
    Get a pointer to the fitted Crystal Ball component for a particular category
    and production process.
    @param cateIndex - The index of the category for which we want the PDF.

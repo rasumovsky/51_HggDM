@@ -87,6 +87,9 @@ void DMWorkspace::createNewWS() {
   //res_tool = new ResReader( file_name_Res_values, nCategories);
   //ss_tool  = new SigShapeReader( file_name_SS_values, nCategories);
   
+  // Instantiate the signal parameterization class using the observable:
+  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile");
+  
   //--------------------------------------//
   // Initialize classes relevant to workspace:
   // Everything for simultaneous fit:
@@ -540,14 +543,15 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currWS->factory(Form("m_yy[%f,%f]",DMMyyRangeLo,DMMyyRangeHi));
   currWS->defineSet("observables","m_yy");
   
-  // Instantiate the signal parameterization class using the observable:
-  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile",
-				currWS->var("m_yy"));
-  // Construct the signal PDF:
-  signalPdfBuilder(essList, resList, "SM");
-  signalPdfBuilder(essList, resList, "DM");
-  signalPdfBuilder(essList, resList, "Inc");
-  
+  // Construct the signal PDFs:
+  currSigParam->addSigToCateWS(currWS, essList, resList, "SM", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "ggH", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "VBF", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "WH", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "ZH", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "ttH", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "bbH", currCateIndex);
+    
   // Instantiate the background parameterization class using the observable:
   currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile",
 				currWS->var("m_yy"));
@@ -767,7 +771,8 @@ void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vect
   // Create list of ess to multiply:
   TString listESS = "";
   for (int i_e = 0; i_e < (int)parNamesESS.size(); i_e++) {
-    TString atlas_exp_name_ess = Form("atlas_expected_%s",parNamesESS[i_e].Data());
+    TString atlas_exp_name_ess = Form("atlas_expected_%s",
+				      parNamesESS[i_e].Data());
     if (!(bool)w->obj(atlas_exp_name_ess)) {
       w->factory(Form("%s[1]",atlas_exp_name_ess.Data()));
     }
@@ -776,13 +781,13 @@ void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vect
       listESS.Append(Form("%s,",atlas_exp_name_ess.Data()));//added comma
     }
     else {
-      listESS.Append(Form("%s",atlas_exp_name_ess.Data()));
+      listESS.Append(Form("%s",atlas_exp_name_ess.Data()));//no comma
     }
   }
   
   //----------------------------------------//
   // Create list of res to multiply:
-  // one important difference from ESS: it is atlas_expected_mRes+procname, where procname = _inc,...
+  // Important difference from ESS: it is atlas_expected_mRes+procname, where procname = _inc,...
   TString listRes = "";
   for (int i_r = 0; i_r < (int)parNamesRes.size(); i_r++) {
     TString atlas_exp_name_res = Form("atlas_expected_%s",parNamesRes[i_r].Data());

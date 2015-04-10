@@ -156,34 +156,32 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
     }
   }
   
-  //Options are: "mu", "sigmaCB", "sigmaGA", "alpha", "nCB", "frac"
-  TString mHiggs = Form("%f", getSigParam(process, "mu", cateIndex));
-  TString mResVal = Form("%f", getSigParam(process, "sigmaCB", cateIndex));
-  TString tailAlpha = Form("%f", getSigParam(process, "alpha", cateIndex));
-  
-  TString mTail = Form("%f", getSigParam(process, "mu", cateIndex));
-  TString sigTail = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
+  TString meanCB = Form("%f", getSigParam(process, "meanCB", cateIndex));
+  TString massResCB = Form("%f", getSigParam(process, "sigmaCB", cateIndex));
+  TString alphaCB = Form("%f", getSigParam(process, "alphaCB", cateIndex));
+  TString nCB = Form("%f", getSigParam(process, "nCB", cateIndex));
+  TString meanGA = Form("%f", getSigParam(process, "meanGA", cateIndex));
+  TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
-  w->factory((TString)"RooCBShape::peakPdf" + procname
-	     + (TString)"(m_yy, prod::mHiggs" + procname
-	     + (TString)"(mHiggs0" + procname + (TString)"[" + mHiggs
-	     + (TString)"]," + listESS + (TString)"), prod::mRes" + procname
-	     + (TString)"(mRes0" + procname + (TString)"[" + mResVal
-	     + (TString)"]," + listRes + (TString)"), tailAlpha" + procname
-	     + (TString)"[" + tailAlpha + (TString)"], 10)");
+  w->factory((TString)"RooCBShape::pdfCB" + procname 
+	     + (TString)"(m_yy, prod::meanCB" + procname + (TString)"(meanCBNom"
+	     + procname + (TString)"[" + meanCB + (TString)"]," + listESS
+	     + (TString)"), prod::massResCB" + procname 
+	     + (TString)"(massResNomCB" + procname + (TString)"[" + massResNomCB
+	     + (TString)"]," + listRes + (TString)"), alphaCB" + procname
+	     + (TString)"[" + alphaCB + (TString)"], nCB["+nCB+"])");
   
-  w->factory((TString)"RooGaussian::tailPdf" + procname
-	     + (TString)"(atlas_invMass, prod::mTail" + procname
-	     + (TString)"(mTail0" + procname + (TString)"[" + mTail
-	     + (TString)"]," + listESS + (TString) + "), prod::sigTail"
-	     + procname + (TString)"(mRes0" + procname + (TString)"[" + mResVal
-	     + (TString)"]," + listRes + (TString)"," + sigTail + "))");
+  w->factory((TString)"RooGaussian::pdfGA" + procname
+	     + (TString)"(atlas_invMass, prod::meanGA" + procname
+	     + (TString)"(meanGANom" + procname + (TString)"[" + meanGA
+	     + (TString)"]," + listESS + (TString) + "), prod::massResGA"
+	     + procname + (TString)"(massResNomGA" + procname + (TString)"["
+	     + massResGA + (TString)"]," + listRes + (TString)"," + "))");
   
-  // the implementation of sigTail above scales the resolution of the CB component to that of the GA component. IS THIS STILL TRUE?
-  w->factory((TString)"SUM::signalPdf" + procname + (TString)"(frac" + procname
-	     + (TString)"[" + frac + (TString)"]*peakPdf" + procname
-	     + (TString)",tailPdf" + procname + (TString)")");
+  w->factory((TString)"SUM::sigPdf" + procname + (TString)"(frac" + procname
+	     + (TString)"[" + frac + (TString)"]*pdfCB" + procname
+	     + (TString)",pdfGA" + procname + (TString)")");
 }
 
 /**
@@ -266,8 +264,8 @@ RooCategory* DMSigParam::getRooCategory() {
    Get the value of a particular parameter of the signal PDF. 
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
-   @param param - The fit parameter. Options are: "mu", "sigmaCB", "sigmaGA", 
-   "alpha", "nCB", "frac"
+   @param param - The fit parameter. Options are: "meanCB", "sigmaCB", "meanGA",
+   "sigmaGA", "alphaCB", "nCB", "frac"
    @param cateIndex - The index of the category for which we want the PDF.
    @returns The value of the specified signal parameter. 
 */
@@ -358,40 +356,49 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   for (int i_c = 0; i_c < nCategories; i_c++) {
     
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
-    
+    // Options are: "meanCB", "sigmaCB", "meanGA",
+    // "sigmaGA", "alphaCB", "nCB", "frac"
+
     // Define the fit variables (Can't avoid using >80 char per line...):
-    RooRealVar *mu = new RooRealVar(Form("mu_%s_%d",process.Data(),i_c),
-				    Form("mu_%s_%d",process.Data(),i_c),
-				    125.4,123.0,128.0);
+    RooRealVar *meanCB = new RooRealVar(Form("meanCB_%s_%d",process.Data(),i_c),
+					Form("meanCB_%s_%d",process.Data(),i_c),
+					125.4,123.0,128.0);
     RooRealVar *sigmaCB = new RooRealVar(Form("sigmaCB_%s_%d",process.Data(),
 					      i_c),
 					 Form("sigmaCB_%s_%d",process.Data(),
 					      i_c),
 					 1.5,0.1,10.0);
-    RooRealVar *sigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),
-					      i_c),
-					 Form("sigmaGA_%s_%d",process.Data(),
-					      i_c),
-					 3,0.1,10.0);
-    RooRealVar *alpha = new RooRealVar(Form("alpha_%s_%d",process.Data(),i_c),
-				       Form("alpha_%s_%d",process.Data(),i_c),
+    RooRealVar *alpha = new RooRealVar(Form("alphaCB_%s_%d",process.Data(),i_c),
+				       Form("alphaCB_%s_%d",process.Data(),i_c),
 				       1.4,0.1,10.0);
     RooRealVar *nCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),
 				     Form("nCB_%s_%d",process.Data(),i_c),
 				     10,0.001,20);
+    RooRealVar *meanGA = new RooRealVar(Form("meanGA_%s_%d",process.Data(),i_c),
+					Form("meanGA_%s_%d",process.Data(),i_c),
+					125.4,123.0,128.0);
+    RooRealVar *sigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),
+					      i_c),
+					 Form("sigmaGA_%s_%d",process.Data(),
+					      i_c),
+					 3,0.1,20.0);
     RooRealVar *frac = new RooRealVar(Form("frac_%s_%d",process.Data(),i_c),
 				      Form("frac_%s_%d",process.Data(),i_c),
 				      0.9,0.001,1.0);
     
     // Define the PDFs:
-    RooCBShape *currCB = new RooCBShape(Form("CB_%s_%d",process.Data(),i_c),
-					Form("CB_%s_%d",process.Data(),i_c),
-					*m_yy, *mu, *sigmaCB, *alpha, *nCB);
-    RooGaussian *currGA = new RooGaussian(Form("GA_%s_%d",process.Data(),i_c),
-					  Form("GA_%s_%d",process.Data(),i_c),
-					  *m_yy, *mu, *sigmaGA);
-    RooAddPdf *currSignal = new RooAddPdf(Form("sig_%s_%d",process.Data(),i_c),
-					  Form("sig_%s_%d",process.Data(),i_c),
+    RooCBShape *currCB = new RooCBShape(Form("pdfCB_%s_%d",process.Data(),i_c),
+					Form("pdfCB_%s_%d",process.Data(),i_c),
+					*m_yy, *meanCB, *sigmaCB, *alpha, *nCB);
+    RooGaussian *currGA = new RooGaussian(Form("pdfGA_%s_%d",process.Data(),
+					       i_c),
+					  Form("pdfGA_%s_%d",process.Data(),
+					       i_c),
+					  *m_yy, *meanGA, *sigmaGA);
+    RooAddPdf *currSignal = new RooAddPdf(Form("sigPdf_%s_%d",process.Data(),
+					       i_c),
+					  Form("sigPdf_%s_%d",process.Data(),
+					       i_c),
 					  *currCB, *currGA, *frac);
     
     // If making from scratch, se DMMassPoints to construct the RooDataSet:
@@ -407,30 +414,39 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       statistics::minimize(nLL);
       
       // After the fit, set parameters constant:
-      mu->setConstant(true);
+      meanCB->setConstant(true);
       sigmaCB->setConstant(true);
-      sigmaGA->setConstant(true);
       alpha->setConstant(true);
       nCB->setConstant(true);
+      meanGA->setConstant(true);
+      sigmaGA->setConstant(true);
       frac->setConstant(true);
       
       // Save the fitted parameters to file:
-      outputFitFile << i_c << " " << mu->getVal() << " " << sigmaCB->getVal()
-		    << " " << alpha->getVal() << " " << nCB->getVal() << " "
-		    << sigmaGA->getVal() << " " << frac->getVal() << std::endl;
-      outputYieldFile << i_c << " " << currData->sumEntries() << " " 
+      outputFitFile << i_c << " "
+		    << meanCB->getVal()  << " "
+		    << sigmaCB->getVal() << " "
+		    << alpha->getVal()   << " "
+		    << nCB->getVal()     << " "
+		    << meanGA->getVal()  << " "
+		    << sigmaGA->getVal() << " "
+		    << frac->getVal() << std::endl;
+      outputYieldFile << i_c << " "
+		      << currData->sumEntries() << " " 
 		      << currData->numEntries() << std::endl;
     }
     // If using previous parameterization, just load params from .txt file.
     else {
-      double rC, rMu, rSigmaCB, rAlpha, rNCB, rSigmaGA, rFrac;
+      double rC, rMeanCB, rSigmaCB, rAlpha, rNCB, rMeanGA, rSigmaGA, rFrac;
       while (!inputFitFile.eof()) {
-	inputFitFile >> rC >> rMu >> rSigmaCB >> rAlpha >> rNCB >> rSigmaGA
-		     >> rFrac;
-	mu->setVal(rMu);
+	inputFitFile >> rC >> rMeanCB >> rSigmaCB >> rAlpha >> rNCB
+		     >> rMeanGA >> rSigmaGA >> rFrac;
+	
+	meanCB->setVal(rMeanCB);
 	sigmaCB->setVal(rSigmaCB);
 	alpha->setVal(rAlpha);
 	nCB->setVal(rNCB);
+	meanGA->setVal(rMeanGA);
 	sigmaGA->setVal(rSigmaGA);
 	frac->setVal(rFrac);
 	break;

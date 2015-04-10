@@ -81,7 +81,6 @@ void DMWorkspace::createNewWS() {
   std::cout << "Luminosity at 13 TeV:" << analysisLuminosity << std::endl;
   std::cout << "........................................" << std::endl;
   
-  //--------------------------------------//
   // Read tables of ESS and Res and store values:
   //ess_tool = new ESSReader( file_name_ESS_values, nCategories);
   //res_tool = new ResReader( file_name_Res_values, nCategories);
@@ -89,6 +88,8 @@ void DMWorkspace::createNewWS() {
   
   // Instantiate the signal parameterization class using the observable:
   currSigParam = new DMSigParam(jobName, cateScheme, "FromFile");
+  // Instantiate the background parameterization class using the observable:
+  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile");
   
   //--------------------------------------//
   // Initialize classes relevant to workspace:
@@ -544,6 +545,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currWS->defineSet("observables","m_yy");
   
   // Construct the signal PDFs:
+  currSigParam->addSigToCateWS(currWS, essList, resList, "DM", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "SM", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "ggH", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "VBF", currCateIndex);
@@ -551,10 +553,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(currWS, essList, resList, "ZH", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "ttH", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "bbH", currCateIndex);
-    
-  // Instantiate the background parameterization class using the observable:
-  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile",
-				currWS->var("m_yy"));
+  
   // Construct the background PDF:
   backgroundPdfBuilder(nuisParamsBkg, currCateName);
   
@@ -760,68 +759,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-////////// signalPdfBuilder:
-
-/**
-   Need to figure out the best interface method for the SigParam class. 
-*/
-void DMWorkspace::signalPdfBuilder( RooWorkspace *&w, vector<double> value, vector<TString> parNamesESS, vector<TString> parNamesRes, TString procname )
-{
-  //----------------------------------------//
-  // Create list of ess to multiply:
-  TString listESS = "";
-  for (int i_e = 0; i_e < (int)parNamesESS.size(); i_e++) {
-    TString atlas_exp_name_ess = Form("atlas_expected_%s",
-				      parNamesESS[i_e].Data());
-    if (!(bool)w->obj(atlas_exp_name_ess)) {
-      w->factory(Form("%s[1]",atlas_exp_name_ess.Data()));
-    }
-    
-    if (i_e < ((int)parNamesESS.size()-1)) {
-      listESS.Append(Form("%s,",atlas_exp_name_ess.Data()));//added comma
-    }
-    else {
-      listESS.Append(Form("%s",atlas_exp_name_ess.Data()));//no comma
-    }
-  }
-  
-  //----------------------------------------//
-  // Create list of res to multiply:
-  // Important difference from ESS: it is atlas_expected_mRes+procname, where procname = _inc,...
-  TString listRes = "";
-  for (int i_r = 0; i_r < (int)parNamesRes.size(); i_r++) {
-    TString atlas_exp_name_res = Form("atlas_expected_%s",parNamesRes[i_r].Data());
-    // fix this here:
-    if (!(bool)w->obj(atlas_exp_name_res)) {
-      w->factory(Form("%s%s[1]",atlas_exp_name_res.Data(),procname.Data()));
-    }
-    if (i_r < ((int)parNamesRes.size()-1)) {
-      listRes.Append(Form("%s%s,",atlas_exp_name_res.Data(),procname.Data()));
-    }
-    else {
-      listRes.Append(Form("%s%s",atlas_exp_name_res.Data(),procname.Data()));
-    }
-  }
-  
-  TString mHiggs = Form("%f", value[2]);
-  TString mResVal = Form("%f", value[3]);
-  TString tailAlpha = Form("%f", value[4]);
-  TString mTail = Form("%f", value[6]);
-  TString sigTail = Form("%f", value[7]/value[3]);
-  TString frac = Form("%f", value[8]);
-
-  // Previous code before modifying resolution systematics:
-  //w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass , prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+listESS+(TString)") , atlas_expected_mRes"+procname+(TString)", tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
-  //w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+listESS+(TString)+"), prod::sigTail"+procname+(TString)"(atlas_expected_mRes"+procname+(TString)","+sigTail+"))");
-  
-  w->factory((TString)"RooCBShape::peakPdf"+procname+(TString)"(atlas_invMass, prod::mHiggs"+procname+(TString)"(mHiggs0"+procname+(TString)"["+mHiggs+(TString)"],"+listESS+(TString)"), prod::mRes"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+listRes+(TString)"), tailAlpha"+procname+(TString)"["+tailAlpha+(TString)"] , 10)");
-  w->factory((TString)"RooGaussian::tailPdf"+procname+(TString)"(atlas_invMass, prod::mTail"+procname+(TString)"(mTail0"+procname+(TString)"["+mTail+(TString)"],"+listESS+(TString)+"), prod::sigTail"+procname+(TString)"(mRes0"+procname+(TString)"["+mResVal+(TString)"],"+listRes+(TString)","+sigTail+"))");
-  // the implementation of sigTail above scales the resolution of the CB component to that of the GA component.
-  w->factory((TString)"SUM::signalPdf"+procname+(TString)"(frac"+procname+(TString)"["+frac+(TString)"]*peakPdf"+procname+(TString)",tailPdf"+procname+(TString)")");
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 ////////// backgroundPdfBuilder:
 
 // Also need to figure out how to interface with BkgModel class. Probably need to pass it the workspace. 
@@ -852,8 +789,7 @@ void DMWorkspace::backgroundPdfBuilder(RooArgSet *nuisParams) {
 
 double DMWorkspace::spurious_signal();
 {
-  // first entry [0] is inclusive 7 and 8 TeV!
-  double spurious[23] = { 1.6, 0.17, 0.12, 0.03, 0.03, 0.05, 0.15, 0.08, 0.20, 0.04, 0.03, 0.03, 0.13, 0.10, 0.02, 0.02, 0.04, 0.1, 0.06, 0.14, 0.02, 0.02, 0.02 };
+  double spurious[10] = { 1.0. 1.0, 1.0, 1.0, 1.0 };// per fb-1
   return spurious[currCateIndex] * analysisLuminosity;
 }
 

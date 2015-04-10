@@ -555,7 +555,10 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(currWS, essList, resList, "bbH", currCateIndex);
   
   // Construct the background PDF:
-  backgroundPdfBuilder(nuisParamsBkg, currCateName);
+  // Out with the old:
+  //backgroundPdfBuilder(nuisParamsBkg, currCateName);
+  // In with the new (to be implemented):
+  currBkgModel->addBkgToCateWS(currWS, nuisParamsBkg, currCateName);
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);

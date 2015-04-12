@@ -789,6 +789,7 @@ void DMWorkspace::NPmaker(const char* varName, double setup[4],
   
   RooWorkspace* workspace = new RooWorkspace(varName);
   std::cout << "Creating a nuisance parameter " << varName << std::endl;
+
   // Create nuisance parameter with asymmetric uncertainty:
   if (sigmaLow > 0) {
     std::cout << "  parameter has an asymmetric uncertainty" << std::endl;
@@ -796,12 +797,12 @@ void DMWorkspace::NPmaker(const char* varName, double setup[4],
     RooRealVar* var = new RooRealVar(Form("nuisPar_%s",varNameNP.Data()),
 				     Form("nuisPar_%s",varNameNP.Data()),
 				     varName,0,-5,5);
-    RooRealVar* beta_var = new RooRealVar(Form("beta_%s",varName.Data()), 
+    RooRealVar* varBeta = new RooRealVar(Form("beta_%s",varName.Data()), 
 					  Form("beta_%s",varName.Data()),
 					  beta);
     RooProduct* varXBeta = new RooProduct(Form("%s_times_beta",varName.Data()),
 					  Form("%s_times_beta",varName.Data()),
-					  RooArgSet(*var,*beta_var));
+					  RooArgSet(*var,*varBeta));
     vector<double> sVarHi; sVarHi.clear(); sVarHi.push_back(1+sigma);
     vector<double> sVarLo; sVarLo.clear(); sVarLo.push_back(1-sigmaLow);
     RooArgList nuisList(*varXBeta);
@@ -853,93 +854,80 @@ void DMWorkspace::NPmaker(const char* varName, double setup[4],
   expected->add(*w->function(Form("expected_%s",varName.Data())));
 }
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-////////// shapeNPmaker:
+/**
+   A private method for constructing a shape systematic uncertainty. The shape
+   NP maker will give variables used in parameterization process dependent name,
+   but keep the same name for nuisance parameter, and global observables.
+   @param varNameNP - the name of the systematic uncertainty.
+   @param process - the corresponding signal process for the systematic.
+   @param setup - the systematic uncertainty configuration parameters.
+   @param nuisParams - the set of nuisance parameters to which this will add.
+   @param constraints - the set of constraints to which this will add a term. 
+   @param globalObs - the set of global observables, to which this will add.
+   @param expected - the set of expected terms. 
+   @returns - void. 
+*/
+void DMWorkspace::shapeNPmaker( TString varNameNP, TString process,
+				double setup[4], RooArgSet *&nuisParams,
+				RooArgSet *&constraints, RooArgSet *&globalObs,
+				RooArgSet *&expected) {
 
-void DMWorkspace::shapeNPmaker( const char* varNameNP, const char* proc, double setup[5], RooArgSet *&nuisParams, RooArgSet *&constraints, RooArgSet *&globalObs, RooArgSet *&expected )
-{
-  // The "shape" NP maker will give variables used in parameterization process dependent name, but keep the same name for the nuisance parameter, and the global observables.
-  
+  // Settings for the systematic:
   double sigma    = setup[0];
   double sigmaLow = setup[1];
   double beta     = setup[2];
   double nominal  = setup[3];
-  double nonATLAS = setup[4];
-  TString varName = (TString)varNameNP + (TString)proc;
+  TString varName = varNameNP + process;
   
-  RooWorkspace* w = new RooWorkspace(varName);
-  //----------------------------------------//
-  // Asymmetric uncertainty:
-  if( sigmaLow > 0 )
-  {
-    cout << " Set up nuisance parameter for an asymmetric uncertainty " << endl;
-    RooRealVar* var = new RooRealVar(varNameNP,varNameNP,0,-5,5);
-    if( nonATLAS != 0 )
-    { 
-      TString atlasNPname = (TString)"nuisPar_"+varNameNP;
-      var->SetName(atlasNPname); 
-      var->SetTitle(atlasNPname); 
-    }
+  RooWorkspace* workspace = new RooWorkspace(varName);
+  
+  // Create nuisance parameter with asymmetric uncertainty:
+  if (sigmaLow > 0) {
+    std::cout << "  parameter for an asymmetric uncertainty" << std::endl;
     
-    RooRealVar* beta_var = new RooRealVar((TString)"beta_"+varName,(TString)"beta_"+varName,beta);
-    RooProduct* varXBeta = new RooProduct(varName+(TString)"_times_beta",varName+(TString)"_times_beta",RooArgSet(*var,*beta_var));
-    vector<double> sVarHi, sVarLo;
-    sVarHi.push_back( 1+sigma );
-    sVarLo.push_back( 1-sigmaLow );
+    RooRealVar* var = new RooRealVar(Form("nuisPar_%s",varNameNP.Data()),
+				     Form("nuisPar_%s",varNameNP.Data()),
+				     0, -5, 5);
+    RooRealVar* varBeta = new RooRealVar(Form("beta_%s",varName.Data()),
+					  Form("beta_%s",varName.Data()),
+					  beta);
+    RooProduct* varXBeta = new RooProduct(Form("%s_times_beta",varName.Data()),
+					  Form("%s_times_beta",varName.Data()),
+					  RooArgSet(*var,*varBeta));
+    
+    vector<double> sVarHi; sVarHi.clear(); sVarHi.push_back(1+sigma);
+    vector<double> sVarLo; sVarLo.clear(); sVarLo.push_back(1-sigmaLow);
     RooArgList nuisList(*varXBeta);
-    RooStats::HistFactory::FlexibleInterpVar expVar("expected_"+(TString)varName,"expected_"+(TString)varName,nuisList,nominal,sVarLo,sVarHi);
-    w->import(expVar);
+    RooStats::HistFactory::FlexibleInterpVar expVar(Form("expected_%s",varName.Data()), Form("expected_%s",varName.Data()), nuisList, nominal, sVarLo, sVarHi);
     
-    if( nonATLAS == 0 )
-    {
-      cout << " Nuisance parameter is shared between ATLAS and CMS " << endl;
-      w->factory((TString)"RooGaussian::constrPdf_"+(TString)varNameNP+(TString)"(R_"+(TString)varNameNP+(TString)"[0,-5,5],"+(TString)varNameNP+(TString)",1)");
-    }
-    else
-    {
-      w->factory((TString)"RooGaussian::constrPdf_"+(TString)varNameNP+(TString)"(globOb_"+(TString)varNameNP+(TString)"[0,-5,5],nuisPar_"+(TString)varNameNP+(TString)",1)");
-    }
-  }
-  //----------------------------------------//
-  // Gaussian uncertainty:
-  else if( sigmaLow == -999 )
-  {
-    cout << " Set up nuisance parameter with a Gaussian constraint term " << endl;
-    TString valSigma=Form("%f", sigma);
-    TString valBeta=Form("%f", beta);
-    TString valNom=Form("%f", nominal );  
-    w->factory((TString)"sum::expected_"+(TString)varName+(TString)"(nominal_"+(TString)varName+"["+valNom+(TString)"]  , prod::uncer_"+(TString)varName+(TString)"( prod::"+varName+(TString)"_times_beta(nuisPar_"+(TString)varNameNP+(TString)"[ 0 ,-5 , 5 ] ,beta_"+varName+(TString)"["+valBeta+(TString)"]), sigma_"+(TString)varName+(TString)"["+valSigma+(TString)" ]))");
-    w->factory("RooGaussian::constrPdf_"+(TString)varNameNP+(TString)"(globOb_"+(TString)varNameNP+(TString)"[0,-5,5],nuisPar_"+(TString)varNameNP+(TString)",1)");
-  }
-  //----------------------------------------//
-  // Other case?
-  else
-  {
-    TString valBeta=Form("%f", beta);
-    TString valLogKappa=Form("%f", sqrt( log( 1+pow(sigma,2)) ) );
-    TString valNom=Form("%f", nominal );
-    w->factory((TString)"atlas_valLogKappa_"+(TString)varName+"["+(TString)valLogKappa+(TString)"]") ;
-    w->factory("RooExponential::atlas_expTerm_"+(TString)varName+"(prod::"+varName+(TString)"_times_beta(nuisPar_"+(TString)varNameNP+(TString)"[ 0 , -5 , 5 ], beta_"+varName+(TString)"["+valBeta+(TString)"]),atlas_valLogKappa_"+(TString)varName+")");
-    w->factory((TString)"prod::expected_"+(TString)varName+"(atlas_expTerm_"+(TString)varName+",nominal_"+(TString)varName+"["+(TString)valNom+(TString)"])");
-    
-    if( nonATLAS != 0 )
-      w->factory("RooGaussian::constrPdf_"+(TString)varNameNP+"(globOb_"+(TString)varNameNP+"[0,-5,5],nuisPar_"+(TString)varNameNP+",1)");
-    else
-    {
-      cout << " Set up constraint term for " << varNameNP << endl;
-      w->factory("RooGaussian::constrPdf_"+(TString)varNameNP+"(R_"+(TString)varNameNP+"[0,-5,5],"+(TString)varNameNP+",1)");
-    }
+    workspace->import(expVar);
+    workspace->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
   }
   
-  // declare the NP and constraint term only when it's not declared in the workspace to avoid duplication.   
-  if( nonATLAS == 0 ) nuisParams->add(*w->var(varNameNP));
-  else nuisParams->add(*w->var("nuisPar_"+(TString)varNameNP));
-  constraints->add(*w->pdf("constrPdf_"+(TString)varNameNP));
-  if( nonATLAS == 0 ) globalObs->add(*w->var("R_"+(TString)varNameNP));
-  else globalObs->add(*w->var("globOb_"+(TString)varNameNP));
-  expected->add(*w->function("expected_"+(TString)varName));
+  // Create a nuisance parameter with Gaussian constraint term:
+  else if (sigmaLow == -999) {
+    std::cout << "  parameter with a Gaussian constraint term" << std::endl;
+    
+    workspace->factory(Form("sum::expected_%s(nominal_%s[%f], prod::uncer_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]), sigma_%s[%f]))", varName.Data(), varName.Data(), nominal, varName.Data(), varName.Data(), varNameNP.Data(), varName.Data(), beta, varName.Data(), sigma));
+    w->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
+  }
+  
+  // Create a nuisance parameter with log-normal constraint term:
+  else {
+    TString valLogKappa = Form("%f", sqrt( log( 1+pow(sigma,2)) ) );
+    w->factory(Form("valLogKappa_%s[%s]", varName.Data(), valLogKappa.Data()));
+    w->factory(Form("RooExponential::expTerm_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]),valLogKappa_%s)", varName.Data(), varName.Data(), varNameNP.Data(), varName.Data(), beta, varName.Data()));
+    w->factory(Form("prod::expected_%s(expTerm_%s,nominal_%s[%f])", varName.Data(), varName.Data(), varName.Data(), nominal));
+    w->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
+  }
+  
+  // Add parameters and PDFs to relevant sets:
+  nuisParams->add(*w->var(Form("nuisPar_%s",varNameNP.Data())));
+  constraints->add(*w->pdf(Form("constrPdf_%s",varNameNP.Data())));
+  globalObs->add(*w->var(Form("globOb_%s",varNameNP.Data())));
+  expected->add(*w->function(Form("expected_%s",varName.Data())));
 }
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ////////// CreateAsimovData:

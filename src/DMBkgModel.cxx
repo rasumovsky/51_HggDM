@@ -99,6 +99,36 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
 }
 
 /**
+   Add the chosen background model to the workspace provided. Also add the 
+   associated nuisance parameters to the nuisParams set.
+   @param workspace - The workspace to which the PDFs will be added.
+   @param nuisParams - The set of nuisance parameters to which the background
+                       parameters will be added.
+   @param cateIndex - The index of the current analysis category. 
+*/
+void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
+				RooArgSet *&nuisParams, int cateIndex) {
+  
+  // First, call the function to get the background PDF:
+  RooAbsPdf* currBkgModel = getCateBkgPDF(cateIndex);
+  
+  // Then add it to the workspace:
+  workspace->add(currBkgModel);
+  
+  // Then add the parameters to the workspace:
+  RooArgSet *currArgs = currBkgModel->getVariables();
+  TIterator *iterArgs = currArgs->createIterator();
+  RooRealVar* currIter = NULL;
+  while ((currIter = (RooRealVar*)iterArgs->Next())) {
+    nuisParams->add(currIter);
+  }
+  
+  // Finally, include a normalization parameter for the background:
+  workspace->factory("nBkg[100,0,1000000]");
+  nuisParams->add(*workspace->var("nBkg"));
+}
+
+/**
    Get the PDF for a given class.
    @param cateIndex - The category of cateScheme used in class initialization.
    @returns The corresponding background PDF for the analysis.
@@ -171,13 +201,13 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   
   // Construct the desired PDF:
   if (fitFunc.Contains("Bern")) {
-    bern = new RooBernsteinM(fitName, fitName, *m_yy, *bkgArgs, &min, &max);
+    //bern = new RooBernsteinM(fitName, fitName, *m_yy, *bkgArgs, &min, &max);
+    bern = new RooBernsteinM("bkgPdf", "bkgPdf", *m_yy, *bkgArgs, &min, &max);
     background = bern;
   }
   else if (fitFunc.Contains("Exppol")) {
-    //bkgArgs has m_yy included as first variable in list:
-    //exppol = new RooGenericPdf(fitName, expFitFormat, bkgArgs);
-    exppol = new RooGenericPdf(fitName, expFitFormat, *bkgArgs);
+    //exppol = new RooGenericPdf(fitName, expFitFormat, *bkgArgs);
+    exppol = new RooGenericPdf("bkgPdf", expFitFormat, *bkgArgs);
     background = exppol;
   }
   

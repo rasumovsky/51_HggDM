@@ -555,9 +555,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(currWS, essList, resList, "bbH", currCateIndex);
   
   // Construct the background PDF:
-  // Out with the old:
-  //backgroundPdfBuilder(nuisParamsBkg, currCateName);
-  // In with the new (to be implemented):
   currBkgModel->addBkgToCateWS(currWS, nuisParamsBkg, currCateName);
   
   // Add background parameters to uncorrelated collection:
@@ -758,32 +755,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   delete h_data;
   return categoryWS;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-////////// backgroundPdfBuilder:
-
-// Also need to figure out how to interface with BkgModel class. Probably need to pass it the workspace. 
-
-//void DMWorkspace::backgroundPdfBuilder( RooWorkspace *&w, RooArgSet *&nuispara, TString currCateName )
-void DMWorkspace::backgroundPdfBuilder(RooArgSet *nuisParams) {
-  
-  RooAbsPdf *cateBkgPdf = DMBkgModel->getCateBkgPdf(currCateIndex);
-  currWS->add(cateBkgPdf);
-  // now add the associated parameters;
-  RooArgSet *cateBkgPdfArgs = DMBkgModel->getCateBkgPars(currCateIndex);
-  
-  // THE LINE BELOW MUST BE FIXED. Maybe get from currWS by name... 
-  nuisParams->add();
-  
-  //w->factory((TString)"RooBernstein::bkgPdf(m_yy,{pconst[1],p0[0.1,-10,10],p1[0.1,-10,10],p2[0.1,-10,10],p3[0.1,-10,10]})");
-  //nuisParams->add(*currWS->var("p0"));
-  //nuisParams->add(*currWS->var("p1"));
-  
-  // Declare the background normalziation parameter:
-  w->factory("nBkg[100,0,1000000]");
-  nuisParams->add(*currWS->var("nBkg"));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1106,7 +1077,7 @@ void DMWorkspace::plotNuisParams(TString plotOptions)
     TString name = parg_nuis->GetName();
     double value = parg_nuis->getVal();
     double error = parg_nuis->getError();
-    if( !name.Contains("atlas_nbkg") && !name.Contains("p0") && !name.Contains("p1") && !name.Contains("p2") )
+    if( !name.Contains("nBkg") && !name.Contains("p0") && !name.Contains("p1") && !name.Contains("p2") )
     {
       index++;
       h_nuis->SetBinContent( index, value );

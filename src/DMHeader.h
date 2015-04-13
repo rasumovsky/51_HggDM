@@ -10,6 +10,9 @@
 //  search with 13 TeV data in 2015. It also has all of the includes that are //
 //  necessary for the analysis.                                               //
 //                                                                            //
+//  13/04/2015 NOTE                                                           //
+//    Maybe we should make this a struct!                                     //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////

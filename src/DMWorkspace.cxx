@@ -383,12 +383,13 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooArgSet *expectedDM = new RooArgSet();
   RooArgSet *expectedShape = new RooArgSet();
   RooArgSet *expectedBias = new RooArgSet();
-  RooArgSet *expectedProc_ggF = new RooArgSet();
+  RooArgSet *expectedProc_ggH = new RooArgSet();
   RooArgSet *expectedProc_VBF = new RooArgSet();
   RooArgSet *expectedProc_WH = new RooArgSet();
   RooArgSet *expectedProc_ZH = new RooArgSet();
+  RooArgSet *expectedProc_bbH = new RooArgSet();
   RooArgSet *expectedProc_ttH = new RooArgSet();
-    
+  
   // array setup[5] is used to configure a nuisance parameter
   // [0]    [1]       [2]   [3]      [4]
   // sigma, sigmalow, beta, nominal, nonATLAS
@@ -495,36 +496,38 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // Parameters of interest (POIs):
-  //RooRealVar *mu_DM = new RooRealVar("mu_DM","mu_DM",1,-100,100);
-  //RooRealVar *mu_SM = new RooRealVar("mu_SM","mu_SM",1,-100,100);
-  RooRealVar *mu_BR_gg = new RooRealVar("mu_BR_gg","mu_BR_gg",1,-100,100);
-  RooRealVar *mu_ggF = new RooRealVar("mu_ggF","mu_ggF",1,-100,100);
+  RooRealVar *mu_DM = new RooRealVar("mu_DM","mu_DM",1,-100,100);
+  RooRealVar *mu_SM = new RooRealVar("mu_SM","mu_SM",1,-100,100);
+  RooRealVar *mu_ggH = new RooRealVar("mu_ggH","mu_ggH",1,-100,100);
   RooRealVar *mu_VBF = new RooRealVar("mu_VBF","mu_VBF",1,-100,100);
   RooRealVar *mu_WH = new RooRealVar("mu_WH","mu_WH",1,-100,100);
   RooRealVar *mu_ZH = new RooRealVar("mu_ZH","mu_ZH",1,-100,100);
+  RooRealVar *mu_bbH = new RooRealVar("mu_bbH","mu_bbH",1,-100,100);
   RooRealVar *mu_ttH = new RooRealVar("mu_ttH","mu_ttH",1,-100,100);
-  //expected->add(RooArgSet(*mu, *mu_BR_gg));NO
-  expectedSM->add(RooArgSet(*mu_SM, *mu_BR_gg));
-  expectedDM->add(RooArgSet(*mu_DM, *mu_BR_gg));
-  expectedProc_ggF->add(RooArgSet(*mu_ggF));
+  expectedDM->add(RooArgSet(*mu_DM));
+  expectedSM->add(RooArgSet(*mu_SM));
+  expectedProc_ggH->add(RooArgSet(*mu_ggH));
   expectedProc_VBF->add(RooArgSet(*mu_VBF));
   expectedProc_WH->add(RooArgSet(*mu_WH));
   expectedProc_ZH->add(RooArgSet(*mu_ZH));
+  expectedProc_bbH->add(RooArgSet(*mu_bbH));
   expectedProc_ttH->add(RooArgSet(*mu_ttH));
   
   // Expectation values:
-  RooProduct expectationSM("expectationSM","expectationSM", *expectedSM);
   RooProduct expectationDM("expectationDM","expectationDM", *expectedDM);
+  RooProduct expectationSM("expectationSM","expectationSM", *expectedSM);
   RooProduct expectationCommon("expectationCommon","expectationCommon",
 			       *expected);
-  RooProduct expectationProc_ggF("expectationProc_ggF","expectationProc_ggF",
-				 *expectedProc_ggF);
+  RooProduct expectationProc_ggH("expectationProc_ggH","expectationProc_ggH",
+				 *expectedProc_ggH);
   RooProduct expectationProc_VBF("expectationProc_VBF","expectationProc_VBF",
 				 *expectedProc_VBF);
   RooProduct expectationProc_WH("expectationProc_WH","expectationProc_WH",
 				*expectedProc_WH);
   RooProduct expectationProc_ZH("expectationProc_ZH","expectationProc_ZH",
 				*expectedProc_ZH);
+  RooProduct expectationProc_bbH("expectationProc_bbH","expectationProc_bbH",
+				 *expectedProc_bbH);
   RooProduct expectationProc_ttH("expectationProc_ttH","expectationProc_ttH",
 				 *expectedProc_ttH);
   
@@ -532,10 +535,11 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currWS->import(expectationSM);
   currWS->import(expectationDM);
   currWS->import(expectationCommon);
-  currWS->import(expectationProc_ggF);
+  currWS->import(expectationProc_ggH);
   currWS->import(expectationProc_VBF);
   currWS->import(expectationProc_WH);
   currWS->import(expectationProc_ZH);
+  currWS->import(expectationProc_bbH);
   currWS->import(expectationProc_ttH);
   currWS->import(*expectedShape);
   currWS->import(*expectedBias);
@@ -551,8 +555,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(currWS, essList, resList, "VBF", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "WH", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "ZH", currCateIndex);
-  currSigParam->addSigToCateWS(currWS, essList, resList, "ttH", currCateIndex);
   currSigParam->addSigToCateWS(currWS, essList, resList, "bbH", currCateIndex);
+  currSigParam->addSigToCateWS(currWS, essList, resList, "ttH", currCateIndex);
   
   // Construct the background PDF:
   currBkgModel->addBkgToCateWS(currWS, nuisParamsBkg, currCateName);
@@ -560,33 +564,34 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
   
-  // build the signal normalization
-  TString nSM = Form("%f", currSigParam->getCateSigYield(currCateIndex,"SM"));
-  TString nDM = Form("%f", currSigParam->getCateSigYield(currCateIndex,"DM"));
-  std::cout << "\tnSM for " << currCateName << " = " << nSM << std::endl;
-  std::cout << "\tnDM for " << currCateName << " = " << nDM << std::endl;
-  
   // Normalization for each process follows such pattern:
   // mu*isEM*lumi*migr => expectationCommon
-  w->factory((TString)"prod::nSigSM(nSM["+nDM+(TString)"],expectationCommon,expectationSM)");
-  w->factory((TString)"prod::nSigDM(nDM["+nSM_2p+(TString)"],expectationCommon,expectationDM)");
-  w->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
-  w->Print();
+  currWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
+		       currSigParam->getCateSigYield(currCateIndex,"SM")));
+  currWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
+		       currSigParam->getCateSigYield(currCateIndex,"DM")));
+  // Model with combined SM production modes:
+  currWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
+  // Model with separated SM production modes:
+  currWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
+  currWS->Print();
   
   // Only attach constraint term to first category. If constraint terms were
   // attached to each category, constraints would effectively be multiplied.
   if (currCateIndex == 0) {
     constraints->add(*constraints_bias);
     RooProdPdf constraint("constraint", "constraint", *constraints);
-    w->import(constraint);
-    w->factory("PROD::model(modelSB,constraint)");
+    currWS->import(constraint);
+    currWS->factory("PROD::model(modelSB,constraint)");
+    currWS->factory("PROD::modelProd(modelProdSB,constraint)");
   }
   // Except in the case where the constraints are uncorrelated between
   // categories, as with the spurious signal:
   else {
     RooProdPdf constraint("constraint","constraint",*constraintsBias);
-    w->import(constraint);
-    w->factory("PROD::model(modelSB,constraint)");
+    currWS->import(constraint);
+    currWS->factory("PROD::model(modelSB,constraint)");
+    currWS->factory("PROD::modelProd(modelProdSB,constraint)");
   }
   
   /*
@@ -597,18 +602,19 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     parameters. All uncorrelated nuisance parameters should be included in
     nuisParamsUncorrelated.
   */
-  TString corrNPNames = "mu_DM,mu_SM,mu_BR_gg";
+  TString corrNPNames = "mu_DM,mu_SM,mu_ggH,mu_VBF,mu_WH,mu_ZH,mu_bbH,mu_ttH";
   
   // Iterate over nuisance parameters:
   TIterator *iterNuis = nuisParams->createIterator();
   RooRealVar* currNuis;
   while ((currNuis = (RooRealVar*)iterNuis->Next())) {
     std::cout << "\t" << currNuis->GetName() << std::endl;
-    corrNPNames += ("," + currNuis->GetName() + ",R_" + currNuis->GetName());
+    corrNPNames += (",nuisPar_" + currNuis->GetName() +
+		    ",globOb_" + currNuis->GetName());
   }
-  std::cout << "For category " << currCateName
-	    << " the following variables will be correlated: "
+  std::cout << "For category " << currCateName << ", correlate variables: "
 	    << corrNPNames << std::endl;
+  
   /*
     Sub-channel labeling
     Import the workspace currWS to another workspace and add currCateName as a 
@@ -616,15 +622,18 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     and their respective global observables will not be renamed.
   */
   RooWorkspace* categoryWS = new RooWorkspace("workspace"+currCateName);
-  categoryWS->import( (*currWS->pdf("model")), RenameAllNodes(currCateName),
-		      RenameAllVariablesExcept(currCateName,corrNPNames),
-		      Silence());
+  categoryWS->import((*currWS->pdf("model")), RenameAllNodes(currCateName),
+		     RenameAllVariablesExcept(currCateName,corrNPNames),
+		     Silence());
+  categoryWS->import((*currWS->pdf("modelProd")), RenameAllNodes(currCateName),
+		     RenameAllVariablesExcept(currCateName,corrNPNames),
+		     Silence());
   
   // Adding correlated nuisance parameters to nuisanceParameters:
-  RooArgSet* nuisance_categoryWS = new RooArgSet();
+  RooArgSet* nuisCateWS = new RooArgSet();
   iterNuis->Reset();
   while ((currNuis = (RooRealVar*)iterNuis->Next())) {
-    nuisance_categoryWS->add(*(RooRealVar*)categoryWS->obj(currNuis->GetName()));
+    nuisCateWS->add(*(RooRealVar*)categoryWS->obj(currNuis->GetName()));
   }
   
   // Adding uncorrelated nuisance parameters to nuisanceParameters:
@@ -633,16 +642,16 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   while ((currNuisUncorrelated = (RooRealVar*)iterNuisUncorrelated->Next())) {
     TString nuisName = (currNuisUncorrelated->GetName() 
 			+ (TString)"_" + currCateName);
-    nuisance_categoryWS->add(*(RooRealVar*)categoryWS->obj(currNuisName));
+    nuisCateWS->add(*(RooRealVar*)categoryWS->obj(currNuisName));
   }
   
   // Adding unconstrained NPs from the background pdf:
-  RooArgSet* nuispara_bkg_categoryWS = new RooArgSet();
+  RooArgSet* nuisBkgCateWS = new RooArgSet();
   TIterator *iterNuisBkg = nuisParamsBkg->createIterator();
   RooRealVar* currNuisBkg;
   while ((currNuisBkg = (RooRealVar*)iterNuisBkg->Next())) {
     TString parName = currNuisBkg->GetName()+(TString)"_"+currCateName;
-    nuispara_bkg_categoryWS->add(*categoryWS->var(parName));
+    nuisBkgCateWS->add(*categoryWS->var(parName));
   }
   
   /*
@@ -653,53 +662,57 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     those in the w. For other subchannels, only the bias constraint term is
     attached.
   */  
-  RooArgSet *global_categoryWS = new RooArgSet();
+  RooArgSet *globsCateWS = new RooArgSet();
   TIterator *iterGlobs = globalObs->createIterator();
   RooRealVar *currGlobs;
   while ((currGlobs = (RooRealVar*)iterGlobs->Next())) {
     
     TString globName = currGlobs->GetName()+(TString)"_"+currCateName;
     if ((bool)categoryWS->obj(globName)) {
-      global_categoryWS->add(*(RooRealVar*)categoryWS->obj(globName));
+      globsCateWS->add(*(RooRealVar*)categoryWS->obj(globName));
       categoryWS->var(globName)->setConstant();
     }
     else if ((bool)categoryWS->obj(currGlobs->GetName())) {
-      global_categoryWS->add(*(RooRealVar*)categoryWS->obj(currGlobs->GetName()));
+      globsCateWS->add(*(RooRealVar*)categoryWS->obj(currGlobs->GetName()));
       categoryWS->var(currGlobs->GetName())->setConstant();
     }
   }
   
-  RooArgSet *observable_categoryWS = new RooArgSet();
+  RooArgSet *obsCateWS = new RooArgSet();
   TIterator *iterObs = currWS->set("observables")->createIterator();
   RooRealVar *currObs;
   while (currObs = (RooRealVar*)iterObs->Next()) {
     TString obsName = currObs->GetName()+(TString)"_"+currCateName;
     if ((bool)categoryWS->obj(obsName)) {
-      observable_categoryWS->add(*(RooRealVar*)categoryWS->obj(obsName));
+      obsCateWS->add(*(RooRealVar*)categoryWS->obj(obsName));
     }
     else {
-      observable_categoryWS->add(*(RooRealVar*)categoryWS->obj(currObs->GetName()));
+      obsCateWS->add(*(RooRealVar*)categoryWS->obj(currObs->GetName()));
     }
   }
   
-  RooArgSet* muConstants_categoryWS = new RooArgSet();
-  muConstants_categoryWS->add(*categoryWS->var("mu_ggF"));
-  muConstants_categoryWS->add(*categoryWS->var("mu_VBF"));
-  muConstants_categoryWS->add(*categoryWS->var("mu_WH"));
-  muConstants_categoryWS->add(*categoryWS->var("mu_ZH"));
-  muConstants_categoryWS->add(*categoryWS->var("mu_ttH"));
-  muConstants_categoryWS->add(*categoryWS->var("mu_BR_gg"));
+  RooArgSet* muConstCateWS = new RooArgSet();
+  muConstCateWS->add(*categoryWS->var("mu_ggH"));
+  muConstCateWS->add(*categoryWS->var("mu_VBF"));
+  muConstCateWS->add(*categoryWS->var("mu_WH"));
+  muConstCateWS->add(*categoryWS->var("mu_ZH"));
+  muConstCateWS->add(*categoryWS->var("mu_bbH"));
+  muConstCateWS->add(*categoryWS->var("mu_ttH"));
   
-  TIterator *iterMuConst = muConstants_categoryWS->createIterator();
+  /**
+     Made it to here.
+  */
+
+  TIterator *iterMuConst = muConstCateWS->createIterator();
   RooRealVar *currMuConst;
   while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
     currMuConst->setConstant();
   }
   
-  categoryWS->defineSet("muConstants", *muConstants_categoryWS);
-  categoryWS->defineSet("observables", *observable_categoryWS);
-  categoryWS->defineSet("nuisanceParameters", *nuisance_categoryWS);
-  categoryWS->defineSet("globalObservables", *global_categoryWS);
+  categoryWS->defineSet("muConstants", *muConstCateWS);
+  categoryWS->defineSet("observables", *obsCateWS);
+  categoryWS->defineSet("nuisanceParameters", *nuisCateWS);
+  categoryWS->defineSet("globalObservables", *globsCateWS);
   
   // Import the observed data set:
   currMassPoints = new DMMassPoints(jobName, "obsData", cateScheme, "FromFile",
@@ -709,9 +722,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Set the background normalization parameter:
   (*categoryWS->var("nBkg_"+currCateName) ).setVal(obsdata->numEntries());
-  (*categoryWS->pdf("bkgPdf_"+currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuispara_bkg_categoryWS)));
+  (*categoryWS->pdf("bkgPdf_"+currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)));
   (*categoryWS->var("nBkg_"+currCateName)).setVal(obsdata->numEntries());
-  nuispara_bkg_categoryWS->Print("v");
+  nuisBkgCateWS->Print("v");
   categoryWS->import(*obsData);
   
   // Create a binned observed data set:

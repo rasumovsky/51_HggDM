@@ -164,24 +164,11 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
-  w->factory((TString)"RooCBShape::pdfCB" + procname 
-	     + (TString)"(m_yy, prod::meanCB" + procname + (TString)"(meanCBNom"
-	     + procname + (TString)"[" + meanCB + (TString)"]," + listESS
-	     + (TString)"), prod::massResCB" + procname 
-	     + (TString)"(massResNomCB" + procname + (TString)"[" + massResNomCB
-	     + (TString)"]," + listRes + (TString)"), alphaCB" + procname
-	     + (TString)"[" + alphaCB + (TString)"], nCB["+nCB+"])");
+  w->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", procname.Data(), procname.Data(), procname.Data(), meanCB.Data(), listESS.Data(), procname.Data(), procname.Data(), massResNomCB.Data(), listRes.Data(), procname.Data(), alphaCB.Data(), nCB.Data()));
   
-  w->factory((TString)"RooGaussian::pdfGA" + procname
-	     + (TString)"(atlas_invMass, prod::meanGA" + procname
-	     + (TString)"(meanGANom" + procname + (TString)"[" + meanGA
-	     + (TString)"]," + listESS + (TString) + "), prod::massResGA"
-	     + procname + (TString)"(massResNomGA" + procname + (TString)"["
-	     + massResGA + (TString)"]," + listRes + (TString)"," + "))");
+  w->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", procname.Data(), procname.Data(), procname.Data(), meanGA.Data(), listESS.Data(), procname.Data(), procname.Data(), massResGA.Data(), listRes.Data()));
   
-  w->factory((TString)"SUM::sigPdf" + procname + (TString)"(frac" + procname
-	     + (TString)"[" + frac + (TString)"]*pdfCB" + procname
-	     + (TString)",pdfGA" + procname + (TString)")");
+  w->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", procname.Data(), procname.Data(), frac.Data(), procname.Data(), procname.Data())); 
 }
 
 /**

@@ -100,7 +100,7 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
   system(Form("mkdir -vp %s",outputDir.Data()));
   
   // Check if data should be weighted:
-  isWeighted = sampleName.Contains("MC");
+  isWeighted = isWeightedSample(sampleName);
   
   // Either load the masspoints from file or create new ones:
   if (options.Contains("FromFile")) loadMassPointsFromFile();
@@ -179,11 +179,6 @@ void DMMassPoints::setRooCategory(RooCategory *newCategories) {
 void DMMassPoints::createNewMassPoints() {
   
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
-
-  // Load the input TFile and TTree here:
-  //TFile *myFile = new TFile(nameToFileList(sampleName));
-  //TTree *myTree = (TTree*)myFile->Get("treename");
-  //DMTree *dmt = new DMTree(myTree);
   
   // Alternative: use file list:
   TString listName = nameToFileList(sampleName);
@@ -322,6 +317,12 @@ void DMMassPoints::loadMassPointsFromFile() {
         
     double readMass; double readWeight;
     ifstream massFile(getMassPointsFileName(i_c));
+    // First check that file exists. If it does not, we need to create inputs.
+    if (!massFile) {
+      std::cout << "Error! Cannot load mass points from file." << std::endl;
+      createNewMassPoints();
+      return;
+    }
     if (isWeighted) {
       while (massFile >> readMass >> readWeight) {
 	wt.setVal(readWeight);

@@ -12,6 +12,16 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef _DMAnalysis_h_
+#define _DMAnalysis_h_
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string>
+#include <iostream>
+
+#include "TString.h"
+
 namespace DMAnalysis {
 
   ////////////////////////////////////////
@@ -27,8 +37,16 @@ namespace DMAnalysis {
   double DMMyyRangeLo = 105.0;
   double DMMyyRangeHi = 160.0;
   
-  int const nProdModes = 6;
-  TString sigProdModes[nProdModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
+  int const nSMModes = 6;
+  TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
+  
+  int const nDMModes = 8;
+  TString sigDMModes[nDMModes] = {"shxx_gg_ms100_mx100",
+				  "shxx_gg_ms100_mx500",
+				  "zphxx_gg_mzp100_mx100"};  
+  
+  int const nMCProcesses = 1;
+  TString MCProcesses[nMCProcesses] = {"gg_gjet"};
   
   ////////////////////////////////////////
   //    INPUT AND OUTPUT DIRECTORIES    //
@@ -89,6 +107,85 @@ namespace DMAnalysis {
     return result;
   }
   
+  /**
+     Convert the DM sample name into a process name, a subset of the full name.
+     @param modeName - the name of the DM production mode.
+     @param processName - the name of the process.
+  */
+  TString getIntermediaryName(TString modeName) {
+    if (modeName.Contains("shxx_gg")) {
+      return "shxx_gg";
+    }
+    else if (modeName.Contains("zphxx_gg")) {
+      return "zphxx_gg";
+    }
+    else {
+      std::cout << "Analysis Error: no matching intermediary name" << std::endl;
+      return "";
+    }
+  }
+  
+  /**
+     Convert the DM sample name into an intermediary mass.
+     @param modeName - the name of the DM production mode.
+     @returns - the mass of the mediator particle.
+  */
+  int getIntermediaryMass(TString modeName) {
+    for (int currMass = 100; currMass < 1000; currMass += 100) {
+      if (modeName.Contains(Form("ms%d",currMass))) {
+	return currMass;
+      }
+    }
+    else {
+      std::cout << "Analysis Error: no matching intermediary mass" << std::endl;
+      return 0;
+    }
+  }
+  
+  /**
+     Convert the DM sample name into a dark matter particle mass.
+     @param modeName - the name of the DM production mode.
+     @returns - the mass of the DM particle.
+  */
+  int getDarkMatterMass(TString modeName) {
+    for (int currMass = 100; currMass < 1000; currMass += 100) {
+      if (modeName.Contains(Form("mx%d",currMass))) {
+	return currMass;
+      }
+    }
+    else {
+      std::cout << "Analysis Error: no matching DM mass" << std::endl;
+      return 0;
+    }
+  }
+  
+  /** 
+      Check whether a sample should be weighted.
+      @param sampleName - the name of the sample being used.
+      @returns - true iff the sample has associated event weights.
+  */
+  bool isWeightedSample(TString sampleName) {
+    // First check if it is a SM signal process:
+    for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+      if (sampleName.EqualTo(sigSMModes[i_SM])) {
+	return true;
+      }
+    }
+    // Then check if it is a dark matter MC process:
+    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+      if (sampleName.EqualTo(sigDMModes[i_DM])) {
+	return true;
+      }
+    }
+    // Finally, check if it is one of the other MC processes:
+    for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
+      if (sampleName.EqualTo(MCProcesses[i_MC])) {
+	return true;
+      }
+    }
+    return false;
+  }
+
   ////////////////////////////////////////
   //          SCRIPT LOCATIONS          //
   ////////////////////////////////////////
@@ -96,4 +193,6 @@ namespace DMAnalysis {
   //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
   //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
   
-}
+};
+
+#endif

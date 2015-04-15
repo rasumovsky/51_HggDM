@@ -88,7 +88,7 @@ float BRXSReader::getSMBR(double mass, TString decay, TString value) {
    production process at a particular intermediate and fermion mass.
    @param massIntermediate - The scalar or Zprime mass.
    @param massFermion - The dark matter particle mass.
-   @param type - The intermediate type (scalar, Zprime).
+   @param type - The production type (shxx_gg, zphxx_gg).
    @param value - The value (XS, +ERR, -ERR).
    @returns - The value of the production cross-section.
 */
@@ -295,13 +295,13 @@ void BRXSReader::loadSMXS(TString production) {
    Convert variables to the key for the Dark Matter map.
    @param massIntermediate - The mass of the scalar or Zprime intermediary. 
    @param massFermion - The mass of the fermionic dark matter particle.
-   @param type - The intermediate type (scalar, Zprime).
+   @param type - The intermediate type (shxx_gg, zphxx_gg).
    @param value - The value (XS, +ERR, -ERR).
    @returns - the map key.
 */
 TString BRXSReader::getDMMapKey(int massIntermediate, int massFermion,
 				TString type, TString value) {
-  TString key = Form("m%s%dGeV_mX%dGeV_%s", type.Data(), massIntermediate,
+  TString key = Form("%s_%d_%d_%s", type.Data(), massIntermediate,
 		     massFermion, value.Data());
   return key;
 }

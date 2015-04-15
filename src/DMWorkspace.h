@@ -20,13 +20,13 @@
 // Systematic Uncertainty readers (DEPRECATED):
 #include "ESSReader.h"
 #include "ResReader.h"
-
-#include "DMMaster.hh"
+#include "DMAnalysis.h"
 
 using namespace std;
 using namespace RooFit;
 using namespace RooStats;
 using namespace CommonFunc;
+using namespace DMAnalysis;
 
 class DMWorkspace
 {

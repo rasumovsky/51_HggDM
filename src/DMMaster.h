@@ -8,9 +8,10 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "DMHeader.h"
+#include "DMAnalysis.h"
 
 using namespace std;
+using namespace DMAnalysis;
 
 void MakeExe(TString exename);
 

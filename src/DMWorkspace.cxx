@@ -13,17 +13,6 @@
 //  Third: make plots a la spin analysis or better yet NPP.                   //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
-//                                      //
-//  Options:                            //
-//    noess - no energy scale sys.      //
-//    nores - no resolution sys.        //
-//    noss  - no shape sys.             //
-//    nosys - no sys. period            //
-//    decorrmu                          //
-//    fitasimov0p                       //
-//    fitasimov2p                       //
-//                                      //
-//////////////////////////////////////////
 
 #include "DMWorkspace.h"
 

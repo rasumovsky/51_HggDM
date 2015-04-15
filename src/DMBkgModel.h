@@ -29,9 +29,11 @@
 // Package includes:
 #include "CommonHead.h"
 #include "RooFitHead.h"
-#include "DMHeader.h"
+#include "DMAnalysis.h"
 #include "DMEvtSelect.h"
 #include "RooBernsteinM.h"
+
+using namespace DMAnalysis;
 
 class DMBkgModel 
 {

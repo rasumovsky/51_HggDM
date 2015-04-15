@@ -31,8 +31,10 @@
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "DMEvtSelect.h"
-#include "DMHeader.h"
+#include "DMAnalysis.h"
 #include "DMTree.h"
+
+using namespace DMAnalysis;
 
 class DMMassPoints 
 {

@@ -33,6 +33,9 @@
 //#include "DMTree.h"
 #include "DMMassPoints.h"
 #include "statistics.h"
+#include "DMAnalysis.h"
+
+using namespace DMAnalysis;
 
 class DMSigParam 
 {

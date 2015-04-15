@@ -31,13 +31,6 @@ double DMMyyRangeHi = 160.0;
 int const nProdModes = 6;
 TString sigProdModes[nProdModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
 
-TString cateToBkgFunc(TString category) {
-  TString result = "";
-  result = "Exppol01";
-  //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
-  return result;
-}
-
 ////////////////////////////////////////
 //    INPUT AND OUTPUT DIRECTORIES    //
 ////////////////////////////////////////
@@ -51,27 +44,49 @@ TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
 //           FILE LOCATIONS           //
 ////////////////////////////////////////
 
-TString nameToRootFile(TString name) {
-  TString result = "";
-  if (name.EqualTo("ggH")) result = "sampleName_ggH";
-  else if (name.EqualTo("VBF")) result = "sampleName_VBF";
-  else if (name.EqualTo("WH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_WH/data-outputLabel/sample.root";
-  else if (name.EqualTo("ZH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_ZH/data-outputLabel/sample.root";
-  else if (name.EqualTo("ttH")) result = "~lkashif/public/for_andrew/H2yyMETAnalysis_ttH/data-outputLabel/sample.root";
-  else if (name.EqualTo("bbH")) result = "sampleName_bbH";
-  else std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+TString nameToFileList(TString name) {
+  TString result = Form("%s/FileLists/",masterInput.Data());
+  if (name.EqualTo("ggH")) {
+    result += "list_H2yyMETAnalysis_ggH.txt";
+  }
+  else if (name.EqualTo("VBF")) {
+    result += "list_H2yyMETAnalysis_VBF.txt";
+  }
+  else if (name.EqualTo("WH")) {
+    result += "list_H2yyMETAnalysis_WH.txt";
+  }
+  else if (name.EqualTo("ZH")) {
+    result += "list_H2yyMETAnalysis_ZH.txt";
+  }
+  else if (name.EqualTo("ttH")) {
+    result += "list_H2yyMETAnalysis_ttH.txt";
+  }
+  else if (name.EqualTo("gg_gjet")) {
+    result += "list_H2yyMETAnalysis_gg_gjet.txt";
+  }
+  else if (name.EqualTo("shxx_gg_ms100_mx100")) {
+    result += "list_H2yyMETAnalysis_shxx_gg_ms100_mx100.txt";
+  }
+  else if (name.EqualTo("shxx_gg_ms100_mx500")) {
+    result += "list_H2yyMETAnalysis_shxx_gg_ms100_mx500.txt";
+  }
+  else if (name.EqualTo("zphxx_gg_mzp100_mx100")) {
+    result += "list_H2yyMETAnalysis_zphxx_gg_mzp100_mx100.txt";
+  }
+  else {
+    std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+  }
   return result;
 }
 
-TString nameToFileList(TString name) {
-  TString result = Form("%s/FileLists/",masterInput.Data());
-  if (name.EqualTo("ggH")) result += "fileList_ggH.txt";
-  else if (name.EqualTo("VBF")) result += "fileList_VBF.txt";
-  else if (name.EqualTo("WH")) result += "fileList_WH.txt";
-  else if (name.EqualTo("ZH")) result += "fileList_ZH.txt";
-  else if (name.EqualTo("ttH")) result += "fileList_ttH.txt";
-  else if (name.EqualTo("bbH")) result += "fileList_bbH.txt";
-  else std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+////////////////////////////////////////
+//          BACKGROUND PDFS           //
+////////////////////////////////////////
+
+TString cateToBkgFunc(TString category) {
+  TString result = "";
+  result = "Exppol01";
+  //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
   return result;
 }
 

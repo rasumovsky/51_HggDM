@@ -22,42 +22,45 @@
 
 #include "TString.h"
 
-extern namespace DMAnalysis {
+namespace DMAnalysis {
   
   ////////////////////////////////////////
   //         GLOBAL PARAMETERS          //
   ////////////////////////////////////////
   
   // Set True for final analysis on data:
-  bool doBlind = true;
+  const bool doBlind = true;
   
   // Luminosity in pb-1:
-  double analysisLuminosity = 5000;
+  const double analysisLuminosity = 5000;
   
-  double higgsMass = 125.09;// GeV
+  const double higgsMass = 125.09;// GeV
 
-  double DMMyyRangeLo = 105.0;
-  double DMMyyRangeHi = 160.0;
+  const double DMMyyRangeLo = 105.0;
+  const double DMMyyRangeHi = 160.0;
   
-  int const nSMModes = 6;
-  TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
+  //int const nSMModes = 6;
+  const int nSMModes = 6;
+  const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
   
-  int const nDMModes = 8;
-  TString sigDMModes[nDMModes] = {"shxx_gg_ms100_mx100",
+  //int const nDMModes = 8;
+  const int nDMModes = 8;
+  const TString sigDMModes[nDMModes] = {"shxx_gg_ms100_mx100",
 				  "shxx_gg_ms100_mx500",
 				  "zphxx_gg_mzp100_mx100"};  
   
-  int const nMCProcesses = 1;
-  TString MCProcesses[nMCProcesses] = {"gg_gjet"};
+  //int const nMCProcesses = 1;
+  const int nMCProcesses = 1;
+  const TString MCProcesses[nMCProcesses] = {"gg_gjet"};
   
   ////////////////////////////////////////
   //    INPUT AND OUTPUT DIRECTORIES    //
   ////////////////////////////////////////
   
   // Location of global input files:
-  TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
+  const TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
   // Location of output directory:
-  TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
+  const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
   
   ////////////////////////////////////////
   //          SCRIPT LOCATIONS          //
@@ -75,7 +78,7 @@ extern namespace DMAnalysis {
       @param name - the name of the sample.
       @returns - the file list location.
   */
-  TString nameToFileList(TString name) {
+  TString nameToFileList(TString name) const {
     TString result = Form("%s/FileLists/",masterInput.Data());
     if (name.EqualTo("ggH")) {
       result += "list_H2yyMETAnalysis_ggH.txt";
@@ -115,7 +118,7 @@ extern namespace DMAnalysis {
       @param category - the category name. 
       @returns - the name of the background PDF.
   */
-  TString cateToBkgFunc(TString category) {
+  TString cateToBkgFunc(TString category) const {
     TString result = "";
     result = "Exppol01";
     //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
@@ -127,7 +130,7 @@ extern namespace DMAnalysis {
      @param modeName - the name of the DM production mode.
      @param processName - the name of the process.
   */
-  TString getIntermediaryName(TString modeName) {
+  TString getIntermediaryName(TString modeName) const {
     if (modeName.Contains("shxx_gg")) {
       return "shxx_gg";
     }
@@ -145,7 +148,7 @@ extern namespace DMAnalysis {
       @param modeName - the name of the DM production mode.
       @returns - the mass of the mediator particle.
   */
-  int getIntermediaryMass(TString modeName) {
+  int getIntermediaryMass(TString modeName) const {
     for (int currMass = 100; currMass < 1000; currMass += 100) {
       if (modeName.Contains(Form("ms%d",currMass))) {
 	return currMass;
@@ -160,7 +163,7 @@ extern namespace DMAnalysis {
       @param modeName - the name of the DM production mode.
       @returns - the mass of the DM particle.
   */
-  int getDarkMatterMass(TString modeName) {
+  int getDarkMatterMass(TString modeName) const {
     for (int currMass = 100; currMass < 1000; currMass += 100) {
       if (modeName.Contains(Form("mx%d",currMass))) {
 	return currMass;
@@ -175,7 +178,7 @@ extern namespace DMAnalysis {
       @param sampleName - the name of the sample being used.
       @returns - true iff the sample is a signal sample.
   */
-  bool isSMSample(TString sampleName) {
+  bool isSMSample(TString sampleName) const {
     for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
       if (sampleName.EqualTo(sigSMModes[i_SM])) {
 	return true;
@@ -184,7 +187,7 @@ extern namespace DMAnalysis {
     return false;
   }
   
-  bool isDMSample(TString sampleName) {
+  bool isDMSample(TString sampleName) const {
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
       if (sampleName.EqualTo(sigDMModes[i_DM])) {
 	return true;
@@ -193,7 +196,7 @@ extern namespace DMAnalysis {
     return false;
   }
   
-  bool isSignalSample(TString sampleName) {
+  bool isSignalSample(TString sampleName) const {
     if (isSMSample(sampleName) || isDMSample(sampleName)) {
       return true;
     }
@@ -207,7 +210,7 @@ extern namespace DMAnalysis {
       @param sampleName - the name of the sample being used.
       @returns - true iff the sample has associated event weights.
   */
-  bool isWeightedSample(TString sampleName) {
+  bool isWeightedSample(TString sampleName) const {
     // First check if it is a SM or DM signal process:
     if (isSignalSample(sampleName)) {
       return true;

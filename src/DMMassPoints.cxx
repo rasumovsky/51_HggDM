@@ -188,6 +188,9 @@ void DMMassPoints::createNewMassPoints() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt);
   
+  // Tool to load cross sections and branching ratios:
+  BRXSReader *brxs = new BRXSReader(Form("%s/XSBRInputs/",masterInput.Data()));
+  
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
   
@@ -241,6 +244,20 @@ void DMMassPoints::createNewMassPoints() {
 	// Get the event weight:
 	double evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
 	
+	// Multiply by the appropriate luminosity, xsection & branching ratio.
+	if (isSMSample(sampleName)) {
+	  evtWeight *= (analysisLuminosity *
+			brxs->getSMBR(higgsMass, "gammagamma","BR") *
+			brxs->getSMXS(higgsMass, sampleName, "BR"));
+	}
+	// Dark matter XSBR includes cross-section and branching ratio.
+	else if (isDMSample(sampleName)) {
+	  evtWeight *= (analysisLuminosity *
+			brxs->getDMXSBR(getIntermediaryMass(sampleName),
+					getDarkMatterMass(sampleName),
+					getIntermediaryName(sampleName),
+					"XS"));
+	}
 	wt.setVal(evtWeight);
 	cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
 	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << " " << evtWeight

@@ -99,13 +99,19 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
   system(Form("mkdir -vp %s",outputDir.Data()));
   system(Form("mkdir -vp %s/Plots",outputDir.Data())); 
   system(Form("mkdir -vp %s/all",outputDir.Data()));
-  for (int i_p = 0; i_p < nProdModes; i_p++) {
-    system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigProdModes[i_p]).Data()));
+
+  // Load the SM signal parameterization from file or start from scratch:
+  for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+    system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigSMModes[i_SM]).Data()));
+    createSigParam(sigSMModes[i_SM], (!options.Contains("FromFile")));
   }
+  // Also create the total SM parameterization:
+  createSigParam("SM", (!options.Contains("FromFile")));
   
-  // Load the signal parameterization from file or start from scratch:
-  for (int i_p = 0; i_p < nProdModes; i_p++) {
-    createSigParam(sigProdModes[i_p], (!options.Contains("FromFile")));
+  // Load the DM signal parameterization from file or start from scratch:
+  for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+    system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigDMModes[i_DM]).Data()));
+    createSigParam(sigDMModes[i_DM], (!options.Contains("FromFile")));
   }
   return;
 }
@@ -307,7 +313,7 @@ void DMSigParam::setRooCategory(RooCategory *newCategories) {
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
    @param makeNew - Set true if make parameterization from scratch. Else false.
-   @returns void.
+   @returns - void.
 */
 void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
@@ -324,8 +330,17 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   else {
     inputFitFile.open(getSigParamFileName(process,"fit"));
     inputYieldFile.open(getSigParamFileName(process,"yield"));
+    // Check that the input files exist, and if they don't, make new param. 
+    if (!inputFitFile || !inputYieldFile) {
+      makeNew = true;
+      outputFitFile.open(getSigParamFileName(process,"fit"));
+      outputYieldFile.open(getSigParamFileName(process,"yield"));
+    }
   }
-  
+
+  // HOW TO ACCOMODATE THIS!?:
+  //createSigParam("SM", (!options.Contains("FromFile")));
+
   // Vectors to store fitted PDFs
   std::vector<RooCBShape*> vectorCB; vectorCB.clear();
   std::vector<RooGaussian*> vectorGA; vectorGA.clear();
@@ -335,9 +350,22 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   // Load the RooDataSet corresponding to the sample
   TString sampleName = nameToSample[process];
   DMMassPoints *mp;
-  // Important to provide pointer to m_yy and categories!
-  if (makeNew) mp = new DMMassPoints(jobName, sampleName, cateScheme, "New",
-				     m_yy, categories);
+  DMMassPoints *mps[nSMModes];
+  
+  if (makeNew) {
+    // For total SM, load all SM mass points.
+    if (process.EqualTo("SM")) {
+      for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+	mps = new DMMassPoints(jobName, sigSMModes[i_SM], cateScheme,
+			       "FromFile", m_yy, categories);
+      }
+    }
+    // Otherwise, just load a particular mode.
+    else {
+      mp = new DMMassPoints(jobName, process, cateScheme, "FromFile", m_yy,
+			    categories);
+    }
+  }
   
   // Loop over categories and process modes:
   for (int i_c = 0; i_c < nCategories; i_c++) {
@@ -388,10 +416,28 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 					       i_c),
 					  *currCB, *currGA, *frac);
     
-    // If making from scratch, se DMMassPoints to construct the RooDataSet:
+    // If making from scratch, use DMMassPoints to construct the RooDataSet:
     if (makeNew) {
-      RooDataSet *currData = mp->getCateDataSet(i_c);
-      
+      RooDataSet *currData = NULL;
+      if (process.EqualTo("SM")) {
+	for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+	  if (i_SM == 0) {
+	    currData = mps[i_SM]->getCateDataSet(i_c);
+	  }
+	  else {
+	    RooDataSet *tempData = mps[i_SM]->getCateDataSet(i_c);
+	    if (!currData->merge(tempData)) {
+	      std::cout << "Error merging SM datasets" << std::endl;
+	    }
+	  }
+	}
+	currData = mps->getCateDataSet(i_c);
+	}
+      }
+      else {
+	currData = mp->getCateDataSet(i_c);
+      }
+
       // Store the signal yields in memory:
       vectorYield.push_back(currData->sumEntries());
       

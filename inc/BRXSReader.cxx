@@ -7,7 +7,8 @@
 //  Date: 11/03/2015                                                          //
 //                                                                            //
 //  This class is designed to load the cross-sections and branching-ratios    //
-//  for the SM Higgs boson at a variety of masses, for sqrt(s) = 13 TeV.      //
+//  for the SM Higgs boson at a variety of masses, for sqrt(s) = 13 TeV. All  //
+//  cross sections are in units of pb.                                        //
 //                                                                            //
 //  13 TeV Cross-section values from:                                         //
 // https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt1314TeV

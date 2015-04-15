@@ -33,6 +33,7 @@
 #include "DMEvtSelect.h"
 #include "DMAnalysis.h"
 #include "DMTree.h"
+#include "BRXSReader.h"
 
 using namespace DMAnalysis;
 
@@ -80,7 +81,6 @@ class DMMassPoints
   RooDataSet *combData;
   RooRealVar *m_yy;
   RooCategory *categories;
-  
 };
 
 #endif

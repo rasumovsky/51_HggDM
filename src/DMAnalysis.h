@@ -29,11 +29,13 @@ namespace DMAnalysis {
   ////////////////////////////////////////
   
   // Set True for final analysis on data:
-  bool doBlind = false;
+  bool doBlind = true;
   
-  // Luminosity in fb-1:
-  double analysisLuminosity = 20.3;
+  // Luminosity in pb-1:
+  double analysisLuminosity = 5000;
   
+  double higgsMass = 125.09// GeV
+
   double DMMyyRangeLo = 105.0;
   double DMMyyRangeHi = 160.0;
   
@@ -58,9 +60,21 @@ namespace DMAnalysis {
   TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
   
   ////////////////////////////////////////
-  //           FILE LOCATIONS           //
+  //          SCRIPT LOCATIONS          //
   ////////////////////////////////////////
   
+  //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
+  //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
+  
+  ////////////////////////////////////////
+  //           MEMBER FUNCTIONS         //
+  ////////////////////////////////////////
+  
+  /** 
+      Convert the sample name to the corresponding file list.
+      @param name - the name of the sample.
+      @returns - the file list location.
+  */
   TString nameToFileList(TString name) {
     TString result = Form("%s/FileLists/",masterInput.Data());
     if (name.EqualTo("ggH")) {
@@ -96,10 +110,11 @@ namespace DMAnalysis {
     return result;
   }
   
-  ////////////////////////////////////////
-  //          BACKGROUND PDFS           //
-  ////////////////////////////////////////
-  
+  /** 
+      Determine the background PDF based on the category.
+      @param category - the category name. 
+      @returns - the name of the background PDF.
+  */
   TString cateToBkgFunc(TString category) {
     TString result = "";
     result = "Exppol01";
@@ -125,10 +140,10 @@ namespace DMAnalysis {
     }
   }
   
-  /**
-     Convert the DM sample name into an intermediary mass.
-     @param modeName - the name of the DM production mode.
-     @returns - the mass of the mediator particle.
+  /** 
+      Convert the DM sample name into an intermediary mass.
+      @param modeName - the name of the DM production mode.
+      @returns - the mass of the mediator particle.
   */
   int getIntermediaryMass(TString modeName) {
     for (int currMass = 100; currMass < 1000; currMass += 100) {
@@ -136,16 +151,14 @@ namespace DMAnalysis {
 	return currMass;
       }
     }
-    else {
-      std::cout << "Analysis Error: no matching intermediary mass" << std::endl;
-      return 0;
-    }
+    std::cout << "Analysis Error: no matching intermediary mass" << std::endl;
+    return 0;
   }
   
-  /**
-     Convert the DM sample name into a dark matter particle mass.
-     @param modeName - the name of the DM production mode.
-     @returns - the mass of the DM particle.
+  /** 
+      Convert the DM sample name into a dark matter particle mass.
+      @param modeName - the name of the DM production mode.
+      @returns - the mass of the DM particle.
   */
   int getDarkMatterMass(TString modeName) {
     for (int currMass = 100; currMass < 1000; currMass += 100) {
@@ -153,9 +166,39 @@ namespace DMAnalysis {
 	return currMass;
       }
     }
+    std::cout << "Analysis Error: no matching DM mass" << std::endl;
+    return 0;
+  }
+    
+  /** 
+      Check if the sample is among those listed as a SM or DM signal. 
+      @param sampleName - the name of the sample being used.
+      @returns - true iff the sample is a signal sample.
+  */
+  bool isSMSample(TString sampleName) {
+    for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+      if (sampleName.EqualTo(sigSMModes[i_SM])) {
+	return true;
+      }
+    }
+    return false;
+  }
+  
+  bool isDMSample(TString sampleName) {
+    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+      if (sampleName.EqualTo(sigDMModes[i_DM])) {
+	return true;
+      }
+    }
+    return false;
+  }
+  
+  bool isSignalSample(TString sampleName) {
+    if (isSMSample(sampleName) || isDMSample(sampleName)) {
+      return true;
+    }
     else {
-      std::cout << "Analysis Error: no matching DM mass" << std::endl;
-      return 0;
+      return false;
     }
   }
   
@@ -165,17 +208,9 @@ namespace DMAnalysis {
       @returns - true iff the sample has associated event weights.
   */
   bool isWeightedSample(TString sampleName) {
-    // First check if it is a SM signal process:
-    for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
-      if (sampleName.EqualTo(sigSMModes[i_SM])) {
-	return true;
-      }
-    }
-    // Then check if it is a dark matter MC process:
-    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      if (sampleName.EqualTo(sigDMModes[i_DM])) {
-	return true;
-      }
+    // First check if it is a SM or DM signal process:
+    if (isSignalSample(sampleName)) {
+      return true;
     }
     // Finally, check if it is one of the other MC processes:
     for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
@@ -185,13 +220,6 @@ namespace DMAnalysis {
     }
     return false;
   }
-
-  ////////////////////////////////////////
-  //          SCRIPT LOCATIONS          //
-  ////////////////////////////////////////
-  
-  //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
-  //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
   
 };
 

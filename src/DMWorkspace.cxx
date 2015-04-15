@@ -133,7 +133,7 @@ void DMWorkspace::createNewWS() {
   combinedWS->defineSet("nuisanceParameters",*nuisanceParameters);
   combinedWS->defineSet("observables",*observables);
   combinedWS->defineSet("globalObservables",*globalObservables);
-  combinedWS->defineSet("poi",RooArgSet(*combinedWS->var("mu")));   
+  combinedWS->defineSet("poi",RooArgSet(*combinedWS->var("mu_DM")));   
   
   RooRealVar wt("wt","wt",1);
   RooArgSet *args = new RooArgSet();

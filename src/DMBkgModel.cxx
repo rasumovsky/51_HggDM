@@ -113,14 +113,14 @@ void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
   RooAbsPdf* currBkgModel = getCateBkgPDF(cateIndex);
   
   // Then add it to the workspace:
-  workspace->add(currBkgModel);
+  workspace->import(currBkgModel);
   
   // Then add the parameters to the workspace:
   RooArgSet *currArgs = currBkgModel->getVariables();
   TIterator *iterArgs = currArgs->createIterator();
   RooRealVar* currIter = NULL;
   while ((currIter = (RooRealVar*)iterArgs->Next())) {
-    nuisParams->add(currIter);
+    nuisParams->add(*currIter);
   }
   
   // Finally, include a normalization parameter for the background:
@@ -135,7 +135,7 @@ void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
 */
 RooAbsPdf* DMBkgModel::getCateBkgPDF(int cateIndex) {
   TString cateName = Form("%s_%d",cateScheme.Data(),cateIndex);
-  TString currFunction = cateToBkgFunc[cateName];
+  TString currFunction = cateToBkgFunc(cateName);
   TString currFuncName = Form("bkg_%d",cateIndex);
   return getBkgPDFByName(currFuncName, currFunction);
 }

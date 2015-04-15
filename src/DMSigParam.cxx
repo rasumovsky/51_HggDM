@@ -136,7 +136,7 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString listESS = "";
   for (int i_e = 0; i_e < (int)namesESS.size(); i_e++) {
     TString atlasExpNameESS = Form("atlas_expected_%s", namesESS[i_e].Data());
-    if (!(bool)w->obj(atlasExpNameESS)) {
+    if (!(bool)workspace->obj(atlasExpNameESS)) {
       workspace->factory(Form("%s[1]",atlasExpNameESS.Data()));
     }
     if (i_e < ((int)namesESS.size()-1)) {
@@ -151,7 +151,7 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString listRes = "";
   for (int i_r = 0; i_r < (int)namesRes.size(); i_r++) {
     TString atlasExpNameRes = Form("atlas_expected_%s",namesRes[i_r].Data());
-    if (!(bool)w->obj(atlasExpNameRes)) {
+    if (!(bool)workspace->obj(atlasExpNameRes)) {
       workspace->factory(Form("%s%s[1]",atlasExpNameRes.Data(),process.Data()));
     }
     if (i_r < ((int)namesRes.size()-1)) {

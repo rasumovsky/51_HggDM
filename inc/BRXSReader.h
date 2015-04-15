@@ -46,6 +46,7 @@ class BRXSReader
   bool hasKey(TString key, TString mapType);
   void loadSMBR(TString decayClass);
   void loadSMXS(TString production);
+  void loadDMXS();
   
   // Member objects:
   TString directory;

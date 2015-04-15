@@ -137,7 +137,7 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   for (int i_e = 0; i_e < (int)namesESS.size(); i_e++) {
     TString atlasExpNameESS = Form("atlas_expected_%s", namesESS[i_e].Data());
     if (!(bool)w->obj(atlasExpNameESS)) {
-      w->factory(Form("%s[1]",atlasExpNameESS.Data()));
+      workspace->factory(Form("%s[1]",atlasExpNameESS.Data()));
     }
     if (i_e < ((int)namesESS.size()-1)) {
       listESS.Append(Form("%s,",atlasExpNameESS.Data()));//added comma
@@ -152,13 +152,13 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   for (int i_r = 0; i_r < (int)namesRes.size(); i_r++) {
     TString atlasExpNameRes = Form("atlas_expected_%s",namesRes[i_r].Data());
     if (!(bool)w->obj(atlasExpNameRes)) {
-      w->factory(Form("%s%s[1]",atlasExpNameRes.Data(),procname.Data()));
+      workspace->factory(Form("%s%s[1]",atlasExpNameRes.Data(),process.Data()));
     }
     if (i_r < ((int)namesRes.size()-1)) {
-      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),procname.Data()));
+      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),process.Data()));
     }
     else {
-      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),procname.Data()));
+      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),process.Data()));
     }
   }
   
@@ -170,11 +170,11 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
-  w->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", procname.Data(), procname.Data(), procname.Data(), meanCB.Data(), listESS.Data(), procname.Data(), procname.Data(), massResNomCB.Data(), listRes.Data(), procname.Data(), alphaCB.Data(), nCB.Data()));
+  workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", process.Data(), process.Data(), process.Data(), meanCB.Data(), listESS.Data(), process.Data(), process.Data(), massResCB.Data(), listRes.Data(), process.Data(), alphaCB.Data(), nCB.Data()));
   
-  w->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", procname.Data(), procname.Data(), procname.Data(), meanGA.Data(), listESS.Data(), procname.Data(), procname.Data(), massResGA.Data(), listRes.Data()));
+  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", process.Data(), process.Data(), process.Data(), meanGA.Data(), listESS.Data(), process.Data(), process.Data(), massResGA.Data(), listRes.Data()));
   
-  w->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", procname.Data(), procname.Data(), frac.Data(), procname.Data(), procname.Data())); 
+  workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", process.Data(), process.Data(), frac.Data(), process.Data(), process.Data())); 
 }
 
 /**
@@ -347,8 +347,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   std::vector<RooAddPdf*> vectorSignal; vectorSignal.clear();
   std::vector<double> vectorYield; vectorYield.clear();
   
-  // Load the RooDataSet corresponding to the sample
-  TString sampleName = nameToSample[process];
+  // Load the RooDataSet corresponding to the sample:
   DMMassPoints *mp;
   DMMassPoints *mps[nSMModes];
   
@@ -356,8 +355,8 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     // For total SM, load all SM mass points.
     if (process.EqualTo("SM")) {
       for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
-	mps = new DMMassPoints(jobName, sigSMModes[i_SM], cateScheme,
-			       "FromFile", m_yy, categories);
+	mps[i_SM] = new DMMassPoints(jobName, sigSMModes[i_SM], cateScheme,
+				     "FromFile", m_yy, categories);
       }
     }
     // Otherwise, just load a particular mode.
@@ -430,8 +429,6 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 	      std::cout << "Error merging SM datasets" << std::endl;
 	    }
 	  }
-	}
-	currData = mps->getCateDataSet(i_c);
 	}
       }
       else {

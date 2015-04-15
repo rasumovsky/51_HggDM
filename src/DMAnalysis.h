@@ -34,7 +34,7 @@ namespace DMAnalysis {
   // Luminosity in pb-1:
   double analysisLuminosity = 5000;
   
-  double higgsMass = 125.09// GeV
+  double higgsMass = 125.09;// GeV
 
   double DMMyyRangeLo = 105.0;
   double DMMyyRangeHi = 160.0;

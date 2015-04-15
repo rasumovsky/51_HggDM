@@ -18,7 +18,7 @@
 //  After initializing the tool, cross-sections and branching ratios can be   //
 //  accessed using the methods below.                                         //
 //                                                                            //
-//  double getXS(int mass, TString production, TString value);                //
+//  double getSMXS(int mass, TString production, TString value);              //
 //    production = "ggH", "VBF", "WH", "ZH", "ttH", "bbH"                     //
 //    type = "XS" for nominal cross-section value                             //
 //           "+QCD"   for the XS + QCD uncertainty in %                       //
@@ -26,7 +26,7 @@
 //           "+PDF"   for the XS + PDF uncertainty in %                       //
 //           "-PDF"   for the XS - PDF uncertainty in %                       //
 //                                                                            //
-//  double getBR(int mass, TString decay, TString value);                     //
+//  double getSMBR(int mass, TString decay, TString value);                   //
 //    decay = "gg", "gammagamma", "Zgamma", "WW", "ZZ",                       //
 //            "bb", "tauttau", "mumu", "cc", "ss", "tt"                       //
 //    type = "+ERR"   for the value of the BR + total error in %              //
@@ -47,29 +47,32 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   valuesXS.clear();
   valuesBR.clear();
   
-  // Open cross-section files and store values.
-  loadXS("ggH");
-  loadXS("VBF");
-  loadXS("WH");
-  loadXS("ZH");
-  loadXS("ttH");
-  loadXS("bbH");
+  // Open SM cross-section files and store values.
+  loadSMXS("ggH");
+  loadSMXS("VBF");
+  loadSMXS("WH");
+  loadSMXS("ZH");
+  loadSMXS("ttH");
+  loadSMXS("bbH");
   
+  // Open the DM cross-section files and store the values.
+  loadDMXS();
+
   // Open BR files and store values.
-  loadBR("2bosons");
-  loadBR("2fermions");
+  loadSMBR("2bosons");
+  loadSMBR("2fermions");
 }
 
 /**
-   Returns the branching-ratio, or related uncertainties, for a decay mode
-   at a particular Higgs mass. 
+   Returns the Standard Model branching-ratio, or related uncertainties, for a
+   decay mode at a particular Higgs boson mass. 
    @param mass - The signal mass of interest.
    @param decay - The decay name. 
    @param value - The value (BR, +ERR, -ERR).
-   @returns The value of the branching-ratio.
+   @returns - The value of the branching-ratio.
 */
-float BRXSReader::getBR(double mass, TString decay, TString value) {
-  TString currKey = getMapKey(mass, decay, value);
+float BRXSReader::getSMBR(double mass, TString decay, TString value) {
+  TString currKey = getSMMapKey(mass, decay, value);
   if (hasKey(currKey,"BR")) {
     return valuesBR[currKey];
   }
@@ -81,15 +84,38 @@ float BRXSReader::getBR(double mass, TString decay, TString value) {
 }
 
 /**
-   Returns the cross-section, or related uncertainties, for a production 
-   process at a particular mass.
+   Returns the cross-section, or related uncertainties, for a Dark Matter
+   production process at a particular intermediate and fermion mass.
+   @param massIntermediate - The scalar or Zprime mass.
+   @param massFermion - The dark matter particle mass.
+   @param type - The intermediate type (scalar, Zprime).
+   @param value - The value (XS, +ERR, -ERR).
+   @returns - The value of the production cross-section.
+*/
+float BRXSReader::getDMXSBR(int massIntermediate, int massFermion, TString type,
+			    TString value) {
+  TString currKey = getDMMapKey(massIntermediate, massFermion, type, value);
+  if (hasKey(currKey,"XS")) {
+    return valuesXS[currKey];
+  }
+  else {
+    std::cout << "BRXSReader Error! No match for " << type << " "
+	      << massIntermediate << " and " << massFermion
+	      << " found." << std::endl;
+    return 0;
+  }
+}
+
+/**
+   Returns the cross-section, or related uncertainties, for a Standard Model
+   production process at a particular Higgs boson mass.
    @param mass - The signal mass of interest.
    @param production - The production mode name. 
    @param value - The value (XS, +QCD, -QCD, +PDF, -PDF).
-   @returns The value of the production cross-section.
+   @returns - The value of the production cross-section.
 */
-float BRXSReader::getXS(double mass, TString production, TString value) {
-  TString currKey = getMapKey(mass, production, value);
+float BRXSReader::getSMXS(double mass, TString production, TString value) {
+  TString currKey = getSMMapKey(mass, production, value);
   if (hasKey(currKey,"XS")) {
     return valuesXS[currKey];
   }
@@ -104,14 +130,14 @@ float BRXSReader::getXS(double mass, TString production, TString value) {
    Print the specified branching-ratio values.
    @param mass - The signal mass of interest.
    @param decay - The decay name. 
-   @returns void after printing BR data.
+   @returns - void after printing BR data.
 */
-void BRXSReader::printBR(double mass, TString decay) {
-  if (hasKey(getMapKey(mass, decay, "BR"),"BR")) {
+void BRXSReader::printSMBR(double mass, TString decay) {
+  if (hasKey(getSMMapKey(mass, decay, "BR"),"BR")) {
     std::cout << "Branching-ratio data for " << decay << std::endl;
-    std::cout << "  BR=" << valuesXS[getMapKey(mass, decay, "BR")];
-    std::cout << "  +ERR=" << valuesXS[getMapKey(mass, decay, "+ERR")];
-    std::cout << "  -ERR=" << valuesXS[getMapKey(mass, decay, "-ERR")];
+    std::cout << "  BR=" << valuesXS[getSMMapKey(mass, decay, "BR")];
+    std::cout << "  +ERR=" << valuesXS[getSMMapKey(mass, decay, "+ERR")];
+    std::cout << "  -ERR=" << valuesXS[getSMMapKey(mass, decay, "-ERR")];
     std::cout << std::endl;
   }
   else {
@@ -123,16 +149,16 @@ void BRXSReader::printBR(double mass, TString decay) {
    Print the specified cross-section values.
    @param mass - The signal mass of interest.
    @param production - The production mode name. 
-   @returns void after printing XS data.
+   @returns - void after printing XS data.
 */
-void BRXSReader::printXS(double mass, TString production) {
-  if (hasKey(getMapKey(mass, production, "XS"),"XS")) {
+void BRXSReader::printSMXS(double mass, TString production) {
+  if (hasKey(getSMMapKey(mass, production, "XS"),"XS")) {
     std::cout << "Cross-section data for " << production << std::endl;
-    std::cout << "  XS=" << valuesXS[getMapKey(mass, production, "XS")];
-    std::cout << "  +QCD=" << valuesXS[getMapKey(mass, production, "+QCD")];
-    std::cout << "  -QCD=" << valuesXS[getMapKey(mass, production, "-QCD")];
-    std::cout << "  +PDF=" << valuesXS[getMapKey(mass, production, "+PDF")];
-    std::cout << "  -PDF=" << valuesXS[getMapKey(mass, production, "-PDF")];
+    std::cout << "  XS=" << valuesXS[getSMMapKey(mass, production, "XS")];
+    std::cout << "  +QCD=" << valuesXS[getSMMapKey(mass, production, "+QCD")];
+    std::cout << "  -QCD=" << valuesXS[getSMMapKey(mass, production, "-QCD")];
+    std::cout << "  +PDF=" << valuesXS[getSMMapKey(mass, production, "+PDF")];
+    std::cout << "  -PDF=" << valuesXS[getSMMapKey(mass, production, "-PDF")];
     std::cout << std::endl;
   }
   else {
@@ -141,11 +167,11 @@ void BRXSReader::printXS(double mass, TString production) {
 }
 
 /**
-   Load the branching ratios from input files.
+   Load the Standard Model branching ratios from input files.
    @param decayClass - The class of decays ("2bosons", "2fermions").
    @returns void
 */
-void BRXSReader::loadBR(TString decayClass) {
+void BRXSReader::loadSMBR(TString decayClass) {
   
   TString fileName = Form("%s/BR_%s.txt", directory.Data(), decayClass.Data());
   ifstream currFile(fileName);
@@ -162,42 +188,42 @@ void BRXSReader::loadBR(TString decayClass) {
 	       >> currIn[18];
            
       if (decayClass.Contains("2bosons")) {
-	valuesBR[getMapKey(currMass, "gg", "BR")] = currIn[1];
-	valuesBR[getMapKey(currMass, "gg", "+ERR")] = currIn[2];
-	valuesBR[getMapKey(currMass, "gg", "-ERR")] = currIn[3];
-	valuesBR[getMapKey(currMass, "gammagamma", "BR")] = currIn[4];
-	valuesBR[getMapKey(currMass, "gammagamma", "+ERR")] = currIn[5];
-	valuesBR[getMapKey(currMass, "gammagamma", "-ERR")] = currIn[6];
-	valuesBR[getMapKey(currMass, "Zgamma", "BR")] = currIn[7];
-	valuesBR[getMapKey(currMass, "Zgamma", "+ERR")] = currIn[8];
-	valuesBR[getMapKey(currMass, "Zgamma", "-ERR")] = currIn[9];
-	valuesBR[getMapKey(currMass, "WW", "BR")] = currIn[10];
-	valuesBR[getMapKey(currMass, "WW", "+ERR")] = currIn[11];
-	valuesBR[getMapKey(currMass, "WW", "-ERR")] = currIn[12];
-	valuesBR[getMapKey(currMass, "ZZ", "BR")] = currIn[13];
-	valuesBR[getMapKey(currMass, "ZZ", "+ERR")] = currIn[14];
-	valuesBR[getMapKey(currMass, "ZZ", "-ERR")] = currIn[15];
+	valuesBR[getSMMapKey(currMass, "gg", "BR")] = currIn[1];
+	valuesBR[getSMMapKey(currMass, "gg", "+ERR")] = currIn[2];
+	valuesBR[getSMMapKey(currMass, "gg", "-ERR")] = currIn[3];
+	valuesBR[getSMMapKey(currMass, "gammagamma", "BR")] = currIn[4];
+	valuesBR[getSMMapKey(currMass, "gammagamma", "+ERR")] = currIn[5];
+	valuesBR[getSMMapKey(currMass, "gammagamma", "-ERR")] = currIn[6];
+	valuesBR[getSMMapKey(currMass, "Zgamma", "BR")] = currIn[7];
+	valuesBR[getSMMapKey(currMass, "Zgamma", "+ERR")] = currIn[8];
+	valuesBR[getSMMapKey(currMass, "Zgamma", "-ERR")] = currIn[9];
+	valuesBR[getSMMapKey(currMass, "WW", "BR")] = currIn[10];
+	valuesBR[getSMMapKey(currMass, "WW", "+ERR")] = currIn[11];
+	valuesBR[getSMMapKey(currMass, "WW", "-ERR")] = currIn[12];
+	valuesBR[getSMMapKey(currMass, "ZZ", "BR")] = currIn[13];
+	valuesBR[getSMMapKey(currMass, "ZZ", "+ERR")] = currIn[14];
+	valuesBR[getSMMapKey(currMass, "ZZ", "-ERR")] = currIn[15];
       }
       
       else if (decayClass.Contains("2fermions")) {
-	valuesBR[getMapKey(currMass, "bb", "BR")] = currIn[1];
-	valuesBR[getMapKey(currMass, "bb", "+ERR")] = currIn[2];
-	valuesBR[getMapKey(currMass, "bb", "-ERR")] = currIn[3];
-	valuesBR[getMapKey(currMass, "tautau", "BR")] = currIn[4];
-	valuesBR[getMapKey(currMass, "tautau", "+ERR")] = currIn[5];
-	valuesBR[getMapKey(currMass, "tautau", "-ERR")] = currIn[6];
-	valuesBR[getMapKey(currMass, "mumu", "BR")] = currIn[7];
-	valuesBR[getMapKey(currMass, "mumu", "+ERR")] = currIn[8];
-	valuesBR[getMapKey(currMass, "mumu", "-ERR")] = currIn[9];
-	valuesBR[getMapKey(currMass, "cc", "BR")] = currIn[10];
-	valuesBR[getMapKey(currMass, "cc", "+ERR")] = currIn[11];
-	valuesBR[getMapKey(currMass, "cc", "-ERR")] = currIn[12];
-	valuesBR[getMapKey(currMass, "ss", "BR")] = currIn[13];
-	valuesBR[getMapKey(currMass, "ss", "+ERR")] = currIn[14];
-	valuesBR[getMapKey(currMass, "ss", "-ERR")] = currIn[15];
-	valuesBR[getMapKey(currMass, "tt", "BR")] = currIn[16];
-	valuesBR[getMapKey(currMass, "tt", "+ERR")] = currIn[17];
-	valuesBR[getMapKey(currMass, "tt", "-ERR")] = currIn[18];
+	valuesBR[getSMMapKey(currMass, "bb", "BR")] = currIn[1];
+	valuesBR[getSMMapKey(currMass, "bb", "+ERR")] = currIn[2];
+	valuesBR[getSMMapKey(currMass, "bb", "-ERR")] = currIn[3];
+	valuesBR[getSMMapKey(currMass, "tautau", "BR")] = currIn[4];
+	valuesBR[getSMMapKey(currMass, "tautau", "+ERR")] = currIn[5];
+	valuesBR[getSMMapKey(currMass, "tautau", "-ERR")] = currIn[6];
+	valuesBR[getSMMapKey(currMass, "mumu", "BR")] = currIn[7];
+	valuesBR[getSMMapKey(currMass, "mumu", "+ERR")] = currIn[8];
+	valuesBR[getSMMapKey(currMass, "mumu", "-ERR")] = currIn[9];
+	valuesBR[getSMMapKey(currMass, "cc", "BR")] = currIn[10];
+	valuesBR[getSMMapKey(currMass, "cc", "+ERR")] = currIn[11];
+	valuesBR[getSMMapKey(currMass, "cc", "-ERR")] = currIn[12];
+	valuesBR[getSMMapKey(currMass, "ss", "BR")] = currIn[13];
+	valuesBR[getSMMapKey(currMass, "ss", "+ERR")] = currIn[14];
+	valuesBR[getSMMapKey(currMass, "ss", "-ERR")] = currIn[15];
+	valuesBR[getSMMapKey(currMass, "tt", "BR")] = currIn[16];
+	valuesBR[getSMMapKey(currMass, "tt", "+ERR")] = currIn[17];
+	valuesBR[getSMMapKey(currMass, "tt", "-ERR")] = currIn[18];
       }
       
       else {
@@ -209,11 +235,40 @@ void BRXSReader::loadBR(TString decayClass) {
 }
 
 /**
-   Load the cross-sections from input files.
-   @param production - The production mode name. 
-   @returns void.
+   Load the Dark Matter model cross-sections from input files. 
+   @returns - void.
 */
-void BRXSReader::loadXS(TString production) {
+void BRXSReader::loadDMXS() {
+
+  ifstream currFile(Form("%s/XS_DM.txt", directory.Data()));
+  if (currFile.is_open()) {
+    
+    TString intermediateName;
+    int intermediateMass;
+    int fermionMass;
+    float currIn[3];
+    
+    while (!currFile.eof()) {
+      currFile >> intermediateName >> intermediateMass >> fermionMass
+	       >> currIn[0] >> currIn[1] >> currIn[5];
+      
+      valuesXS[getDMMapKey(intermediateMass, fermionMass,
+			   intermediateName, "XS")] = currIn[0];
+      valuesXS[getDMMapKey(intermediateMass, fermionMass,
+			   intermediateName, "+ERR")] = currIn[1];
+      valuesXS[getDMMapKey(intermediateMass, fermionMass,
+			   intermediateName, "-ERR")] = currIn[2];
+    }
+  }
+  currFile.close();
+}
+
+/**
+   Load the Standard Model cross-sections from input files.
+   @param production - The production mode name. 
+   @returns - void.
+*/
+void BRXSReader::loadSMXS(TString production) {
   
   TString fileName = Form("%s/XS_%s.txt", directory.Data(), production.Data());
   ifstream currFile(fileName);
@@ -226,26 +281,41 @@ void BRXSReader::loadXS(TString production) {
       currFile >> currMass >> currIn[1] >> currIn[2] >> currIn[3] >> currIn[4]
 	       >> currIn[5];
       
-      valuesXS[getMapKey(currMass, production, "XS")] = currIn[1];
-      valuesXS[getMapKey(currMass, production, "+QCD")] = currIn[2];
-      valuesXS[getMapKey(currMass, production, "-QCD")] = currIn[3];
-      valuesXS[getMapKey(currMass, production, "+PDF")] = currIn[4];
-      valuesXS[getMapKey(currMass, production, "-PDF")] = currIn[5];
+      valuesXS[getSMMapKey(currMass, production, "XS")] = currIn[1];
+      valuesXS[getSMMapKey(currMass, production, "+QCD")] = currIn[2];
+      valuesXS[getSMMapKey(currMass, production, "-QCD")] = currIn[3];
+      valuesXS[getSMMapKey(currMass, production, "+PDF")] = currIn[4];
+      valuesXS[getSMMapKey(currMass, production, "-PDF")] = currIn[5];
     }
   }
   currFile.close();
 }
 
 /**
-   Convert variables to the key for the map.
+   Convert variables to the key for the Dark Matter map.
+   @param massIntermediate - The mass of the scalar or Zprime intermediary. 
+   @param massFermion - The mass of the fermionic dark matter particle.
+   @param type - The intermediate type (scalar, Zprime).
+   @param value - The value (XS, +ERR, -ERR).
+   @returns - the map key.
+*/
+TString BRXSReader::getDMMapKey(int massIntermediate, int massFermion,
+				TString type, TString value) {
+  TString key = Form("m%s%dGeV_mX%dGeV_%s", type.Data(), massIntermediate,
+		     massFermion, value.Data());
+  return key;
+}
+
+/**
+   Convert variables to the key for the Standard Model map.
    @param mass - The signal mass of interest.
    @param type - The production or decay mode name. 
    @param value - The value (XS, +QCD, -QCD, +PDF, -PDF, BR, +ERR, -ERR).
-   @returns void.
+   @returns - the map key.
 */
-TString BRXSReader::getMapKey(double mass, TString type, TString value) {
+TString BRXSReader::getSMMapKey(double mass, TString type, TString value) {
   int massInt = (int)(100*mass);
-  TString key = Form("%d_%s_%s", massInt, type.Data(), value.Data());
+  TString key = Form("mH%dGeV_%s_%s", massInt, type.Data(), value.Data());
   return key;
 }
 
@@ -253,6 +323,7 @@ TString BRXSReader::getMapKey(double mass, TString type, TString value) {
    Check whether the specified key is contained in the specified map.
    @param key - The key for either the valuesXS or valuesBR map.
    @param mapType - The map type (either "XS", "BR").
+   @returns - true if the specified key is in the map. 
 */
 bool BRXSReader::hasKey(TString key, TString mapType) {
   if (mapType.EqualTo("XS")) {

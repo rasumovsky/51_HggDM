@@ -307,7 +307,8 @@ void DMWorkspace::createNewWS() {
   std::cout << "Profiled mu value : " << profiledMuValue << std::endl;
   
   //ofstream file_muprof;
-  //file_muprof.open(Form("%s/profiled_mu_%iTeV_%ips.txt",output_directory_ws.Data(),lambda,lifetime));
+  //file_muprof.open(Form("%s/profiled_mu_%iTeV_%ips.txt",
+  //                      output_directory_ws.Data(),lambda,lifetime));
   //file_muprof << profiled_mu_value << endl;
   //file_muprof.close();
   

@@ -30,18 +30,22 @@ class BRXSReader
   virtual ~BRXSReader() {};
 
   // Accessors:
-  float getBR(double mass, TString decay, TString value);
-  float getXS(double mass, TString production, TString value);
-  void printBR(double mass, TString decay);
-  void printXS(double mass, TString production);
+  float getSMBR(double mass, TString decay, TString value);
+  float getDMXSBR(int massIntermediate, int massFermion, TString type,
+		  TString value);
+  float getSMXS(double mass, TString production, TString value);
+  void printSMBR(double mass, TString decay);
+  void printSMXS(double mass, TString production);
   
  private:
   
   // Private accessors & mutators:
-  TString getMapKey(double mass, TString type, TString value);
+  TString getDMMapKey(int massIntermediate, int massFermion, TString type,
+		      TString value);
+  TString getSMMapKey(double mass, TString type, TString value);
   bool hasKey(TString key, TString mapType);
-  void loadBR(TString decayClass);
-  void loadXS(TString production);
+  void loadSMBR(TString decayClass);
+  void loadSMXS(TString production);
   
   // Member objects:
   TString directory;

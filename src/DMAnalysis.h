@@ -22,8 +22,8 @@
 
 #include "TString.h"
 
-namespace DMAnalysis {
-
+extern namespace DMAnalysis {
+  
   ////////////////////////////////////////
   //         GLOBAL PARAMETERS          //
   ////////////////////////////////////////

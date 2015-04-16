@@ -53,6 +53,42 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newCateScheme,
 }
 
 /**
+   Checks whether all of the fits converged.
+   @returns - true iff the fits all converged.
+*/
+bool DMWorkspace::fitsAllConverged() {
+  return allGoodFits;
+}
+
+/**
+   Retrieves the workspace created by this program.
+*/
+RooWorkspace* DMWorkspace::getCombinedWorkspace() {
+  return combinedWS;
+}
+
+/**
+   Retrieves a pointer to the model config.
+*/
+ModelConfig* DMWorkspace::getModelConfig() {
+  return mConfig;
+}
+
+/**
+   Load a previously created workspace.
+   // WARNING! MUST IMPLEMENT
+*/
+void DMWorkspace::loadWSFromFile() {
+  //Check to see if the workspace has actually been made.
+  bool wsExists = true;
+  if (wsExists) {
+  }
+  else {
+    createNewWS();
+  }
+}
+
+/**
    Create a workspace from scratch. 
 */
 void DMWorkspace::createNewWS() {
@@ -77,9 +113,8 @@ void DMWorkspace::createNewWS() {
   std::cout << "........................................" << std::endl;
   
   // Read tables of ESS and Res and store values:
-  //ess_tool = new ESSReader( file_name_ESS_values, nCategories);
-  //res_tool = new ResReader( file_name_Res_values, nCategories);
-  //ss_tool  = new SigShapeReader( file_name_SS_values, nCategories);
+  ess = new ESSReader( file_name_ESS_values, nCategories);
+  res = new ResReader( file_name_Res_values, nCategories);
   
   // Instantiate the signal parameterization class using the observable:
   currSigParam = new DMSigParam(jobName, cateScheme, "FromFile");
@@ -91,9 +126,9 @@ void DMWorkspace::createNewWS() {
   // Everything for simultaneous fit:
   RooWorkspace* cateWS[nCategories];
   RooCategory* categories = new RooCategory(Form("categories_%s",
-						 newCateScheme.Data()),
+						 cateScheme.Data()),
 					    Form("categories_%s",
-						 newCateScheme.Data()));
+						 cateScheme.Data()));
   
   combinedWS = new RooWorkspace("combinedWS");
   combinedWS->importClassCode();
@@ -116,7 +151,7 @@ void DMWorkspace::createNewWS() {
   std::cout << "DMWorkspace: Loop over categories to define WS" << std::endl;
   for (int i_c = 0; i_c < nCategories; i_c++) {
     
-    currCateIdex = i_c;
+    currCateIndex = i_c;
     currCateName = cateNames[i_c];
 
     // Create the workspace for a single category:
@@ -124,7 +159,8 @@ void DMWorkspace::createNewWS() {
     categories->defineType(cateNames[i_c]);
     
     // Add PDF and parameters from category to global collections:
-    combinedPdf.addPdf(*cateWS[i_c]->pdf("model_"+CN[i_c]),CN[i_c]);
+    combinedPdf.addPdf(*cateWS[i_c]->pdf("model_"+cateNamesS[i_c]),
+		       cateNamesS[i_c]);
     nuisanceParameters->add(*cateWS[i_c]->set("nuisanceParameters"));
     globalObservables->add(*cateWS[i_c]->set("globalObservables"));
     observables->add(*cateWS[i_c]->set("observables"));
@@ -190,9 +226,7 @@ void DMWorkspace::createNewWS() {
   poiAndNuis->Print();
   combinedWS->saveSnapshot("paramsOrigin",*poiAndNuis);
   RooAbsPdf *pdf = mconfig->GetPdf();
-  
-  can = new TCanvas("can","can",800,800);
-  
+    
   //----------------------------------------//
   // Profile and save snapshot for mu=1 fixed:
   std::cout << "\nProfile mu = 1:" << std::endl;
@@ -211,7 +245,7 @@ void DMWorkspace::createNewWS() {
   }
   
   // Track whether all fits converge:
-  if (resMu1->status() != 0) AllGoodFits = false;
+  if (resMu1->status() != 0) allGoodFits = false;
   
   double nllMu1 = resMu1->minNll();
   combinedWS->saveSnapshot("paramsProfileMu1",*poiAndNuis);
@@ -250,7 +284,7 @@ void DMWorkspace::createNewWS() {
   }
   
   // Track whether all fits converge:
-  if (resMu0->status() != 0) AllGoodFits = false;
+  if (resMu0->status() != 0) allGoodFits = false;
   
   double nllMu0 = resMu0->minNll();
   combinedWS->saveSnapshot("paramsProfileMu0",*poiAndNuis);
@@ -288,7 +322,7 @@ void DMWorkspace::createNewWS() {
   }
   
   // Track whether all fits converge:
-  if (resMsuFree->status() != 0) AllGoodFits = false;
+  if (resMsuFree->status() != 0) allGoodFits = false;
   
   double nllMuFree = resMuFree->minNll();
   double profiledMuValue = poi->getVal();
@@ -314,16 +348,16 @@ void DMWorkspace::createNewWS() {
   // Print summary of the fits:
   std::cout.precision(10);
   std::cout << "\nPrinting likelihood results: " << std::endl;
-  std::cout << "\tnll(mu = 1):  " << nllMu1 << std::endl;
-  std::cout << "\tnll(mu = 0):  " << nllMu0 << std::endl;
-  std::cout << "\tnll(mu free): " << nllMuFree << std::endl;
+  std::cout << "\tnll(muDM = 1):  " << nllMu1 << std::endl;
+  std::cout << "\tnll(muDM = 0):  " << nllMu0 << std::endl;
+  std::cout << "\tnll(muDM free): " << nllMuFree << std::endl;
   std::cout << " " << endl;
   std::cout << "\tnll(S+B)/nll(B) " << nllMu1 - nllMu0 << std::endl;
-  std::cout << "\tnll(mu=1)/nll(muhat) = " << nllMu1 - nllMuFree << std::endl;
-  std::cout << "\tnll(mu=0)/nll(muhat) = " << nllMu0 - nllMuFree << std::endl;
-  if (AllGoodFits) std::cout << "AllGoodFits = TRUE" << std::endl;
-  else std::cout << "AllGoodFits = FALSE" << std::endl;
-  std::cout << "Profiled mu value : " << profiledMuValue << std::endl;
+  std::cout << "\tnll(muDM=1)/nll(muhat) = " << nllMu1 - nllMuFree << std::endl;
+  std::cout << "\tnll(muDM=0)/nll(muhat) = " << nllMu0 - nllMuFree << std::endl;
+  if (allGoodFits) std::cout << "allGoodFits = TRUE" << std::endl;
+  else std::cout << "allGoodFits = FALSE" << std::endl;
+  std::cout << "Profiled muDM value : " << profiledMuValue << std::endl;
   
   //ofstream file_muprof;
   //file_muprof.open(Form("%s/profiled_mu_%iTeV_%ips.txt",
@@ -400,27 +434,27 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooArgSet *expectedProc_ttH = new RooArgSet();
   
   // array setup[5] is used to configure a nuisance parameter
-  // [0]    [1]       [2]   [3]      [4]
-  // sigma, sigmalow, beta, nominal, nonATLAS
+  // [0]    [1]       [2]   [3]     
+  // sigma, sigmalow, beta, nominal,
   
   //--------------------------------------//
   // Normalization systematics:
   if (m_norm) {
-    double setupLumi[5] = {0.036, 0, 1, 1, 1};
+    double setupLumi[4] = {0.036, 0, 1, 1};
     makeNP("Luminosity", setupLumi, *&nuisParams, *&constraints, *&globalObs,
-	    *&expected);
-    double setupTrigger[5] = {0.005, 0, 1, 1, 1};
+	   *&expected);
+    double setupTrigger[4] = {0.005, 0, 1, 1};
     makeNP("Trigger", setupTrigger, *&nuisParams, *&constraints, *&globalObs,
-	    *&expected);
-    double setupIsEM[5] = {0.0526, 0, 1, 1, 1};
+	   *&expected);
+    double setupIsEM[4] = {0.0526, 0, 1, 1};
     makeNP("PhotonID", setupIsEM, *&nuisParams, *&constraints, *&globalObs,
-	    *&expected);
-    double setupIso[5] = {0.004, 0, 1, 1, 1};
+	   *&expected);
+    double setupIso[4] = {0.004, 0, 1, 1};
     makeNP("Isolation", setupIso, *&nuisParams, *&constraints, *&globalObs,
-	    *&expected);
-    double setupESCALE[5] = {0.003, 0, 1, 1, 1};
+	   *&expected);
+    double setupESCALE[4] = {0.003, 0, 1, 1};
     makeNP("ESCALE", setupESCALE, *&nuisParams, *&constraints, *&globalObs,
-	    *&expected);
+	   *&expected);
   }
   
   //--------------------------------------//
@@ -437,7 +471,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
       int current_ss_sign = ss_tool->GetSign( current_SS_source_name, currCateIndex, energy );
       
       // Asymmetric migration uncertainties:
-      double setup_ss_current[5] = {current_ss_value, 0, current_ss_sign, 1, 1};
+      double setup_ss_current[4] = {current_ss_value, 0, current_ss_sign, 1};
       if( current_SS_source_name.Contains("_up") )
       {
 	TString current_SS_source_name_down = ss_tool->GetNameOfSource( i_s+1, energy );
@@ -457,10 +491,10 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   //--------------------------------------//
   // SYSTEMATICS: Spurious signal
   if (m_bgm) {
-    double ss_events = spurious_signal(currCateName);
-    double setup_bias[5] = {ss_events, -999, 1, 0, 1}; //Gaussian constraint
-    makeNP("bias", setup_bias, *&nuisParamsUncorrelated, *&constraintsBias,
-	    *&globalObs, *&expectedBias);
+    double ssEvents = spurious_signal(currCateName);
+    double setupBias[4] = {ssEvents, -999, 1, 0}; //Gaussian constraint
+    makeNP("bias", setupBias, *&nuisParamsUncorrelated, *&constraintsBias,
+	   *&globalObs, *&expectedBias);
   }
   else tempWS->factory("expectedBias[0]");
   
@@ -468,18 +502,32 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // SYSTEMATICS: Resolution:
   vector<TString> resList; resList.clear();
   if (m_res) {
-    double setup_AllRes[5] = {0.0, 0, 1, 1, 1};
+    double setupRes[4] = {0.0, 0, 1, 1};
     
     // Loop over sources of resolution systematic uncertainty:
-    for (int i_s = 0; i_s < res_tool->GetNumberOfSources(); i_s++) {
-      TString currResSource = res_tool->GetNameOfSource(i_s);
+    for (int i_s = 0; i_s < res->getNumberOfSources(); i_s++) {
+      TString currResSource = res->getNameOfSource(i_s);
       TString currResName = Form("EM_%s",currResSource.Data());
       resList.push_back(currResName);
-      setupRes[0] = res_tool->GetValue(currResSource, currCateIndex);
-      setupRes[2] = res_tool->GetSign(currResSource, currCateIndex);
+      setupRes[0] = res->getValue(currResSource, currCateIndex);
+      setupRes[2] = res->getSign(currResSource, currCateIndex);
       
       // resolution on the inclusive shape:
-      makeShapeNP(currResName, "_inc", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currResName, "DM", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "SM", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "ggH", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "VBF", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "WH", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "ZH", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "bbH", setupRes, *&nuisParams, *&constraints,
+		  *&globalObs, *&expectedShape);
+      makeShapeNP(currResName, "ttH", setupRes, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
     }
   }
@@ -489,17 +537,17 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   vector<TString> essList; essList.clear();
   if( !m_noess )
   {
-    double setup_AllESS[5] = {0.0, 0, 1, 1, 1};
+    double setupESS[4] = {0.0, 0, 1, 1};
     
     // loop over sources of energy scale systematic uncertainty:
-    for (int i_s = 0; i_s < ess_tool->GetNumberOfSources(); i_s++) {
-      TString currESSSource = ess_tool->GetNameOfSource(i_s);
+    for (int i_s = 0; i_s < ess->getNumberOfSources(); i_s++) {
+      TString currESSSource = ess->getNameOfSource(i_s);
       TString currESSName = Form("EM_%s",currESSSource.Data());
       essList.push_back(currESSName);
-      setupESS[0] = ess_tool->GetValue(currESSSource, currCateIndex);
-      setupESS[2] = ess_tool->GetSign(currESSSource, currCateIndex);
+      setupESS[0] = ess->getValue(currESSSource, currCateIndex);
+      setupESS[2] = ess->getSign(currESSSource, currCateIndex);
       makeNP(currESSName, setupESS, *&nuisParams, *&constraints, *&globalObs,
-	      *&expectedShape);
+	     *&expectedShape);
     }
   }
   
@@ -651,7 +699,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   while ((currNuisUncorrelated = (RooRealVar*)iterNuisUncorrelated->Next())) {
     TString nuisName = (currNuisUncorrelated->GetName() 
 			+ (TString)"_" + currCateName);
-    nuisCateWS->add(*(RooRealVar*)categoryWS->obj(currNuisName));
+    nuisCateWS->add(*(RooRealVar*)categoryWS->obj(nuisName));
   }
   
   // Adding unconstrained NPs from the background pdf:
@@ -733,9 +781,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   obsData->SetNameTitle("obsData","obsData");
   
   // Set the background normalization parameter:
-  (*categoryWS->var("nBkg_"+currCateName) ).setVal(obsdata->numEntries());
+  (*categoryWS->var("nBkg_"+currCateName) ).setVal(obsData->numEntries());
   (*categoryWS->pdf("bkgPdf_"+currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)));
-  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsdata->numEntries());
+  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->numEntries());
   nuisBkgCateWS->Print("v");
   categoryWS->import(*obsData);
   
@@ -786,7 +834,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 
 double DMWorkspace::spuriousSignal();
 {
-  double spurious[10] = { 1.0. 1.0, 1.0, 1.0, 1.0 };// per fb-1
+  double spurious[10] = { 1.0, 1.0, 1.0, 1.0, 1.0 };// per fb-1
   return spurious[currCateIndex] * analysisLuminosity;
 }
 
@@ -998,7 +1046,7 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
     wt.setVal(weightVal);
     asimovData->add(RooArgSet(*cateWS->var("m_yy_"+currCateName),wt),weightVal);
   }
-  if (fabs((countAsimov - obsdata->sumEntries()) / countAsimov) > 0.04) {
+  if (fabs((countAsimov - obsData->sumEntries()) / countAsimov) > 0.04) {
     std::cout << "Bad Asimov Data: Data = " << obsData->sumEntries()
 	      << ", Asimov = " << countAsimov << std::endl;
     exit(0);
@@ -1016,8 +1064,8 @@ void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM);
 {
   cout << "plotFit( " << currCateName << " )" << endl;
   TCanvas *c = new TCanvas();
-  RooPlot* frame =  (*categoryWS->var("atlas_invMass_"+currCateName)).frame(55);
-  categoryWS->data("obsdata")->plotOn(frame);
+  RooPlot* frame =  (*categoryWS->var("m_yy_"+currCateName)).frame(55);
+  categoryWS->data("obsData")->plotOn(frame);
   (*categoryWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
   (*categoryWS->pdf("model_"+currCateName)).plotOn(frame,Components( (*categoryWS->pdf("bkgPdf_"+currCateName)) ) , LineColor(4));
   double chi2 = frame->chiSquare() ;
@@ -1031,6 +1079,6 @@ void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM);
   lresult3.DrawLatex(0.5,0.78, currCateName);
   
   system(Form("mkdir -vp %s/figures/",outputDir.Data()));
-  PrintCanvas(c, Form("%s/figures/data_fit_%s",outputDir.Data(),currCateName.Data()));
+  PrintCanvas(c,Form("%s/figures/fit_%s",outputDir.Data(),currCateName.Data()));
   delete c;
 }

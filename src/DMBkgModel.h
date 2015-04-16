@@ -40,13 +40,11 @@ class DMBkgModel
   
  public:
   
-  DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions);
-  DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions, RooRealVar *newObservable);
-  DMBkgModel(TString newJobName, TString newSampleName, TString newCateScheme,
-	     TString newOptions, RooRealVar *newObservable,
-	     RooCategory *newCategories);
+  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions);
+  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions,
+	     RooRealVar *newObservable);
+  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions,
+	     RooRealVar *newObservable, RooCategory *newCategories);
   
   virtual ~DMBkgModel() {};
   
@@ -72,7 +70,6 @@ class DMBkgModel
   
   // Member variables:
   TString jobName;
-  TString sampleName;
   TString cateScheme;
   TString options;
   

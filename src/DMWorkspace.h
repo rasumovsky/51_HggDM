@@ -33,22 +33,22 @@ class DMWorkspace
   
  private:
   
+  bool fitsAllConverged();
+  RooWorkspace* DMWorkspace::getCombinedWorkspace();
+  ModelConfig* DMWorkspace::getModelConfig();
+  void loadWSFromFile();
   void createNewWS();
   RooWorkspace* createNewCategoryWS();
-  //  void loadWSFromFile();
   void createAsimovData(RooWorkspace *cateWS, RooDataSet *obsData, 
 			RooRealVar wt, int valueMuDM);
- 
   // eliminate this as soon as possible:
   double spuriousSignal(TString cateName);
-  
   void makeNP(const char* varName, double setup[4], RooArgSet *&nuisParams,
 	      RooArgSet *&constraints, RooArgSet *&globalObs,
 	      RooArgSet *&expected);
   void makeShapeNP(const char* varnameNP, const char* process, double setup[4],
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
-  
   void plotFit(RooWorkspace *cateWS, double valMuDM);
   //void plotNuisParams();// Take this from NPP?
   
@@ -74,6 +74,8 @@ class DMWorkspace
   // The Final RooWorkspace and ModelConfig:
   RooWorkspace *combinedWS;
   ModelConfig *mconfig;
+  
+  bool allGoodFits;
   
 };
 

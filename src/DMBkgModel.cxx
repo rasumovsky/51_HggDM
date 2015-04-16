@@ -18,31 +18,27 @@
    RooCategory.
    classes (instead of importing them).
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @returns void.
 */
-DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions) {
+DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme, 
+		       TString newOptions) {
   RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
 					     DMMyyRangeHi);
-  DMBkgModel(newJobName, newSampleName, newCateScheme, newOptions, 
-	     newObservable);
+  DMBkgModel(newJobName, newCateScheme, newOptions, newObservable);
 }
 
 /**
    Initialize the DMBkgModel class and make a new RooCategory.
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @param newObservable - The RooRealVar to be used in fits (m_yy).
    @returns void.
 */
-DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions,
-		       RooRealVar *newObservable) {
+DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
+		       TString newOptions, RooRealVar *newObservable) {
   
   // Load the selector to get category information.
   selector = new DMEvtSelect();
@@ -60,29 +56,27 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName,
   }
   
   // Then call the full initializer:
-  DMBkgModel(newJobName, newSampleName, newCateScheme, newOptions,
-	     newObservable, newCategories);
+  DMBkgModel(newJobName, newCateScheme, newOptions, newObservable,
+	     newCategories);
 }
 
 /**
    Initialize the DMBkgModel class using previously defined observable 
    RooRealVar and RooCategory classes.
    @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile")
    @param newObservable - The RooRealVar to be used in fits (m_yy).
    @param newCategories - The RooCategory to be used in the combined PDF.
    @returns void.
 */
-DMBkgModel::DMBkgModel(TString newJobName, TString newSampleName, 
-		       TString newCateScheme, TString newOptions,
-		       RooRealVar *newObservable, RooCategory *newCategories) {
+DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
+		       TString newOptions, RooRealVar *newObservable,
+		       RooCategory *newCategories) {
   std::cout << std::endl << "DMBkgModel::Initializing..." << std::endl;
   
   // Assign member variables:
   jobName = newJobName;
-  sampleName = newSampleName;
   cateScheme = newCateScheme;
   options = newOptions;
   

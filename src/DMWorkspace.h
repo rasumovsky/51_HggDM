@@ -34,15 +34,15 @@ class DMWorkspace
  private:
   
   bool fitsAllConverged();
-  RooWorkspace* DMWorkspace::getCombinedWorkspace();
-  ModelConfig* DMWorkspace::getModelConfig();
+  RooWorkspace* getCombinedWorkspace();
+  ModelConfig* getModelConfig();
   void loadWSFromFile();
   void createNewWS();
   RooWorkspace* createNewCategoryWS();
   void createAsimovData(RooWorkspace *cateWS, RooDataSet *obsData, 
 			RooRealVar wt, int valueMuDM);
   // eliminate this as soon as possible:
-  double spuriousSignal(TString cateName);
+  double spuriousSignal();
   void makeNP(const char* varName, double setup[4], RooArgSet *&nuisParams,
 	      RooArgSet *&constraints, RooArgSet *&globalObs,
 	      RooArgSet *&expected);
@@ -60,8 +60,8 @@ class DMWorkspace
   TString outputDir;
   
   // Helper classes:
-  ESSReader *ess_tool;
-  ResReader* res_tool;
+  ESSReader *ess;
+  ResReader* res;
   DMEvtSelect *selector;
   DMSigParam *currSigParam;
   DMBkgModel *currBkgModel;
@@ -73,7 +73,7 @@ class DMWorkspace
   
   // The Final RooWorkspace and ModelConfig:
   RooWorkspace *combinedWS;
-  ModelConfig *mconfig;
+  ModelConfig *mConfig;
   
   bool allGoodFits;
   

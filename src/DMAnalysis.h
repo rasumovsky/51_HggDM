@@ -58,6 +58,9 @@ namespace DMAnalysis {
   // Location of output directory:
   const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
   
+  const TString fileNameESSValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/ESS/table_ESS.txt";
+  const TString fileNameResValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Res/table_Res.txt";
+  
   ////////////////////////////////////////
   //          SCRIPT LOCATIONS          //
   ////////////////////////////////////////

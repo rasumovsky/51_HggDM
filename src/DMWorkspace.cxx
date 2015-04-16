@@ -738,7 +738,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooArgSet *obsCateWS = new RooArgSet();
   TIterator *iterObs = tempWS->set("observables")->createIterator();
   RooRealVar *currObs;
-  while (currObs = (RooRealVar*)iterObs->Next()) {
+  while ((currObs = (RooRealVar*)iterObs->Next())) {
     TString obsName = currObs->GetName()+(TString)"_"+currCateName;
     if ((bool)categoryWS->obj(obsName)) {
       obsCateWS->add(*(RooRealVar*)categoryWS->obj(obsName));
@@ -866,7 +866,7 @@ void DMWorkspace::makeNP(TString varName, double setup[4],
     
     RooRealVar* var = new RooRealVar(Form("nuisPar_%s",varName.Data()),
 				     Form("nuisPar_%s",varName.Data()),
-				     varName,0,-5,5);
+				     0,-5,5);
     RooRealVar* varBeta = new RooRealVar(Form("beta_%s",varName.Data()), 
 					  Form("beta_%s",varName.Data()),
 					  beta);
@@ -895,11 +895,12 @@ void DMWorkspace::makeNP(TString varName, double setup[4],
   // Create nuisance parameter with bifurcated Gaussian constraint term:
   else if (sigmaLow<0 && sigmaLow != -999) {
     
+    TString valLogKappa = Form("%f",sqrt(log(1+pow(sigma,2))));
+    TString valA = Form("%f",fabs(sigma/sigmaLow)); 
+    
     std::cout << "  parameter has a Bif. Gauss constraint term" << std::endl;
     std::cout << "  asymmetric factor is " << valA << std::endl;
     
-    TString valLogKappa = Form("%f",sqrt(log(1+pow(sigma,2))));
-    TString valA = Form("%f",fabs(sigma/sigmaLow)); 
     workspace->factory(Form("valLogKappa_%s[%s]", varName.Data(), valLogKappa.Data()));
     workspace->factory(Form("RooExponential::expTerm_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]), valLogKappa_%s)", varName.Data(), varName.Data(), varName.Data(), varName.Data(), beta, varName.Data()));
     workspace->factory(Form("prod::expected_%s(expTerm_%s, nominal_%s[%f])", varName.Data(), varName.Data(), varName.Data(), nominal));
@@ -1062,7 +1063,7 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
 void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM) {
   cout << "plotFit( " << currCateName << " )" << endl;
   TCanvas *c = new TCanvas();
-  RooPlot* frame =  (*categoryWS->var("m_yy_"+currCateName)).frame(55);
+  RooPlot* frame =  (*cateWS->var("m_yy_"+currCateName)).frame(55);
   categoryWS->data("obsData")->plotOn(frame);
   (*categoryWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
   (*categoryWS->pdf("model_"+currCateName)).plotOn(frame,Components( (*categoryWS->pdf("bkgPdf_"+currCateName)) ) , LineColor(4));

@@ -40,7 +40,7 @@ class ResReader {
   double valuesRes[100][20];
   
   // store the RES names:
-  vector<TString> nameListRes;
+  std::vector<TString> nameListRes;
   
 };
 

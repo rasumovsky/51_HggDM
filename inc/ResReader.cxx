@@ -32,7 +32,7 @@ ResReader::ResReader(TString inputFileName, int nCategories) {
   ifstream sysFile(inputFileName);
   while (!sysFile.eof()) {
     
-    sysFile >> tempSourcName;
+    sysFile >> tempSourceName;
     for (int i_c = 0; i_c <= nCategories; i_c++) {
       sysFile >> tempValues[i_c];
       valuesRes[nResParams][i_c] = tempValues[i_c];
@@ -40,7 +40,7 @@ ResReader::ResReader(TString inputFileName, int nCategories) {
     nameListRes.push_back(tempSourceName);
     nResParams++;
   }
-  sys_file.close();
+  sysFile.close();
   std::cout << "Finished loading data for the ResReader class." << std::endl;
 }
 

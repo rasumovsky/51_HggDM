@@ -11,6 +11,7 @@
 #ifndef ESSReader_h
 #define ESSReader_h
 
+#include <cmath>
 #include <string>
 #include <stdlib.h>
 #include <stdio.h>

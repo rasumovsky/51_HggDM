@@ -11,6 +11,7 @@
 #ifndef ResReader_h
 #define ResReader_h
 
+#include <cmath>
 #include <string>
 #include <stdlib.h>
 #include <stdio.h>

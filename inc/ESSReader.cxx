@@ -24,9 +24,7 @@ ESSReader::ESSReader(TString inputFileName, int nCategories) {
   
   std::cout << "\nInitializing the ESSReader class" << std::endl;
   
-  nAnalysisCategories = nCategories;
   nESSParams = 0;
-  
   nameListESS.clear();
   
   TString tempSourceName = "";

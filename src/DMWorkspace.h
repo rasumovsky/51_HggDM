@@ -43,10 +43,10 @@ class DMWorkspace
 			RooRealVar wt, int valueMuDM);
   // eliminate this as soon as possible:
   double spuriousSignal();
-  void makeNP(const char* varName, double setup[4], RooArgSet *&nuisParams,
+  void makeNP(TString varName, double setup[4], RooArgSet *&nuisParams,
 	      RooArgSet *&constraints, RooArgSet *&globalObs,
 	      RooArgSet *&expected);
-  void makeShapeNP(const char* varnameNP, const char* process, double setup[4],
+  void makeShapeNP(TString varnameNP, TString process, double setup[4],
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
   void plotFit(RooWorkspace *cateWS, double valMuDM);

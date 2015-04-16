@@ -159,8 +159,9 @@ void DMWorkspace::createNewWS() {
     categories->defineType(cateNames[i_c]);
     
     // Add PDF and parameters from category to global collections:
-    combinedPdf.addPdf(*cateWS[i_c]->pdf("model_"+cateNamesS[i_c]),
-		       cateNamesS[i_c]);
+    combinedPdf.addPdf(*cateWS[i_c]->pdf(Form("model_%s",
+					      cateNames[i_c].Data())),
+		       cateNames[i_c]);
     nuisanceParameters->add(*cateWS[i_c]->set("nuisanceParameters"));
     globalObservables->add(*cateWS[i_c]->set("globalObservables"));
     observables->add(*cateWS[i_c]->set("observables"));
@@ -615,7 +616,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(tempWS, essList, resList, "ttH", currCateIndex);
   
   // Construct the background PDF:
-  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateName);
+  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateIndex);
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
@@ -846,7 +847,7 @@ double DMWorkspace::spuriousSignal() {
    @param expected - the set of expected terms. 
    @returns - void. 
 */
-void DMWorkspace::makeNP(const char* varName, double setup[4],
+void DMWorkspace::makeNP(TString varName, double setup[4],
 			 RooArgSet *&nuisParams, RooArgSet *&constraints,
 			 RooArgSet *&globalObs, RooArgSet *&expected) {
   
@@ -863,8 +864,8 @@ void DMWorkspace::makeNP(const char* varName, double setup[4],
   if (sigmaLow > 0) {
     std::cout << "  parameter has an asymmetric uncertainty" << std::endl;
     
-    RooRealVar* var = new RooRealVar(Form("nuisPar_%s",varNameNP.Data()),
-				     Form("nuisPar_%s",varNameNP.Data()),
+    RooRealVar* var = new RooRealVar(Form("nuisPar_%s",varName.Data()),
+				     Form("nuisPar_%s",varName.Data()),
 				     varName,0,-5,5);
     RooRealVar* varBeta = new RooRealVar(Form("beta_%s",varName.Data()), 
 					  Form("beta_%s",varName.Data()),
@@ -917,10 +918,10 @@ void DMWorkspace::makeNP(const char* varName, double setup[4],
   }
   
   // Add parameters and PDFs to relevant sets:
-  nuisParams->add(*w->var(Form("nuisPar_%s",varName.Data())));
-  constraints->add(*w->pdf(Form("constrPdf_%s",varName.Data())));
-  globalObs->add(*w->var(Form("globOb_%s",varName.Data())));
-  expected->add(*w->function(Form("expected_%s",varName.Data())));
+  nuisParams->add(*workspace->var(Form("nuisPar_%s",varName.Data())));
+  constraints->add(*workspace->pdf(Form("constrPdf_%s",varName.Data())));
+  globalObs->add(*workspace->var(Form("globOb_%s",varName.Data())));
+  expected->add(*workspace->function(Form("expected_%s",varName.Data())));
 }
 
 /**
@@ -978,23 +979,23 @@ void DMWorkspace::makeShapeNP(TString varNameNP, TString process,
     std::cout << "  parameter with a Gaussian constraint term" << std::endl;
     
     workspace->factory(Form("sum::expected_%s(nominal_%s[%f], prod::uncer_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]), sigma_%s[%f]))", varName.Data(), varName.Data(), nominal, varName.Data(), varName.Data(), varNameNP.Data(), varName.Data(), beta, varName.Data(), sigma));
-    w->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
+    workspace->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
   }
   
   // Create a nuisance parameter with log-normal constraint term:
   else {
     TString valLogKappa = Form("%f", sqrt( log( 1+pow(sigma,2)) ) );
-    w->factory(Form("valLogKappa_%s[%s]", varName.Data(), valLogKappa.Data()));
-    w->factory(Form("RooExponential::expTerm_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]),valLogKappa_%s)", varName.Data(), varName.Data(), varNameNP.Data(), varName.Data(), beta, varName.Data()));
-    w->factory(Form("prod::expected_%s(expTerm_%s,nominal_%s[%f])", varName.Data(), varName.Data(), varName.Data(), nominal));
-    w->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
+    workspace->factory(Form("valLogKappa_%s[%s]", varName.Data(), valLogKappa.Data()));
+    workspace->factory(Form("RooExponential::expTerm_%s(prod::%s_times_beta(nuisPar_%s[0,-5,5], beta_%s[%f]),valLogKappa_%s)", varName.Data(), varName.Data(), varNameNP.Data(), varName.Data(), beta, varName.Data()));
+    workspace->factory(Form("prod::expected_%s(expTerm_%s,nominal_%s[%f])", varName.Data(), varName.Data(), varName.Data(), nominal));
+    workspace->factory(Form("RooGaussian::constrPdf_%s(globOb_%s[0,-5,5],nuisPar_%s,1)", varNameNP.Data(), varNameNP.Data(), varNameNP.Data()));
   }
   
   // Add parameters and PDFs to relevant sets:
-  nuisParams->add(*w->var(Form("nuisPar_%s",varNameNP.Data())));
-  constraints->add(*w->pdf(Form("constrPdf_%s",varNameNP.Data())));
-  globalObs->add(*w->var(Form("globOb_%s",varNameNP.Data())));
-  expected->add(*w->function(Form("expected_%s",varName.Data())));
+  nuisParams->add(*workspace->var(Form("nuisPar_%s",varNameNP.Data())));
+  constraints->add(*workspace->pdf(Form("constrPdf_%s",varNameNP.Data())));
+  globalObs->add(*workspace->var(Form("globOb_%s",varNameNP.Data())));
+  expected->add(*workspace->function(Form("expected_%s",varName.Data())));
 }
 
 /**
@@ -1003,23 +1004,23 @@ void DMWorkspace::makeShapeNP(TString varNameNP, TString process,
    @param cateWS - the current category workspace.
    @param obsData - the observed dataset for the category.
    @param wt - the weight variable for the dataset.
-   @param valueMuDM - the value of dark matter signal strength to use.
+   @param valMuDM - the value of dark matter signal strength to use.
    @returns - void.
 */
 void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
-				   RooRealVar wt, int valueMuDM) {
+				   RooRealVar wt, int valMuDM) {
   
-  std::cout << "Creating Asimov data for " << valueMuDM << std::endl;
+  std::cout << "Creating Asimov data for " << valMuDM << std::endl;
   
   int nPointsAsimov = 275;
   
   // This is the dataset to be returned:
-  RooDataSet *AsimovData = new RooDataSet(Form("asimovMu%d", valueMuDM), Form("asimovMu%d", valMuDM), RooArgSet(*cateWS->var("m_yy_"+currCateName),wt), WeightVar(wt));
+  RooDataSet *asimovData = new RooDataSet(Form("asimovMu%d", valMuDM), Form("asimovMu%d", valMuDM), RooArgSet(*cateWS->var("m_yy_"+currCateName),wt), WeightVar(wt));
   
   // Load the PDF from the workspace:
   RooAbsPdf *currPdf = (RooAbsPdf*)(cateWS->pdf("model_"+currCateName));
   double initialMuDM = (cateWS->var("mu_DM"))->getVal();
-  cateWS->var("mu_DM")->setVal(valueMuDM);
+  cateWS->var("mu_DM")->setVal(valMuDM);
   
   // Use fit result to get the estimate of the background:
   double totalBkgEvents = obsData->sumEntries();
@@ -1027,7 +1028,7 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
   
   // Loop over the number of Asimov points:
   double countAsimov = 0.0;
-  for ( int i_p = 0; i_p < npoints_Asimov; i_p++) {
+  for ( int i_p = 0; i_p < nPointsAsimov; i_p++) {
   
     double massVal = DMMyyRangeLo + (0.5*width) + (width*(double)i_p);
     
@@ -1058,8 +1059,7 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
    @param plotOptions - options for what fits to plot etc.
    @returns void
 */
-void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM);
-{
+void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM) {
   cout << "plotFit( " << currCateName << " )" << endl;
   TCanvas *c = new TCanvas();
   RooPlot* frame =  (*categoryWS->var("m_yy_"+currCateName)).frame(55);

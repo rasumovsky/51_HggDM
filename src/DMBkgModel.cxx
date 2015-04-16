@@ -113,7 +113,7 @@ void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
   RooAbsPdf* currBkgModel = getCateBkgPDF(cateIndex);
   
   // Then add it to the workspace:
-  workspace->import(currBkgModel);
+  workspace->import(*currBkgModel);
   
   // Then add the parameters to the workspace:
   RooArgSet *currArgs = currBkgModel->getVariables();

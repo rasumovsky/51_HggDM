@@ -15,18 +15,12 @@
 #include "RooFitHead.h"
 #include "RooStatsHead.h"
 #include "CommonFunc.h"
-#include "statistics.hh"
+#include "statistics.h"
 
 // Systematic Uncertainty readers (DEPRECATED):
 #include "ESSReader.h"
 #include "ResReader.h"
 #include "DMAnalysis.h"
-
-using namespace std;
-using namespace RooFit;
-using namespace RooStats;
-using namespace CommonFunc;
-using namespace DMAnalysis;
 
 class DMWorkspace
 {

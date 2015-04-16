@@ -16,6 +16,12 @@
 
 #include "DMWorkspace.h"
 
+using namespace std;
+using namespace RooFit;
+using namespace RooStats;
+using namespace CommonFunc;
+using namespace DMAnalysis;
+
 /**
    Instantiate the class.
    @param newJobName - The name of the job

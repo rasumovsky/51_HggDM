@@ -29,11 +29,9 @@
 // Package includes:
 #include "CommonHead.h"
 #include "RooFitHead.h"
-//#include "DMEvtSelect.h"
-//#include "DMTree.h"
-#include "DMMassPoints.h"
 #include "statistics.h"
 #include "DMAnalysis.h"
+#include "DMMassPoints.h"
 
 using namespace DMAnalysis;
 

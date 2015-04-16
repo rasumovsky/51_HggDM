@@ -12,7 +12,7 @@
 #define ResReader_h
 
 #include <string>
-#include <stdlib>
+#include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
 #include <fstream>

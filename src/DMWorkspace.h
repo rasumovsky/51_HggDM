@@ -16,11 +16,12 @@
 #include "RooStatsHead.h"
 #include "CommonFunc.h"
 #include "statistics.h"
-
-// Systematic Uncertainty readers (DEPRECATED):
 #include "ESSReader.h"
 #include "ResReader.h"
 #include "DMAnalysis.h"
+#include "DMMassPoints.h"
+#include "DMSigParam.h"
+#include "DMBkgModel.h"
 
 class DMWorkspace
 {
@@ -32,25 +33,24 @@ class DMWorkspace
   
  private:
   
-  void backgroundPdfBuilder(RooWorkspace *&w, RooArgSet *&nuispara,
-		       TString cateName);
-  void createAsimovData(TString cateName, RooWorkspace *currWS, 
-			RooDataSet *currData, RooRealVar currWeightVar, 
-			double valuePOI);
-  RooWorkspace* createNewCategoryWS();
   void createNewWS();
-  void loadWSFromFile();
-  
-  void makeNP(const char* varname, double setup[5], RooArgSet *&nuispara,
-	      RooArgSet *&constraints, RooArgSet *&globobs,
-	      RooArgSet *&expected);
-  void makeShapeNP(const char* varnameNP, const char* proc, double setup[5],
-		   RooArgSet *&nuispara, RooArgSet *&constraints,
-		   RooArgSet *&globobs, RooArgSet *&expected);
+  RooWorkspace* createNewCategoryWS();
+  //  void loadWSFromFile();
+  void createAsimovData(RooWorkspace *cateWS, RooDataSet *obsData, 
+			RooRealVar wt, int valueMuDM);
+ 
+  // eliminate this as soon as possible:
   double spuriousSignal(TString cateName);
   
-  void plotFit(TString cateName, RooWorkspace *workspace);
-  void plotNuisParams();
+  void makeNP(const char* varName, double setup[4], RooArgSet *&nuisParams,
+	      RooArgSet *&constraints, RooArgSet *&globalObs,
+	      RooArgSet *&expected);
+  void makeShapeNP(const char* varnameNP, const char* process, double setup[4],
+		   RooArgSet *&nuisParams, RooArgSet *&constraints,
+		   RooArgSet *&globalObs, RooArgSet *&expected);
+  
+  void plotFit(RooWorkspace *cateWS, double valMuDM);
+  //void plotNuisParams();// Take this from NPP?
   
   // Member variables:
   TString jobName;
@@ -60,22 +60,21 @@ class DMWorkspace
   TString outputDir;
   
   // Helper classes:
+  ESSReader *ess_tool;
+  ResReader* res_tool;
   DMEvtSelect *selector;
-  
-  //ESSReader *ess_tool;
-  //ResReader* res_tool;
-  
-  // The RooWorkspace and ModelConfig:
-  RooWorkspace *combinedWS;
-  ModelConfig *mconfig;
-  
-  // Updated inside each call to createNewCategoryWS():
-  int currCateIndex;
-  TString currCateName;
-  RooWorkspace *currWS;
   DMSigParam *currSigParam;
   DMBkgModel *currBkgModel;
   DMMassPoints *currMassPoints;
+  
+  // Updated for each call to createNewCategoryWS():
+  int currCateIndex;
+  TString currCateName;
+  
+  // The Final RooWorkspace and ModelConfig:
+  RooWorkspace *combinedWS;
+  ModelConfig *mconfig;
+  
 };
 
 #endif

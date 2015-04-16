@@ -1064,10 +1064,10 @@ void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM) {
   cout << "plotFit( " << currCateName << " )" << endl;
   TCanvas *c = new TCanvas();
   RooPlot* frame =  (*cateWS->var("m_yy_"+currCateName)).frame(55);
-  categoryWS->data("obsData")->plotOn(frame);
-  (*categoryWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
-  (*categoryWS->pdf("model_"+currCateName)).plotOn(frame,Components( (*categoryWS->pdf("bkgPdf_"+currCateName)) ) , LineColor(4));
-  double chi2 = frame->chiSquare() ;
+  cateWS->data("obsData")->plotOn(frame);
+  (*cateWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
+  (*cateWS->pdf("model_"+currCateName)).plotOn(frame,Components( (*cateWS->pdf("bkgPdf_"+currCateName))), LineColor(4));
+  double chi2 = frame->chiSquare();
   frame->SetYTitle("Events / GeV");
   frame->SetXTitle("M_{#gamma#gamma} [GeV]");
   frame->Draw();

@@ -787,7 +787,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 				      categoryWS->var("m_yy_"+currCateName));
   }
 
-  
   RooDataSet *obsData = currMassPoints->getCateDataSet(currCateIndex);
   obsData->SetNameTitle("obsData","obsData");
   

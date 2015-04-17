@@ -1,84 +1,95 @@
-# HggDM
-Higgs to diphoton + dark matter search 
+# HggDM 
 
+## A search for dark matter associated with a Higgs boson (H->diphoton)
+
+### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
 for Higgs bosons produced in association with dark matter particles. The Higgs
 decay is identified by a diphoton resonance, while the dark matter particle
 would manifest as missing transverse energy.
 
-General analysis strategy:
-     1) mini-MxAODs from xAODs using the tools provided by Hgamma WG.
-     2) mass points for data, backgrounds, and signal.
-     3) parameterization of the SM and DM signals.
-     4) background modeling.
-     5) workspace to store models and PDFs.
-     6) pseudoexperiment ensemble generation and analysis 
-     7) CLs and p0 calculators
-     
-NOTES 03/04/2015:
+The code has been structured so that all of the general analysis settings are 
+stored in the DMAnalysis namespace. *A typical user should only need to adjust
+the settings in DMAnalysis.* Changes to the cutflow are an exception, and should
+be added to the DMEvtSelect class. The code is designed to be as automatic as
+possible. Each class looks to see if all of the necessary inputs have been 
+produced previously before generating them from scratch. You can force the 
+program to produce inputs from scratch either by using a new job name or with 
+the option "FromScratch".
 
-      The "FromFile" option should be modified. First, the program looks for the
-      desired file. If it exists, open. Otherwise, call the 'createNew' method.
+### General analysis strategy:
+1)  mini-MxAODs from xAODs using the tools provided by Hgamma WG.
+2)  mass points for data, backgrounds, and signal.
+3)  parameterization of the SM and DM signals.
+4)  background modeling.
+5)  workspace to store models and PDFs.
+6)  pseudoexperiment ensemble generation and analysis 
+7)  CLs and p0 calculators
 
+### Package contents:
 
-NOTES 24/03/2015:
+* DMAnalysis
+  This namespace should store all important analysis information. The idea is to
+  avoid hard-coding anything in the supporting classes. Luminosity, higgs mass,
+  m_yy range, file names, script locations, produciton modes should all go here.
+  Functions that are used to access these global parameters are also included.
 
-      Need to think more about handling communication between analysis classes.
-      For example, should DMSigParam have its own instance of DMMassPoints, or
-      should DMMaster pass a reference during initialization? Same issue will 
-      arise for workspace generation.
-      
-      Another issue: have instance of DMMassPoints for each sample? Yes. So then
-      what about DMSigParam? I am inclined to do all of the signals in one shot,
-      just because it is less cumbersome. 
+* DMMaster
+  This is the master 'wrapper' class for the analysis. Using this class, all the
+  analysis tools can be run. The file organization is automated, using a 
+  directory structure based on the 'masterInput' and 'masterOutput' strings in 
+  DMAnalysis, as well as the masterJobName.
 
-      
-OPEN ISSUES 22/03/2015: 
+* DMMassPoints
+  This program uses a TTree of data events to produce a series of mass points 
+  that can be used as inputs for the signal parameterization or workspace 
+  creation. The cutflow is implemented using the DMEvtSelect class.
+  
+* DMSigParam
+  This program uses signal MC to fit the resonance shape for the SM Higgs and 
+  the DM signal and saves the parameters for use in workspace generation. The 
+  fit is performed on masspoints generated with DMMassPoints. Signal cross-
+  sections are provided by the BRXSReader tool.
 
-     * DMMassPoints only compiles on lxplus (not OSX Yosemite...). Why?
-               
-     * DMSigParam - need to choose RooRealVar ranges for fits. Also, need to
-       consider using modified mass variable to prevent errors in the matrix	
-       used for the fit.
+* DMBkgModel
+  This program implements all of the possible background models, and can
+  return either a RooAbsPdf object, a CombinedPdf, or add a PDF directly to the 
+  analysis workspace.
 
+* DMWorkspace
+  This program produces the statistical model for the DM analysis. It includes
+  SM signal, a single DM signal, and background PDFs, as well as associated 
+  systematic uncertainties. The parameter of interest is "mu_DM", the signal
+  strength for the dark matter production process. The signal strength of the 
+  Standard Model Higgs Boson "mu_SM" is set to 1. The background normalization 
+  comes from data. There is the option of fitting the SM signal strengths 
+  individually. 
 
-Analysis Header:
+* DMPseudoexperiments (TBA)
 
-     * DMHeader.h
-          This header file should store all important analysis information. The
-	  idea is to avoid hard-coding anything in the supporting classes. File
-	  names, analysis luminosity, category names, production modes, mass
-	  ranges are just a few of the quantities that should be defined here.
+* DMCLs (TBA)
 
-Main Classes:
-     
-     * DMMaster.cxx
-          This is the master class for the analysis. Using this class, all the
-     	  analysis tools can be run. The file organization is automated, using
-     	  a directory structure based on the 'master_input' and 'master_output'
-     	  strings in DMHeader.h, as well as the MasterJobName.
+* DMP0 (TBA)
 
-     * DMMassPoints.cxx
-          This program uses a TTree of data events to produce a series of mass
-	  points that can be used as inputs for the workspace. The cutflow is
-	  implemented using the DMEvtSelect class.
+### Supporting Classes:
 
-     * DMSigParam.cxx
-          This program uses MC to fit the resonance shape for the SM Higgs and 
-	  the DM signal and saves the parameters for use in workspace 
-	  generation. The cutflow is implemented using the DMEvtSelect class.
+* BRXSReader
+  Reads tables of SM Higgs cross sections and branching ratios and provides an 
+  easy-to-use interface.
 
-Supporting Classes:
+* DMEvtSelect
+  This class implements the cutflow and counters for the analysis. It can be 
+  initialized using a pointer to the DMTree. 
 
-     * BRXSReader.cxx
-          Reads tables of SM Higgs cross sections and branching ratios and 
-	  provides an easy-to-use interface.
+* DMTree
+  This class is automatically generated based on the MxAOD structure. It 
+  provides a useful interface for code to the TTrees. 
 
-     * DMEvtSelect.cxx
-          This class implements the cutflow and counters for the analysis. It
-	  can be initialized using a pointer to the DMTree. This class is 
-	  instantiated in the DMMassPoints and DMSigParam classes. 
+* ESSReader
+  This is a simple class for loading and accessing energy scale systematics
+  based on an input file. 
 
-     * DMTree.cxx
-          This class is automatically generated based on the MxAOD structure.
-	  It provides a useful interface for code to the TTrees. 
+* ResReader
+  This is a simple class for loading and accessing energy resolution systematics
+  based on an input file. 
+

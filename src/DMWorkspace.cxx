@@ -775,8 +775,19 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   
   // Import the observed data set:
-  currMassPoints = new DMMassPoints(jobName, "obsData", cateScheme, "FromFile",
-				categoryWS->var("m_yy_"+currCateName));
+  if (doBlind) {
+
+    currMassPoints = new DMMassPoints(jobName, "gg_gjet",
+				      cateScheme, "FromFile",
+				      categoryWS->var("m_yy_"+currCateName));
+  }
+  else {
+    currMassPoints = new DMMassPoints(jobName, "data",
+				      cateScheme, "FromFile",
+				      categoryWS->var("m_yy_"+currCateName));
+  }
+
+  
   RooDataSet *obsData = currMassPoints->getCateDataSet(currCateIndex);
   obsData->SetNameTitle("obsData","obsData");
   

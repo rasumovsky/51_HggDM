@@ -112,9 +112,9 @@ void DMWorkspace::createNewWS() {
   std::cout << "Luminosity at 13 TeV:" << analysisLuminosity << std::endl;
   std::cout << "........................................" << std::endl;
   
-  // Read tables of ESS and Res and store values:
-  ess = new ESSReader(fileNameESSValues, nCategories);
-  res = new ResReader(fileNameResValues, nCategories);
+  // Read tables of PES and PER and store values:
+  pes = new PESReader(fileNamePESValues, nCategories);
+  per = new PERReader(fileNamePERValues, nCategories);
   
   // Instantiate the signal parameterization class using the observable:
   currSigParam = new DMSigParam(jobName, cateScheme, "FromFile");
@@ -380,8 +380,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   bool inclusive = currCateName == "inclusive";
   bool channel_constraints_attached = (currCateIndex == 0);
   bool m_norm = !options.Contains("nonorm");
-  bool m_ess = !options.Contains("noess");
-  bool m_res = !options.Contains("nores");
+  bool m_pes = !options.Contains("nopes");
+  bool m_per = !options.Contains("noper");
   bool m_ss  = !options.Contains("noss");
   bool m_bgm = !options.Contains("nobgm");
   bool m_mig = !options.Contains("nomig");
@@ -389,15 +389,15 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   if (m_nosys) {
     std::cout << "\tALL systematics = OFF" << endl;
     m_norm = false;
-    m_ess = false;
-    m_res = false;
+    m_pes = false;
+    m_per = false;
     m_ss  = false;
     m_bgm = false;
     m_mig = false;
   }
   std::cout << "\tNormalization systematics = " << m_norm << std::endl;
-  std::cout << "\tEnergy scale systematics  = " << m_ess  << std::endl;
-  std::cout << "\tResolution systematics    = " << m_res  << std::endl;
+  std::cout << "\tEnergy scale systematics  = " << m_pes  << std::endl;
+  std::cout << "\tResolution systematics    = " << m_per  << std::endl;
   std::cout << "\tShape systematics         = " << m_ss   << std::endl;
   std::cout << "\tBackground systematics    = " << m_bgm  << std::endl;
   std::cout << "\tMigration systematics     = " << m_mig  << std::endl;
@@ -501,52 +501,52 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // SYSTEMATICS: Resolution:
-  vector<TString> resList; resList.clear();
-  if (m_res) {
-    double setupRes[4] = {0.0, 0, 1, 1};
+  vector<TString> perList; perList.clear();
+  if (m_per) {
+    double setupPER[4] = {0.0, 0, 1, 1};
     
     // Loop over sources of resolution systematic uncertainty:
     for (int i_s = 0; i_s < res->getNumberOfSources(); i_s++) {
-      TString currResSource = res->getNameOfSource(i_s);
-      TString currResName = Form("EM_%s",currResSource.Data());
-      resList.push_back(currResName);
-      setupRes[0] = res->getValue(currResSource, currCateIndex);
-      setupRes[2] = res->getSign(currResSource, currCateIndex);
+      TString currPERSource = per->getNameOfSource(i_s);
+      TString currPERName = Form("EM_%s",currPERSource.Data());
+      perList.push_back(currPERName);
+      setupPER[0] = per->getValue(currPERSource, currCateIndex);
+      setupPER[2] = per->getSign(currPERSource, currCateIndex);
       
       // resolution on the inclusive shape:
-      makeShapeNP(currResName, "DM", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "DM", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "SM", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "SM", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "ggH", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "ggH", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "VBF", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "VBF", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "WH", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "WH", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "ZH", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "ZH", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "bbH", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "bbH", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      makeShapeNP(currResName, "ttH", setupRes, *&nuisParams, *&constraints,
+      makeShapeNP(currPERName, "ttH", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
     }
   }
   
   //--------------------------------------//
   // SYSTEMATICS: Energy-scale
-  vector<TString> essList; essList.clear();
-  if (m_ess) {
-    double setupESS[4] = {0.0, 0, 1, 1};
+  vector<TString> pesList; pesList.clear();
+  if (m_pes) {
+    double setupPES[4] = {0.0, 0, 1, 1};
     
     // loop over sources of energy scale systematic uncertainty:
-    for (int i_s = 0; i_s < ess->getNumberOfSources(); i_s++) {
-      TString currESSSource = ess->getNameOfSource(i_s);
-      TString currESSName = Form("EM_%s",currESSSource.Data());
-      essList.push_back(currESSName);
-      setupESS[0] = ess->getValue(currESSSource, currCateIndex);
-      setupESS[2] = ess->getSign(currESSSource, currCateIndex);
-      makeNP(currESSName, setupESS, *&nuisParams, *&constraints, *&globalObs,
+    for (int i_s = 0; i_s < pes->getNumberOfSources(); i_s++) {
+      TString currPESSource = pes->getNameOfSource(i_s);
+      TString currPESName = Form("EM_%s",currPESSource.Data());
+      pesList.push_back(currPESName);
+      setupPES[0] = pes->getValue(currPESSource, currCateIndex);
+      setupPES[2] = pes->getSign(currPESSource, currCateIndex);
+      makeNP(currPESName, setupPES, *&nuisParams, *&constraints, *&globalObs,
 	     *&expectedShape);
     }
   }
@@ -606,14 +606,14 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->defineSet("observables","m_yy");
   
   // Construct the signal PDFs:
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "DM", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "SM", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "ggH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "VBF", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "WH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "ZH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "bbH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, essList, resList, "ttH", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "DM", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "SM", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ggH", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "VBF", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "WH", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ZH", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "bbH", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ttH", currCateIndex);
   
   // Construct the background PDF:
   currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateIndex);

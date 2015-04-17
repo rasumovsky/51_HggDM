@@ -38,7 +38,7 @@ GLIBS	+= -lTreePlayer -lProof -lProofPlayer -lutil -lRooFit -lRooFitCore  -lRooS
 OBJS_Template		= obj/template.o
 DEPS_Template		:= $(OBJS_Template:.o=.d) 
 
-bin/%	: obj/%.o obj/statistics.o obj/statisticsDict.o obj/RooBernsteinM.o obj/RooBernsteinMDict.o obj/CommonFunc.o obj/DMTree.o obj/BRXSReader.o obj/ESSReader.o obj/ResReader.o obj/DMEvtSelect.o obj/DMMassPoints.o obj/DMSigParam.o obj/DMBkgModel.o 
+bin/%	: obj/%.o obj/statistics.o obj/statisticsDict.o obj/RooBernsteinM.o obj/RooBernsteinMDict.o obj/CommonFunc.o obj/DMTree.o obj/BRXSReader.o obj/PESReader.o obj/PERReader.o obj/DMEvtSelect.o obj/DMMassPoints.o obj/DMSigParam.o obj/DMBkgModel.o 
 
 	@echo "Linking " $@
 	echo $(LD) $(LDFLAGS) $^ $(GLIBS) -o $@	

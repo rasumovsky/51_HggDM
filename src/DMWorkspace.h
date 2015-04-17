@@ -16,8 +16,8 @@
 #include "RooStatsHead.h"
 #include "CommonFunc.h"
 #include "statistics.h"
-#include "ESSReader.h"
-#include "ResReader.h"
+#include "PESReader.h"
+#include "PERReader.h"
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
 #include "DMSigParam.h"
@@ -60,8 +60,8 @@ class DMWorkspace
   TString outputDir;
   
   // Helper classes:
-  ESSReader *ess;
-  ResReader* res;
+  PESReader *pes;
+  PERReader* per;
   DMEvtSelect *selector;
   DMSigParam *currSigParam;
   DMBkgModel *currBkgModel;

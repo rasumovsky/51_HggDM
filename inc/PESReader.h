@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: ResReader.h                                                         //
-//  Class: ResReader.cxx                                                      //
+//  Name: PESReader.h                                                         //
+//  Class: PESReader.cxx                                                      //
 //  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
 //  Date: 15/04/2015                                                          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef ResReader_h
-#define ResReader_h
+#ifndef PESReader_h
+#define PESReader_h
 
 #include <cmath>
 #include <string>
@@ -19,28 +19,29 @@
 #include <fstream>
 #include <vector>
 #include "TString.h"
-class ResReader {
 
+class PESReader {
+ 
  public:
   
-  ResReader(TString inputFileName, int nCategories);
-  ~ResReader();
+  PESReader(TString inputFileName, int nCategories);
+  ~PESReader();
   
-  int sourceNameToIndex(TString name); 
+  int sourceNameToIndex(TString name);
   double getValue(TString name, int cateIndex);
   int getSign(TString name, int cateIndex);
   int getNumberOfSources();
-  TString getNameOfSource(int resIndex);
+  TString getNameOfSource(int sourceIndex);
   
  private:
   
-  int nResParams;
+  int nPESParams; 
   
-  // store the RES values [#systematics][#categories]
-  double valuesRes[100][20];
+  // store the PES values [#systematics][#categories]
+  double valuesPES[100][20];
   
-  // store the RES names:
-  std::vector<TString> nameListRes;
+  // store the PES names:
+  std::vector<TString> nameListPES;
   
 };
 

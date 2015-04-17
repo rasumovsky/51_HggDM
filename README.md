@@ -2,6 +2,18 @@
 
 ## A search for dark matter associated with a Higgs boson (H->diphoton)
 
+### To do 4/17/2015:
+1) Implement bbH in DMSigParam. Use the ggH parameters, but scale down by the 
+   cross-section of the bbH. Will need to access BRXSReader. Simply add a 
+   case for bbH in the initializer, so that the ggH values are essentially 
+   duplicated.
+
+2) Produce mass points using the Sherpa sample. 
+
+3) Implement fit plots for the workspace. 
+
+4) Convert NPP code for toy MC
+
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
 for Higgs bosons produced in association with dark matter particles. The Higgs
@@ -41,29 +53,29 @@ the option "FromScratch".
   DMAnalysis, as well as the masterJobName.
 
 #### DMMassPoints
-     This program uses a TTree of data events to produce a series of mass points
-     that can be used as inputs for the signal parameterization or workspace 
-     creation. The cutflow is implemented using the DMEvtSelect class.
+ This program uses a TTree of data events to produce a series of mass points
+ that can be used as inputs for the signal parameterization or workspace 
+ creation. The cutflow is implemented using the DMEvtSelect class.
   
 #### DMSigParam
-     This program uses signal MC to fit the resonance shape for the SM Higgs and
-     the DM signal and saves the parameters for use in workspace generation. The
-     fit is performed on masspoints generated with DMMassPoints. Signal cross-
-     sections are provided by the BRXSReader tool.
+ This program uses signal MC to fit the resonance shape for the SM Higgs and
+ the DM signal and saves the parameters for use in workspace generation. The
+ fit is performed on masspoints generated with DMMassPoints. Signal cross-
+ sections are provided by the BRXSReader tool.
 
 #### DMBkgModel
-     This program implements all of the possible background models, and can
-     return either a RooAbsPdf object, a CombinedPdf, or add a PDF directly to 
-     the analysis workspace.
+ This program implements all of the possible background models, and can return 
+ either a RooAbsPdf object, a CombinedPdf, or add a PDF directly to the analysis
+ workspace.
 
 #### DMWorkspace
-     This program produces the statistical model for the DM analysis. It 
-     includes SM signal, a single DM signal, and background PDFs, as well as 
-     associated systematic uncertainties. The parameter of interest is "mu_DM",
-     the signal strength for the dark matter production process. The signal 
-     strength of the Standard Model Higgs Boson "mu_SM" is set to 1. The 
-     background normalization comes from data. There is the option of fitting 
-     the SM signal strengths individually. 
+ This program produces the statistical model for the DM analysis. It includes SM
+ signal, a single DM signal, and background PDFs, as well as associated 
+ systematic uncertainties. The parameter of interest is "mu_DM", the signal 
+ strength for the dark matter production process. The signal strength of the 
+ Standard Model Higgs Boson "mu_SM" is set to 1. The background normalization 
+ comes from data. There is the option of fitting the SM signal strengths 
+ individually. 
 
 #### DMPseudoexperiments (TBA)
 
@@ -74,22 +86,21 @@ the option "FromScratch".
 ### Supporting Classes:
 
 #### BRXSReader
-     Reads tables of SM Higgs cross sections and branching ratios and provides 
-     an easy-to-use interface.
+ Reads tables of SM Higgs cross sections and branching ratios and provides an 
+ easy-to-use interface.
 
 #### DMEvtSelect
-     This class implements the cutflow and counters for the analysis. It can be 
-     initialized using a pointer to the DMTree. 
+ This class implements the cutflow and counters for the analysis. It can be 
+ initialized using a pointer to the DMTree. 
 
 #### DMTree
-     This class is automatically generated based on the MxAOD structure. It 
-     provides a useful interface for code to the TTrees. 
+ This class is automatically generated based on the MxAOD structure. It provides
+ a useful interface for code to the TTrees. 
 
-#### ESSReader
-     This is a simple class for loading and accessing energy scale systematics
-     based on an input file. 
+#### PESReader
+ This is a simple class for loading and accessing energy scale systematics based
+ on an input file. 
 
-#### ResReader
-     This is a simple class for loading and accessing energy resolution 
-     systematics based on an input file. 
-
+#### PERReader
+ This is a simple class for loading and accessing energy resolution systematics
+ based on an input file. 

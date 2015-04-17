@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: ESSReader.h                                                         //
-//  Class: ESSReader.cxx                                                      //
+//  Name: PERReader.h                                                         //
+//  Class: PERReader.cxx                                                      //
 //  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
 //  Date: 15/04/2015                                                          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef ESSReader_h
-#define ESSReader_h
+#ifndef PERReader_h
+#define PERReader_h
 
 #include <cmath>
 #include <string>
@@ -19,29 +19,28 @@
 #include <fstream>
 #include <vector>
 #include "TString.h"
+class PERReader {
 
-class ESSReader {
- 
  public:
   
-  ESSReader(TString inputFileName, int nCategories);
-  ~ESSReader();
+  PERReader(TString inputFileName, int nCategories);
+  ~PERReader();
   
-  int sourceNameToIndex(TString name);
+  int sourceNameToIndex(TString name); 
   double getValue(TString name, int cateIndex);
   int getSign(TString name, int cateIndex);
   int getNumberOfSources();
-  TString getNameOfSource(int sourceIndex);
+  TString getNameOfSource(int indexPER);
   
  private:
   
-  int nESSParams; 
+  int nPERParams;
   
-  // store the ESS values [#systematics][#categories]
-  double valuesESS[100][20];
+  // store the RES values [#systematics][#categories]
+  double valuesPER[100][20];
   
-  // store the ESS names:
-  std::vector<TString> nameListESS;
+  // store the RES names:
+  std::vector<TString> nameListPER;
   
 };
 

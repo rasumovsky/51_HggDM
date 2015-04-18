@@ -21,7 +21,9 @@
 */
 TString DMAnalysis::nameToFileList(TString name) {
   TString result = Form("%s/FileLists/",masterInput.Data());
-  if (name.EqualTo("ggH")) {
+
+  // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
+  if (name.EqualTo("ggH") || name.EqualTo("bbH")) {
     result += "list_H2yyMETAnalysis_ggH.txt";
   }
   else if (name.EqualTo("VBF")) {

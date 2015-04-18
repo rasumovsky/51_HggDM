@@ -338,9 +338,6 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     }
   }
 
-  // HOW TO ACCOMODATE THIS!?:
-  //createSigParam("SM", (!options.Contains("FromFile")));
-
   // Vectors to store fitted PDFs
   std::vector<RooCBShape*> vectorCB; vectorCB.clear();
   std::vector<RooGaussian*> vectorGA; vectorGA.clear();

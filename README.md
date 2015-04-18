@@ -3,16 +3,13 @@
 ## A search for dark matter associated with a Higgs boson (H->diphoton)
 
 ### To do 4/17/2015:
-1) Implement bbH in DMSigParam. Use the ggH parameters, but scale down by the 
-   cross-section of the bbH. Will need to access BRXSReader. Simply add a 
-   case for bbH in the initializer, so that the ggH values are essentially 
-   duplicated.
 
-2) Produce mass points using the Sherpa sample. 
+1) Implement bbH. DONE! Actually, implemented in DMAnalysis. Code runs over
+   ggH sample, but bbH cross-sections are applied.
 
-3) Implement fit plots for the workspace. 
+2) Implement fit plots for the workspace. 
 
-4) Convert NPP code for toy MC
+3) Convert NPP code for toy MC
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look

@@ -37,7 +37,7 @@ namespace DMAnalysis {
   
   //int const nSMModes = 6;
   const int nSMModes = 6;
-  const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","ttH","bbH"};
+  const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","bbH","ttH"};
   
   //int const nDMModes = 8;
   const int nDMModes = 8;

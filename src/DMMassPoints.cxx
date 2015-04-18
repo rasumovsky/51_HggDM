@@ -231,9 +231,7 @@ void DMMassPoints::createNewMassPoints() {
     
     // Check the cutflow:
     if (!selector->passesCut("all")) continue;
-    
-    
-    
+        
     // Save the categories:
     int currCate = selector->getCategoryNumber(cateScheme);
     if (currCate > 0) {

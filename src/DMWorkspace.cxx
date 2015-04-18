@@ -12,6 +12,9 @@
 //  Second: add asimov data function.                                         //
 //  Third: make plots a la spin analysis or better yet NPP.                   //
 //                                                                            //
+//  Note: 18/4/2015. Need to specify a single DM signal process to be used in //
+//  the construction of this statistical model. One workspace per DM model.   //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMWorkspace.h"

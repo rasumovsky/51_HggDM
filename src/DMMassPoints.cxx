@@ -13,7 +13,9 @@
 //  mass points from a previously generated text file, using newOptions =     //
 //  "FromFile" or "New".                                                      //
 //                                                                            //
-//  Still need to get input TTree name convention. Solve in DMHeader file?    //
+//  Currently, gg_gjet sample has a 'loose selection' applied. Also, the      //
+//  normalization should be hard-coded as an extrapolation of the 8TeV        //
+//  analysis background.                                                      //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -229,9 +231,36 @@ void DMMassPoints::createNewMassPoints() {
   for (Long64_t event = 0; event < entries; event++) {
     dmt->fChain->GetEntry(event);
     
-    // Check the cutflow:
-    if (!selector->passesCut("all")) continue;
-        
+    // Calculate the weights for the cutflow first!
+    double evtWeight = 1.0;
+    if (isWeighted) {
+      evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
+      
+      // Multiply by the appropriate luminosity, xsection & branching ratio.
+      if (isSMSample(sampleName)) {
+	evtWeight *= (analysisLuminosity *
+		      brxs->getSMBR(higgsMass, "gammagamma","BR") *
+		      brxs->getSMXS(higgsMass, sampleName, "BR"));
+      }
+      // Dark matter XSBR includes cross-section and branching ratio.
+      else if (isDMSample(sampleName)) {
+	evtWeight *= (analysisLuminosity *
+		      brxs->getDMXSBR(getIntermediaryMass(sampleName),
+				      getDarkMatterMass(sampleName),
+				      getIntermediaryName(sampleName),
+				      "XS"));
+      }
+    }
+    
+    // Check the cutflow (loose for background sample):
+    if (sampleName.Equals("gg_gjet") && 
+	!selector->passesCut("looseCuts",evtWeight)) {
+      continue;
+    }
+    else if (!selector->passesCut("allCuts",evtWeight)) {
+      continue;
+    }
+    
     // Save the categories:
     int currCate = selector->getCategoryNumber(cateScheme);
     if (currCate > 0) {
@@ -239,23 +268,6 @@ void DMMassPoints::createNewMassPoints() {
       m_yy->setVal(dmt->EventInfoAuxDyn_m_yy);
       
       if (isWeighted) {
-	// Get the event weight:
-	double evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
-	
-	// Multiply by the appropriate luminosity, xsection & branching ratio.
-	if (isSMSample(sampleName)) {
-	  evtWeight *= (analysisLuminosity *
-			brxs->getSMBR(higgsMass, "gammagamma","BR") *
-			brxs->getSMXS(higgsMass, sampleName, "BR"));
-	}
-	// Dark matter XSBR includes cross-section and branching ratio.
-	else if (isDMSample(sampleName)) {
-	  evtWeight *= (analysisLuminosity *
-			brxs->getDMXSBR(getIntermediaryMass(sampleName),
-					getDarkMatterMass(sampleName),
-					getIntermediaryName(sampleName),
-					"XS"));
-	}
 	wt.setVal(evtWeight);
 	cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
 	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << " " << evtWeight

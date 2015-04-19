@@ -38,6 +38,7 @@ DMEvtSelect::DMEvtSelect() {
 
 /**
    Initializes the tool and loads XS, BR values from files. 
+   @param newTree - the TTree which contains the sample.
 */
 DMEvtSelect::DMEvtSelect(DMTree* newTree) {
     
@@ -45,11 +46,15 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   cutList.clear();
   cutList.push_back("photonPt");
   cutList.push_back("photonEta");
+  cutList.push_back("photonIso");
+  cutList.push_back("photonID");
   cutList.push_back("diphotonMass");
   cutList.push_back("diphotonPt");
   cutList.push_back("diphotonETMiss");
+  cutList.push_back("looseCuts");//same as allCuts but no photonID or photonIso
   cutList.push_back("allCuts");
-    
+  
+  
   // ADD CATE HERE ([name] = # categories):
   cateSchemesAndSizes.clear();
   cateSchemesAndSizes["inclusive"] = 1;
@@ -64,6 +69,8 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
 
 /**
    Get the (integer) number of events in the specified category.
+   @param cateScheme - the name of the categorization.
+   @param cate - the category number. 
 */
 int DMEvtSelect::getEventsPerCate(TString cateScheme, int cate) {
   if (cateExists(cateScheme)) {
@@ -74,6 +81,9 @@ int DMEvtSelect::getEventsPerCate(TString cateScheme, int cate) {
 
 /**
    Get the weighted number of events in the specified category.
+   @param cateScheme - the name of the categorization.
+   @param cate - the category number.
+   @returns - the number of weighted events in the category.
 */
 double DMEvtSelect::getEventsPerCateWt(TString cateScheme, int cate) {
   if (cateExists(cateScheme)) {
@@ -84,6 +94,8 @@ double DMEvtSelect::getEventsPerCateWt(TString cateScheme, int cate) {
 
 /**
    Get the number of categories in the named categorization scheme.
+   @param cateScheme - the name of the categorization.
+   @returns - the number of categories in the categorization scheme.
 */
 int DMEvtSelect::getNCategories(TString cateScheme) {
   if (cateExists(cateScheme)) return cateSchemesAndSizes[cateScheme];
@@ -92,6 +104,8 @@ int DMEvtSelect::getNCategories(TString cateScheme) {
 
 /**
    Get the (integer) number of events passing the specified cut.
+   @param cutName - the name of the cut.
+   @returns - the integer number of events passing the cut.
 */
 int DMEvtSelect::getPassingEvents(TString cutName) {
   if (cutExists(cutName)) return evtCountPass[cutName];
@@ -100,6 +114,8 @@ int DMEvtSelect::getPassingEvents(TString cutName) {
 
 /**
    Get the weighted number of events passing the specified cut.
+   @param cutName - the name of the cut.
+   @returns - the weighted number of events passing the cut.
 */
 double DMEvtSelect::getPassingEventsWt(TString cutName) {
   if (cutExists(cutName)) return evtCountPassWt[cutName];
@@ -108,6 +124,8 @@ double DMEvtSelect::getPassingEventsWt(TString cutName) {
 
 /**
    Get the (integer) number of events tested at the specified cut.
+   @param cutName - the name of the cut.
+   @returns - the integer number of events tested at the cut.
 */
 int DMEvtSelect::getTotalEvents(TString cutName) {
   if (cutExists(cutName)) return evtCountTot[cutName];
@@ -116,6 +134,8 @@ int DMEvtSelect::getTotalEvents(TString cutName) {
 
 /**
    Get the weighted number of events tested at the specified cut.
+   @param cutName - the name of the cut.
+   @returns - the weighted number of events tested at the cut.
 */
 double DMEvtSelect::getTotalEventsWt(TString cutName) {
   if (cutExists(cutName)) return evtCountTotWt[cutName];
@@ -124,6 +144,7 @@ double DMEvtSelect::getTotalEventsWt(TString cutName) {
 
 /**
    Print the cutflow.
+   @param weighted - true iff the event counts should be weighted.
 */
 void DMEvtSelect::printCutflow(bool weighted) {
   std::cout << "Printing Cutflow: " << std::endl;
@@ -144,6 +165,7 @@ void DMEvtSelect::printCutflow(bool weighted) {
 
 /**
    Print the categories.
+   @param weighted - true iff the event counts should be weighted.
 */
 void DMEvtSelect::printCategorization(bool weighted) {
   std::cout << "Printing Categories: " << std::endl;
@@ -167,6 +189,8 @@ void DMEvtSelect::printCategorization(bool weighted) {
 
 /**
    Save the cutflow.
+   @param fileName - the output filename for the cutflow.
+   @param weighted - true iff the event counts should be weighted.
 */
 void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
   ofstream outFile(fileName);
@@ -188,6 +212,8 @@ void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
 
 /**
    Save the categories.
+   @param fileName - the output filename for the category yields.
+   @param weighted - true iff the event counts should be weighted.
 */
 void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
   ofstream outFile(fileName);
@@ -230,7 +256,8 @@ void DMEvtSelect::clearCounters() {
   }
   // Then initialize all category counters to zero:
   std::map<TString,int>::iterator it;
-  for (it = cateSchemesAndSizes.begin(); it != cateSchemesAndSizes.end(); it++) {
+  for (it = cateSchemesAndSizes.begin(); 
+       it != cateSchemesAndSizes.end(); it++) {
     for (int j = 0; j < it->second; j++) {
       cateCount[Form("%s_%d",(it->first).Data(),it->second)] = 0;
       cateCountWt[Form("%s_%d",(it->first).Data(),it->second)] = 0.0;
@@ -240,6 +267,8 @@ void DMEvtSelect::clearCounters() {
 
 /**
    Find the category in which this event belongs. 
+   @param cateScheme - the name of the categorization.
+   @returns - the category number for the event.
 */
 int DMEvtSelect::getCategoryNumber(TString cateScheme) {
   return getCategoryNumber(cateScheme, 1.0);
@@ -247,6 +276,9 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme) {
 
 /**
    Find the category in which this weighted event belongs. 
+   @param cateScheme - the name of the categorization.
+   @param weight - the event weight.
+   @returns - the category number for the event.
 */
 int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   
@@ -278,13 +310,20 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
 
 /**
    Check whether an event passes the specified cut.
+   @param cutName - the name of the cut.
+   @returns - true iff the event passes the cut.
 */
 bool DMEvtSelect::passesCut(TString cutName) {
   return passesCut(cutName, 1.0);
 }
 
 /**
-   Check whether a weighted event passes the specified cut.
+   Check whether a weighted event passes the specified cut. Adds to the 
+   selection counters automatically. WARNING! Calling "allCuts" or "looseCuts" 
+   in conjunction with the other counters will lead to duplication.
+   @param cutName - the name of the cut.
+   @param weight - the event weight.
+   @returns - true iff the event passes the cut.
 */
 bool DMEvtSelect::passesCut(TString cutName, double weight) {
   
@@ -294,35 +333,57 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   // ADD CUT HERE:
   bool passes = true;
   // Cut on photon transverse momenta / diphoton mass:
-  if (cutName.Contains("photonPt")) {
+  if (cutName.EqualTo("photonPt")) {
     passes = ((evtTree->EventInfoAuxDyn_y1_pt /
 	       evtTree->EventInfoAuxDyn_m_yy > 0.35) &&
 	      (evtTree->EventInfoAuxDyn_y2_pt /
 	       evtTree->EventInfoAuxDyn_m_yy > 0.25));
   }
   // Cut on the photon pseudorapidities:
-  else if (cutName.Contains("photonEta")) {
+  else if (cutName.EqualTo("photonEta")) {
     passes = (evtTree->EventInfoAuxDyn_y1_eta < 2.5 && 
 	      evtTree->EventInfoAuxDyn_y2_eta < 2.5);
   }
+  // Cut on the calo/track isolation of the photons.
+  else if (cutName.EqualTo("photonIso")) {
+    passes = true;
+  }
+  // Cut on the ID variable of the photons.
+  else if (cutName.EqualTo("photonID")) {
+    passes = true;
+  }
   // Cut on the diphoton invariant mass:
-  else if (cutName.Contains("diphotonMass")) {
+  else if (cutName.EqualTo("diphotonMass")) {
     passes = (evtTree->EventInfoAuxDyn_m_yy > 105.0 && 
 	      evtTree->EventInfoAuxDyn_m_yy < 160.0);
   }
   // Cut on the diphoton transverse momentum:
-  else if (cutName.Contains("diphotonPt")) {
+  else if (cutName.EqualTo("diphotonPt")) {
     passes = (evtTree->EventInfoAuxDyn_pt_yy > 120.0);
   }
   // Cut on the event missing transverse energy:
-  else if (cutName.Contains("diphotonETMiss")) {
+  else if (cutName.EqualTo("diphotonETMiss")) {
     passes = (evtTree->EventInfoAuxDyn_metref_final > 120.0);
   }
   // Check whether event passes all of the cuts above:
-  else if (cutName.Contains("all")) {
-   
+  else if (cutName.EqualTo("allCuts")) {
     for (int i = 0; i < (int)cutList.size(); i++) {
-      if (cutList[i].Contains("all")) continue;
+      if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts")) {
+	continue;
+      }
+      if (!passesCut(cutList[i])) {
+	passes = false;
+	break;
+      }
+    }
+  }
+  // Check whether event passes all of the cuts except ID and isolation.
+  else if (cutName.Contains("looseCuts")) {
+    for (int i = 0; i < (int)cutList.size(); i++) {
+      if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts") ||
+	  cutList[i].EqualTo("photonIso") || cutList[i].EqualTo("photonID")) {
+	continue;
+      }
       if (!passesCut(cutList[i])) {
 	passes = false;
 	break;
@@ -343,7 +404,8 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
 }
 
 /**
-   Give the selector class a new TTree to deal with.
+   Give the selector class a new TTree to handle.
+   @param newTree - the TTree on which the cuts shall be tested.
 */
 void DMEvtSelect::setTree(DMTree *newTree) {
   evtTree = newTree;
@@ -352,6 +414,8 @@ void DMEvtSelect::setTree(DMTree *newTree) {
 
 /** 
    Check whether the specified cut has been defined.
+   @param cutName - the name of the cut whose existence shall be questioned.
+   @returns - true iff the cut exists.
 */
 bool DMEvtSelect::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 
@@ -364,6 +428,8 @@ bool DMEvtSelect::cutExists(TString cutName) {
 
 /** 
     Check whether the specified category has been defined.
+    @param cateScheme - the name of the categorization.
+    @returns - true iff the categorization has been defined. 
 */
 bool DMEvtSelect::cateExists(TString cateScheme) {
   // Checks if there is a key corresponding to cateScheme in the map: 

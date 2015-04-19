@@ -32,9 +32,10 @@ using namespace DMAnalysis;
    @param newOptions - The job options ("New", "FromFile"), etc.
    @returns void
 */
-DMWorkspace::DMWorkspace(TString newJobName, TString newCateScheme,
-			 TString newOptions) {
+DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
+			 TString newCateScheme, TString newOptions) {
   jobName = newJobName;
+  DMSignal = newDMSignal;
   cateScheme = newCateScheme;
   options = newOptions;
   
@@ -83,6 +84,7 @@ ModelConfig* DMWorkspace::getModelConfig() {
 */
 void DMWorkspace::loadWSFromFile() {
   //Check to see if the workspace has actually been made.
+  //Form("%s/workspaceDM_%s.root",outputDir.Data(), DMSignal.Data()));
   bool wsExists = true;
   if (wsExists) {
   }
@@ -370,7 +372,8 @@ void DMWorkspace::createNewWS() {
   //file_muprof.close();
   
   // Write workspace to file:
-  combinedWS->writeToFile(Form("%s/workspaceDM.root",outputDir.Data()));
+  combinedWS->writeToFile(Form("%s/workspaceDM_%s.root",outputDir.Data(),
+			       DMSignal.Data()));
 }
 
 /**
@@ -609,7 +612,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->defineSet("observables","m_yy");
   
   // Construct the signal PDFs:
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "DM", currCateIndex);
+  //currSigParam->addSigToCateWS(tempWS, pesList, perList, "DM", currCateIndex);
+  currSigParam->addSigToCateWS(tempWS, pesList, perList, DMSignal,
+			       currCateIndex);
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "SM", currCateIndex);
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "ggH", currCateIndex);
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "VBF", currCateIndex);
@@ -628,8 +633,11 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // mu*isEM*lumi*migr => expectationCommon
   tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
 		       currSigParam->getCateSigYield(currCateIndex,"SM")));
+  //tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
+  //currSigParam->getCateSigYield(currCateIndex,"DM")));
   tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
-		       currSigParam->getCateSigYield(currCateIndex,"DM")));
+		       currSigParam->getCateSigYield(currCateIndex,DMSignal)));
+  
   // Model with combined SM production modes:
   tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
   // Model with separated SM production modes:
@@ -1090,7 +1098,7 @@ void DMWorkspace::plotFit(RooWorkspace *cateWS, double valMuDM) {
   lresult3.SetTextColor(1);
   lresult3.DrawLatex(0.5,0.78, currCateName);
   
-  system(Form("mkdir -vp %s/figures/",outputDir.Data()));
-  PrintCanvas(c,Form("%s/figures/fit_%s",outputDir.Data(),currCateName.Data()));
+  PrintCanvas(c,Form("%s/figures/fit_%s_%s",outputDir.Data(),DMSignal.Data(),
+		     currCateName.Data()));
   delete c;
 }

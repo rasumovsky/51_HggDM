@@ -4,12 +4,17 @@
 
 ### To do 4/17/2015:
 
-1) Implement bbH. DONE! Actually, implemented in DMAnalysis. Code runs over
-   ggH sample, but bbH cross-sections are applied.
+1) Implement photon ID and isolation in DMEvtSelect
 
-2) Implement fit plots for the workspace. 
+2) Figure out gg_gjet normalization
 
-3) Convert NPP code for toy MC
+3) Implement fit plots for the workspace. 
+
+4) Make workspaces in loop over DM names.
+
+5) CLs and p0 code for DM
+
+6) Toy MC code for DM
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look

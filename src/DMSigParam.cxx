@@ -129,8 +129,11 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 */
 void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
 				std::vector<TString> namesESS,
-				std::vector<TString> namesRes, TString process, 
+				std::vector<TString> namesRes, TString process,
 				int cateIndex) {
+  
+  // A variable that converts any DM process name into "DM" for simplicity:
+  TString processType = (isDMSample(process)) ? "DM" : process;
   
   // Create list of ess to multiply:
   TString listESS = "";
@@ -152,13 +155,14 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   for (int i_r = 0; i_r < (int)namesRes.size(); i_r++) {
     TString atlasExpNameRes = Form("atlas_expected_%s",namesRes[i_r].Data());
     if (!(bool)workspace->obj(atlasExpNameRes)) {
-      workspace->factory(Form("%s%s[1]",atlasExpNameRes.Data(),process.Data()));
+      workspace->factory(Form("%s%s[1]",atlasExpNameRes.Data(),
+			      processType.Data()));
     }
     if (i_r < ((int)namesRes.size()-1)) {
-      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),process.Data()));
+      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),processType.Data()));
     }
     else {
-      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),process.Data()));
+      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),processType.Data()));
     }
   }
   
@@ -170,11 +174,11 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
-  workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", process.Data(), process.Data(), process.Data(), meanCB.Data(), listESS.Data(), process.Data(), process.Data(), massResCB.Data(), listRes.Data(), process.Data(), alphaCB.Data(), nCB.Data()));
+  workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", processType.Data(), processType.Data(), processType.Data(), meanCB.Data(), listESS.Data(), processType.Data(), processType.Data(), massResCB.Data(), listRes.Data(), processType.Data(), alphaCB.Data(), nCB.Data()));
   
-  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", process.Data(), process.Data(), process.Data(), meanGA.Data(), listESS.Data(), process.Data(), process.Data(), massResGA.Data(), listRes.Data()));
+  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listESS.Data(), processType.Data(), processType.Data(), massResGA.Data(), listRes.Data()));
   
-  workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", process.Data(), process.Data(), frac.Data(), process.Data(), process.Data())); 
+  workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", processType.Data(), processType.Data(), frac.Data(), processType.Data(), processType.Data())); 
 }
 
 /**

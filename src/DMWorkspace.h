@@ -28,7 +28,8 @@ class DMWorkspace
 
  public:
   
-  DMWorkspace(TString newJobName, TString newCateScheme, TString newOptions);
+  DMWorkspace(TString newJobName, TString newDMSignal, TString newCateScheme, 
+	      TString newOptions);
   virtual ~DMWorkspace() {};
   
  private:
@@ -54,7 +55,7 @@ class DMWorkspace
   
   // Member variables:
   TString jobName;
-  TString sampleName;
+  TString DMSignal;
   TString cateScheme;
   TString options;
   TString outputDir;

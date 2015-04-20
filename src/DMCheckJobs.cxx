@@ -12,6 +12,7 @@
 
 #include "DMCheckJobs.h"
 
+using namespace DMAnalysis;
 /**
    Initialize the class for checking job statuses.
    @param newJobName - the name of the analysis job.
@@ -39,15 +40,14 @@ int DMCheckJobs::getNumberToResubmit(TString jobType) {
    @returns - a vector of the signal point names.
 */
 std::vector<TString> DMCheckJobs::getResubmitList(TString jobType) {
+  std::vector<TString> result; result.clear();
   if (jobType.EqualTo("DMWorkspace")) {
-    return listDMWorkspace;
+    result = listDMWorkspace;
   }
   else if (jobType.EqualTo("DMTestStat")) {
-    return listDMTestStat;
+    result = listDMTestStat;
   }
-  else {
-    return NULL;
-  }
+  return result;
 }
 
 /**
@@ -74,7 +74,7 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
 		      jobName.Data(), fileName.Data());
     }
     if (jobType.EqualTo("DMTestStat")) {
-      fileName = Form("CL_values_%is.txt", currDMSignal.Data());
+      fileName = Form("CL_values_%s.txt", currDMSignal.Data());
       fullName = Form("%s/%s/DMTestStat/CL/%s", masterOutput.Data(), 
 		      jobName.Data(), fileName.Data());
     }

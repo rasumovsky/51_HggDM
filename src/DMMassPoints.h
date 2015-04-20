@@ -37,8 +37,7 @@
 
 using namespace DMAnalysis;
 
-class DMMassPoints 
-{
+class DMMassPoints {
   
  public:
   

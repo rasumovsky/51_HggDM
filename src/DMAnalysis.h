@@ -40,7 +40,7 @@ namespace DMAnalysis {
   const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","bbH","ttH"};
   
   //int const nDMModes = 8;
-  const int nDMModes = 8;
+  const int nDMModes = 3;
   const TString sigDMModes[nDMModes] = {"shxx_gg_ms100_mx100",
 				  "shxx_gg_ms100_mx500",
 				  "zphxx_gg_mzp100_mx100"};  
@@ -62,10 +62,11 @@ namespace DMAnalysis {
   const TString fileNamePERValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Systematics/PER/table_PER.txt";
   
   ////////////////////////////////////////
-  //          SCRIPT LOCATIONS          //
+  //        FOR JOB SUBMISSION          //
   ////////////////////////////////////////
   
-  //TString ws_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/ws_jobfile.sh";
+  TString exeWorkspace = "DMWorkspace"
+  TString jobScriptWorkspace = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM/scripts/jobFileWorkspace.sh";
   //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
   
   ////////////////////////////////////////

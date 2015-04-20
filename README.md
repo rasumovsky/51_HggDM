@@ -10,9 +10,9 @@
 
 3) Implement fit plots for the workspace. 
 
-4) Wrapper for workspace.
+4) Make test statistics in loop over DM names.
 
-5) Make workspaces & test statistics in loop over DM names.
+5) Check job status code.
 
 6) Toy MC code for DM
 

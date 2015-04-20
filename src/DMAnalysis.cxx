@@ -167,6 +167,3 @@ bool DMAnalysis::isWeightedSample(TString sampleName) {
   return false;
 }
 
-
-
-#endif

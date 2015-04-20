@@ -12,9 +12,7 @@
 
 4) Make workspaces in loop over DM names.
 
-5) CLs and p0 code for DM
-
-6) Toy MC code for DM
+5) Toy MC code for DM
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
@@ -79,11 +77,10 @@ the option "FromScratch".
  comes from data. There is the option of fitting the SM signal strengths 
  individually. 
 
+#### DMTestStat
+ This program calculates the 95% CL, CLs, and p0 values for a given DM signal. 
+
 #### DMPseudoexperiments (TBA)
-
-#### DMCLs (TBA)
-
-#### DMP0 (TBA)
 
 ### Supporting Classes:
 

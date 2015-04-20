@@ -1,11 +1,12 @@
-/////////////////////////////////////////
-//                                     //
-//  NPPV1_checkjobs.hh                 //
-//                                     //
-//  Author: Andrew Hard                //
-//  Date: 26/11/2013                   //
-//                                     //
-/////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//  Name: DMCheckJobs.h                                                       //
+//  Class: DMCheckJobs.cxx                                                    //
+//  Creator: Andrew Hard                                                      //
+//  Email: ahard@cern.ch                                                      //
+//  Date: 20/04/2015                                                          //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
 
 #ifndef DMCheckJobs_h
 #define DMCheckJobs_h
@@ -20,13 +21,19 @@ class DMCheckJobs {
   DMCheckJobs(TString newJobName);
   virtual ~DMBkgModel() {};
   
+  // Mutators:
+  int getNumberToResubmit(TString jobType);
+  std::vector<TString> getResubmitList(TString jobType);
+  updateJobStatus(TString jobType);
+  
   // Accessors:
-  getResubmitList(TString jobType);
+  printResubmitList(TString jobType);
   
  private:
-  
+    
   TString jobName;
-  
+  std::vector<TString> listDMWorkspace;
+  std::vector<TString> listDMTestStat;
   
 };
 

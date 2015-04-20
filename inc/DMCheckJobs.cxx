@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: DMheckjobs.cxx                                                      //
+//  Name: DMCheckJobs.cxx                                                     //
 //                                                                            //
 //  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
@@ -12,62 +12,97 @@
 
 #include "DMCheckJobs.h"
 
+/**
+   Initialize the class for checking job statuses.
+   @param newJobName - the name of the analysis job.
+*/
 DMCheckJobs::DMCheckJobs(TString newJobName) {
-  
   jobName = newJobName;
-    
-  // Save names and values of failed jobs:
-  int nfailed_jobs = 0;
-  vector<TString> incomplete_files; incomplete_files.clear();
-  vector<int> incomplete_lambda; incomplete_lambda.clear();
-  vector<int> incomplete_lifetime; incomplete_lifetime.clear();
+  updateJobStatus("DMWorkspace");
+  updateJobStatus("DMTestStat");
+  return;
+}
+
+/**
+   Get the number of jobs that need to be resubmitted.
+   @param jobType - the type of job (DMWorkspace, DMTestStat).
+   @returns - the number of jobs that failed the first attempt.
+*/
+int DMCheckJobs::getNumberToResubmit(TString jobType) {
+  std::vector<TString> currList = getResubmitList(jobType);
+  return (int)currList.size();
+}
+
+/**
+   Get the list of signal points that must be resubmitted.
+   @param jobType - the type of job (DMWorkspace, DMTestStat).
+   @returns - a vector of the signal point names.
+*/
+std::vector<TString> DMCheckJobs::getResubmitList(TString jobType) {
+  if (jobType.EqualTo("DMWorkspace")) {
+    return listDMWorkspace;
+  }
+  else if (jobType.EqualTo("DMTestStat")) {
+    return listDMTestStat;
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+   Update the status of jobs from a particular program.
+   @param jobType - the type of job (DMWorkspace, DMTestStat)
+   @returns - void. Updates the lists of failed jobs.
+*/
+void DMCheckJobs::updateJobStatus(TString jobType) {
   
-  TString output_name;
-  if( type == "WS" ) output_name = Form("%s/%s/workspaces/failed_ws_points.txt",master_output.Data(),jobname.Data());
-  if( type == "CL" ) output_name = Form("%s/%s/CL_limits/failed_cl_points.txt",master_output.Data(),jobname.Data());
-  if( type == "MU" ) output_name = Form("%s/%s/limits_mu/failed_mu_points.txt",master_output.Data(),jobname.Data());
-  if( type == "p0" ) output_name = Form("%s/%s/p0_values/failed_p0_points.txt",master_output.Data(),jobname.Data());
-  ofstream failed_points(output_name);
+  // Save names of failed jobs:
+  listDMWorkspace.clear();
+  listDMTestStat.clear();
   
-  //--------------------------------------//
   // Then loop over submissions to see whether output files exist:
-  for( int i_l = 0; i_l < nlambda_values; i_l++ )
-  {
-    //if( type == "MU" && ( lambda_values[i_l] != specified_lambda ) ) continue;
-    for( int i_t = 0; i_t < nlifetime_values; i_t++ )
-    {
-      int current_lambda = lambda_values[i_l];
-      int current_lifetime = ps_lifetimes[i_t];
-      TString file_name;
-      if( type == "WS" ) file_name = Form( "workspace_NPP_%iTeV_%ips.root", current_lambda, current_lifetime );
-      if( type == "CL" ) file_name = Form( "CL_values_%iTeV_%ips.txt", current_lambda, current_lifetime );
-      if( type == "MU" ) file_name = Form( "text_CLs_%iTeV_%ips.txt", current_lambda, current_lifetime );
-      if( type == "p0" ) file_name = Form( "p0_values_%iTeV_%ips.txt", current_lambda, current_lifetime );
-      TString full_name;
-      if( type == "WS" ) full_name = Form("%s/%s/workspaces/rootfiles/%s",master_output.Data(),jobname.Data(),file_name.Data());
-      if( type == "CL" ) full_name = Form("%s/%s/CL_limits/single_files/%s",master_output.Data(),jobname.Data(),file_name.Data());
-      if( type == "MU" ) full_name = Form("%s/%s/limits_mu/single_files/%s",master_output.Data(),jobname.Data(),file_name.Data());
-      if( type == "p0" ) full_name = Form("%s/%s/p0_values/single_files/%s",master_output.Data(),jobname.Data(),file_name.Data());
-      ifstream test_file(full_name);
-      if( !test_file )
-      {
-	incomplete_files.push_back(file_name);
-	incomplete_lambda.push_back(current_lambda);
-	incomplete_lifetime.push_back(current_lifetime);
-	failed_points << current_lambda << " " << current_lifetime << endl;
-	nfailed_jobs++;
+  for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+    
+    TString currDMSignal = sigDMModes[i_DM];
+    
+    TString fileName;
+    TString fullName;
+    if (jobType.EqualTo("DMWorkspace")) {
+      fileName = Form("workspaceDM_%s.root", currDMSignal.Data());
+      fullName = Form("%s/%s/DMWorkspace/rootfiles/%s", masterOutput.Data(),
+		      jobName.Data(), fileName.Data());
+    }
+    if (jobType.EqualTo("DMTestStat")) {
+      fileName = Form("CL_values_%is.txt", currDMSignal.Data());
+      fullName = Form("%s/%s/DMTestStat/CL/%s", masterOutput.Data(), 
+		      jobName.Data(), fileName.Data());
+    }
+        
+    // Then test the existence of the file.
+    ifstream testFile(fullName);
+    if (!testFile) {
+      if (jobType.EqualTo("DMWorkspace")) {
+	listDMWorkspace.push_back(currDMSignal);
+      }
+      if (jobType.EqualTo("DMTestStat")) {
+	listDMWorkspace.push_back(currDMSignal);
       }
     }
   }
-  
-  //--------------------------------------//
-  // Print information on failed jobs:
-  cout << "Failed to make the following files ( " << nfailed_jobs << " total )" << endl;
-  for( int i_f = 0; i_f < nfailed_jobs; i_f++ )
-  {
-    cout << "  " << incomplete_lambda[i_f] << " TeV, \t" << incomplete_lifetime[i_f] << " ps, \t" << incomplete_files[i_f] << endl;
+}
+
+/**
+   Print the list and number of failed jobs.
+   @param jobType - the type of job (DMWorkspace, DMTestStat).
+   @returns void. Prints to the terminal.
+*/
+void DMCheckJobs::printResubmitList(TString jobType) {
+  // Get the relevant list of failed jobs:
+  std::vector<TString> currList = getResubmitList(jobType);
+  std::cout << "Failed to make the following " << jobType << " files ("
+	    << currList.size() << " total)" << std::endl;
+  for (int i_f = 0; i_f < (int)currList.size(); i_f++) {
+    std::cout << "\t" << currList[i_f] << std::endl;
   }
-  failed_points.close();
-  cout << "End of NPPV1_checkjobs.cc" << endl;
-  return 0;
 }

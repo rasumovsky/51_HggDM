@@ -9,9 +9,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMAnalysis.h"
+#include "DMBkgModel.h"
+#include "DMCheckJobs.h"
 #include "DMMassPoints.h"
 #include "DMSigParam.h"
-#include "DMBkgModel.h"
 #include "DMTestStat.h"
 
 void makeExe(TString exeName);

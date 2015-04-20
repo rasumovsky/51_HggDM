@@ -27,19 +27,32 @@
 
 #include "DMMaster.h"
 
-//   Compiles the executable required by the job options.
+using namespace std;
+using namespace DMAnalysis;
 
-void MakeExe(TString exename) {
-  
+/**
+   Compiles the executable required by the job options.
+   @param exeName - the name of the executable to compile.
+*/
+void makeExe(TString exeName) {
   // recompile all executables before running...
-  system(Form("rm bin/%s",exename.Data()));
-  system(Form("make bin/%s",exename.Data()));
+  system(Form("rm %s/bin/%s", packageLocation.Data(), exeName.Data()));
+  system(Form("make %s/bin/%s", packageLocation.Data(), exeName.Data()));
 }
 
-void SubmitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal) {
+/**
+   Submits the workspace jobs to the lxbatch server. 
+   @param exeJobName - the job name.
+   @param exeOption - the job options for the executable.
+   @param exeSignal - the signal to process in the executable.
+   @param exeCateScheme - the categorization scheme for the executable.
+*/
+void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
+		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s",exeJobName.Data());
+  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s_DMWorkspace",
+		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
   TString exe = Form("%s/exe", dir.Data());
@@ -49,13 +62,11 @@ void SubmitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal) {
   
   // create .tar file with everything:
   system(Form("tar zcf Cocoon.tar bin/%s", exeWorkspace.Data()));
-  system(Form("chmod +x %s", jobScriptWorkspace.Data()));
-  
-  //change permissions for local input files:!!!!!!!!!!!!!
-  //system(Form("chmod +x %s/%s/workspace_files/combinedWS.root",master_output.Data(),executable_jobname.Data()));
-   
-  system(Form("cp -f %s %s/jobFileWorkspace.sh", jobScriptWorkspace.Data(),
-	      exe.Data()));
+  system(Form("chmod +x %s/%s", packageLocation.Data(), 
+	      jobScriptWorkspace.Data()));
+     
+  system(Form("cp -f %s/%s %s/jobFileWorkspace.sh", packageLocation.Data(), 
+	      jobScriptWorkspace.Data(), exe.Data()));
   system(Form("mv Cocoon.tar %s", exe.Data()));
   TString inputFile = Form("%s/Cocoon.tar", exe.Data());
   TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(), exeJobName.Data(),
@@ -64,13 +75,57 @@ void SubmitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal) {
 			     exeSignal.Data());
   
   // Define the arguments for the job script:
-  TString nameJobScript = Form("%s %s %s %s %s %s", jobScriptWorkspace.Data(),
-			       exeJobName.Data(), inputFile.Data(),
+  TString nameJobScript = Form("%s/jobFileWorkspace.sh %s %s %s %s %s %s",
+			       exe.Data(), exeJobName.Data(), inputFile.Data(),
 			       exeOption.Data(), exeWorkspace.Data(),
-			       exeSignal.Data());
+			       exeSignal.Data(), exeCateScheme.Data());
   
   // Submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
+	      nameErrFile.Data(), nameJobScript.Data()));
+}
+
+/**
+   Submits the test statistics jobs to the lxbatch server. 
+   @param exeJobName - the job name.
+   @param exeOption - the job options for the executable.
+   @param exeSignal - the signal to process in the executable.
+*/
+void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal) {
+  
+  // Make directories for job info:
+  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s_DMTestStat",
+		     exeJobName.Data());
+  TString out = Form("%s/out", dir.Data());
+  TString err = Form("%s/err", dir.Data());
+  TString exe = Form("%s/exe", dir.Data());
+  system(Form("mkdir -vp %s", out.Data()));
+  system(Form("mkdir -vp %s", err.Data()));
+  system(Form("mkdir -vp %s", exe.Data()));
+  
+  // create .tar file with everything:
+  system(Form("tar zcf Cocoon.tar bin/%s", exeTestStat.Data()));
+  system(Form("chmod +x %s/%s", packageLocation.Data(), 
+	      jobScriptTestStat.Data()));
+  system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
+	      masterOutput.Data(), exeJobName.Data(), exeSignal.Data()));
+  system(Form("cp -f %s/%s %s/jobFileTestStat.sh", packageLocation.Data(), 
+	      jobScriptTestStat.Data(), exe.Data()));
+  system(Form("mv Cocoon.tar %s", exe.Data()));
+  TString inputFile = Form("%s/Cocoon.tar", exe.Data());
+  TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(),
+			     exeJobName.Data(), exeSignal.Data());
+  TString nameErrFile = Form("%s/err/%s_%s.err", dir.Data(), exeJobName.Data(),
+			     exeSignal.Data());
+  
+  // Here you define the arguments for the job script:
+  TString nameJobScript = Form("%s/%s %s %s %s %s %s", packageLocation.Data(),
+			       jobScriptTestStat.Data(), exeJobName.Data(),
+			       inputFile.Data(), exeName.Data(),
+			       exeSignal.Data(), exeOption.Data());
+  
+  // submit the job:
+  system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(),
 	      nameErrFile.Data(), nameJobScript.Data()));
 }
 
@@ -97,6 +152,13 @@ int main( int argc, char **argv ) {
   TString bkgModelOptions = "FromFile";
   TString workspaceOptions = "FromFile_nosys";
   TString testStatOptions = "FromFile";
+  
+  //--------------------------------------//
+  // Compile any wrappers that need to run remotely:
+  if (runInParallel) {
+    if (masterOption.Contains("Workspace")) makeExe(exeWorkspace);
+    if (masterOption.Contains("TestStat")) makeExe(exeTestStat);
+  }
   
   //--------------------------------------//
   // Step 1: Make or load mass points:
@@ -144,10 +206,11 @@ int main( int argc, char **argv ) {
     
     int jobCounterWS = 0;
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      TString currDMSignal = sigmDMModes[i_DM];
+      TString currDMSignal = sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitWSViaBsub(masterJobName, workspaceOptions, currDMSignal);
+	submitWSViaBsub(masterJobName, workspaceOptions, currDMSignal,
+			cateScheme);
 	jobCounterWS++;
       }
       else {
@@ -207,7 +270,7 @@ int main( int argc, char **argv ) {
 
     int jobCounterTS = 0;
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      TString currDMSignal = sigmDMModes[i_DM];
+      TString currDMSignal = sigDMModes[i_DM];
       
       if (runInParallel) {
 	submitTSViaBsub(exeTestStat, masterJobName, testStatOptions, 

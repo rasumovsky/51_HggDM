@@ -58,6 +58,10 @@ namespace DMAnalysis {
   // Location of output directory:
   const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
   
+  // Location of this software package:
+  const TString packageLocation = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
+
+
   const TString fileNamePESValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Systematics/PES/table_PES.txt";
   const TString fileNamePERValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Systematics/PER/table_PER.txt";
   
@@ -65,8 +69,12 @@ namespace DMAnalysis {
   //        FOR JOB SUBMISSION          //
   ////////////////////////////////////////
   
-  TString exeWorkspace = "DMWorkspace"
-  TString jobScriptWorkspace = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM/scripts/jobFileWorkspace.sh";
+  TString exeWorkspace = "DMWorkspaceWrapper";
+  TString jobScriptWorkspace = "scripts/jobFileWorkspace.sh";
+  
+  TString exeTestStat = "DMTestStatWrapper";
+  TString jobScriptTestStat = "scripts/jobFileTestStat.sh";
+  
   //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
   
   ////////////////////////////////////////

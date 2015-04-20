@@ -9,12 +9,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMAnalysis.h"
+#include "DMMassPoints.h"
+#include "DMSigParam.h"
+#include "DMBkgModel.h"
+#include "DMTestStat.h"
 
-using namespace std;
-using namespace DMAnalysis;
+void makeExe(TString exeName);
 
-void MakeExe(TString exename);
+void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
+		     TString exeCateScheme);
 
-void SubmitWSViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_lambda, int executable_lifetime);
-
-void SubmitToysViaBsub(TString executable_name, TString executable_jobname, TString executable_option, int executable_seed, int executable_toys_per_job, int chosen_lambda, int chosen_lifetime);
+void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal);

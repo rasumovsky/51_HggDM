@@ -53,7 +53,7 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   calculatedValues.clear();
   
   // Create output directories:
-  outputDir = Form("%s/TestStatistics/",masterOutput.Data());
+  outputDir = Form("%s/TestStat/",masterOutput.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
   system(Form("mkdir -vp %s/CL/",outputDir.Data()));
   system(Form("mkdir -vp %s/p0/",outputDir.Data()));

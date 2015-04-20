@@ -86,7 +86,7 @@ double DMTestStat::accessValue(TString testStat, bool observed, int N) {
   
   // Check that corresponding entry exists:
   if (mapValueExists(currMapKey)) {
-    return calculatedValue[currMapKey];
+    return calculatedValues[currMapKey];
   }
   else {
     return 0;
@@ -107,7 +107,7 @@ void DMTestStat::calculateNewCL() {
   double muHatExp = 0.0;
   double nllMu1Exp = getFitNLL("asimovDataMu0", 1.0, true, muHatExp);
   double nllMuHatExp = getFitNLL("asimovDataMu0", 0.0, false, muHatExp);
-  double expQMu = getQMuFromNLL(nll_mu1_exp, nll_muhat_exp, muHatExp, 1);
+  double expQMu = getQMuFromNLL(nllMu1Exp, nllMuHatExp, muHatExp, 1);
   
   // Calculate CL:
   double expCLn2 = getCLFromQMu(expQMu, "exp_n2");
@@ -135,8 +135,8 @@ void DMTestStat::calculateNewCL() {
   if (allGoodFits) std::cout << "All good fits? True" << std::endl;
   else std::cout << "All good fits? False" << std::endl;
   cout << " " << endl;
-  if (qmu_obs < 0) std::cout << "WARNING! obsQMu < 0 : " << obsQMu << std::endl;
-  if (qmu_exp < 0) std::cout << "WARNING! expQMu < 0 : " << expQMu << std::endl;
+  if (obsQMu < 0) std::cout << "WARNING! obsQMu < 0 : " << obsQMu << std::endl;
+  if (expQMu < 0) std::cout << "WARNING! expQMu < 0 : " << expQMu << std::endl;
   
   // save CL and CLs for later access:
   calculatedValues["CL_exp_n2"] = expCLn2;
@@ -181,8 +181,8 @@ void DMTestStat::calculateNewP0() {
   textP0.close();
   
   // Print summary:
-  std::cout << "\n  Expected p0 = " << p0_exp << std::endl;
-  std::cout << "  Observed p0 = " << p0_obs << std::endl;
+  std::cout << "\n  Expected p0 = " << expP0 << std::endl;
+  std::cout << "  Observed p0 = " << obsP0 << std::endl;
   if (fitsAllConverged()) {
     std::cout << "All good fits? True\n" << std::endl;
   }
@@ -209,7 +209,7 @@ bool DMTestStat::fitsAllConverged() {
    @returns - the corresponding CLs value.
 */
 double getCLsFromCL(double CL) {
-  double CLs = 1 - CL;
+  return (1.0 - CL);
 }
 
 /**
@@ -218,7 +218,7 @@ double getCLsFromCL(double CL) {
    @returns - the corresponding CL value.
 */
 double getCLFromCLs(double CLs) {
-  double CL = 1 - CLs;
+  return (1.0 - CLs);
 }
 
 /**
@@ -258,7 +258,7 @@ double DMTestStat::getCLFromQMu(double qMu, TString type) {
    @param muHat - profiled signal strength.
    @returns - the value of q0.
 */
-double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuhat, double muhat) {
+double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuHat, double muHat) {
   double q0 = (muHat < 0) ? 0 : (2 * (nllMu0 - nllMuHat));
   return q0;
 }
@@ -273,14 +273,14 @@ double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuhat, double muhat) {
 */
 double DMTestStat::getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
 				 double muTest) {
-  double qmu = 0;
-  if (muhat < mutest) {
-    qmu = 2 * (nll_mu - nll_muhat);
+  double qMu = 0;
+  if (muHat < muTest) {
+    qMu = 2 * (nllMu - nllMuHat);
   }
   else {
-    qmu = 0.0;
+    qMu = 0.0;
   }
-  return qmu;
+  return qMu;
 }
 
 /**
@@ -454,8 +454,8 @@ void DMTestStat::loadStatsFromFile() {
 bool DMTestStat::mapValueExists(TString mapKey) {
 
   // Checks if there is a key corresponding to mapKey in the map: 
-  bool exists = (calculatedValue.find(Form("%s_0",mapKey.Data()))
-		 == calculatedValue.end());
+  bool exists = (calculatedValues.find(Form("%s_0",mapKey.Data()))
+		 == calculatedValues.end());
   if (!exists) {
     std::cout << "DMTestStat: key " << mapKey << " not defined!" << std::endl;
   }

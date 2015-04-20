@@ -33,6 +33,7 @@ class DMTestStat {
   double accessValue(TString testStat, bool observed, int N);
   void calculateNewCL();
   void calculateNewP0();
+  void clearData();
   bool fitsAllConverged();
   double getCLsFromCL(double CL);
   double getCLsFromQMu(double qMu, TString type);
@@ -44,27 +45,28 @@ class DMTestStat {
   double getPMuFromQMu(double qMu);
   double getPbFromQMu(double qMu, double sigma, double mu);
   double getPbfromN(double N);
-  double getFitNLL(TString datasetName, double muVal, bool fixMu,
-		   double &profiledMu);
   
  private:
-  
+
+  double getFitNLL(TString datasetName, double muVal, bool fixMu,
+		   double &profiledMu);
   void loadStatsFromFile();
   bool mapValueExists(TString mapKey);
   
   // From the initialization:
   TString jobName;
   TString DMSignal;
+  TString options;
   TString outputDir;
   
   // Check whether all fits successful:
-  bool AllGoodFits = true;
+  bool allGoodFits;
   
   // The workspace for the fits:
   RooWorkspace *workspace;
   
   // Store the calculated values:
-  std::map<TString,double> calculatedValue;
+  std::map<TString,double> calculatedValues;
   
 };
 

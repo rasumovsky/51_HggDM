@@ -32,11 +32,12 @@ class DMWorkspace
 	      TString newOptions);
   virtual ~DMWorkspace() {};
   
- private:
-  
   bool fitsAllConverged();
   RooWorkspace* getCombinedWorkspace();
   ModelConfig* getModelConfig();
+  
+ private:
+  
   void loadWSFromFile();
   void createNewWS();
   RooWorkspace* createNewCategoryWS();

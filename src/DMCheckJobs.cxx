@@ -80,7 +80,7 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
     }
         
     // Then test the existence of the file.
-    ifstream testFile(fullName);
+    std::ifstream testFile(fullName);
     if (!testFile) {
       if (jobType.EqualTo("DMWorkspace")) {
 	listDMWorkspace.push_back(currDMSignal);

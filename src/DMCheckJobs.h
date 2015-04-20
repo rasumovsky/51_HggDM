@@ -11,6 +11,14 @@
 #ifndef DMCheckJobs_h
 #define DMCheckJobs_h
 
+#include <fstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string>
+#include <iostream>
+#include <vector>
+#include "TString.h"
+
 #include "DMAnalysis.h"
 
 class DMCheckJobs {

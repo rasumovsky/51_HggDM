@@ -74,9 +74,7 @@ namespace DMAnalysis {
   
   TString exeTestStat = "DMTestStatWrapper";
   TString jobScriptTestStat = "scripts/jobFileTestStat.sh";
-  
-  //TString toy_jobscript = "/afs/cern.ch/user/a/ahard/work_directory/analysis/51_HDM/scripts/toy_jobfile.sh";
-  
+    
   ////////////////////////////////////////
   //           MEMBER FUNCTIONS         //
   ////////////////////////////////////////

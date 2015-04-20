@@ -19,15 +19,15 @@ class DMCheckJobs {
   
   // Constructor and destructor:
   DMCheckJobs(TString newJobName);
-  virtual ~DMBkgModel() {};
+  virtual ~DMCheckJobs() {};
   
   // Mutators:
   int getNumberToResubmit(TString jobType);
   std::vector<TString> getResubmitList(TString jobType);
-  updateJobStatus(TString jobType);
+  void updateJobStatus(TString jobType);
   
   // Accessors:
-  printResubmitList(TString jobType);
+  void printResubmitList(TString jobType);
   
  private:
     

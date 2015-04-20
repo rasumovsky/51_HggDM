@@ -253,7 +253,7 @@ void DMMassPoints::createNewMassPoints() {
     }
     
     // Check the cutflow (loose for background sample):
-    if (sampleName.Equals("gg_gjet") && 
+    if (sampleName.EqualTo("gg_gjet") && 
 	!selector->passesCut("looseCuts",evtWeight)) {
       continue;
     }

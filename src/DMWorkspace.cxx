@@ -88,10 +88,10 @@ void DMWorkspace::loadWSFromFile() {
   //Check to see if the workspace has actually been made.
   TFile inputFile(Form("%s/workspaceDM_%s.root", outputDir.Data(),
 		       DMSignal.Data()),"read");
-  if (inputFile) {
+  if (inputFile.IsOpen()) {
     std::cout << "Loading workspace from file"<< std::endl;
     combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
-    mConfig = (ModelConfig*)workspace->obj("ModelConfig");
+    mConfig = (ModelConfig*)combinedWS->obj("ModelConfig");
   }
   else {
     std::cout << "WARNING! Cannot locate requested workspace!"<< std::endl;
@@ -518,7 +518,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     double setupPER[4] = {0.0, 0, 1, 1};
     
     // Loop over sources of resolution systematic uncertainty:
-    for (int i_s = 0; i_s < res->getNumberOfSources(); i_s++) {
+    for (int i_s = 0; i_s < per->getNumberOfSources(); i_s++) {
       TString currPERSource = per->getNameOfSource(i_s);
       TString currPERName = Form("EM_%s",currPERSource.Data());
       perList.push_back(currPERName);

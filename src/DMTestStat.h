@@ -17,7 +17,7 @@
 #include "CommonHead.h"
 #include "CommonFunc.h"
 #include "RooFitHead.h"
-#include "statistics.hh"
+#include "statistics.h"
 #include "DMWorkspace.h"
 
 class DMTestStat {

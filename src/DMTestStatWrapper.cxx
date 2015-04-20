@@ -15,8 +15,9 @@
 
 int main(int argc, char **argv) {
   
+  // Check that arguments are provided.
   if (argc < 4) {
-    std::cout << "\nUsage: " << argv[0] <<" <jobName> <DMSignal> <options>"
+    std::cout << "\nUsage: " << argv[0] << " <jobName> <DMSignal> <options>"
 	      << std::endl;
     exit(0);
   }
@@ -30,12 +31,7 @@ int main(int argc, char **argv) {
 			    DMSignal.Data());
   TString copiedFile = Form("workspaceDM_%s.root",DMSignal.Data());
   system(Form("cp %s %s",originFile.Data(),copiedFile.Data()));
-  
-  // Define and create the output directory:
-  outputDir = Form("%s/%s/p0_values/single_files", masterOutput.Data(), 
-		   jobName.Data());
-  system(Form("mkdir -vp %s", outputDir.Data()));
-  
+    
   // Load the RooWorkspace and ModelConfig:
   TFile inputFile(copiedFile,"read");
   RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");

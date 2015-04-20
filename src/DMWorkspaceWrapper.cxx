@@ -28,7 +28,6 @@ using namespace DMAnalysis;
 /**
    Instantiate the class.
    @param newJobName - The name of the job
-   @param newDMSignal - The Dark Matter signal to incorporate in the model.
    @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile"), etc.
    @returns void
@@ -44,8 +43,6 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   outputDir = Form("%s/%s/DMWorkspace",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
   system(Form("mkdir -vp %s/figures/",outputDir.Data()));
-  system(Form("mkdir -vp %s/rootfiles/",outputDir.Data()));
-  system(Form("mkdir -vp %s/mu/",outputDir.Data()));
   
   // Set style for plots:
   SetAtlasStyle();
@@ -83,18 +80,15 @@ ModelConfig* DMWorkspace::getModelConfig() {
 
 /**
    Load a previously created workspace.
+   // WARNING! MUST IMPLEMENT
 */
 void DMWorkspace::loadWSFromFile() {
   //Check to see if the workspace has actually been made.
-  TFile inputFile(Form("%s/workspaceDM_%s.root", outputDir.Data(),
-		       DMSignal.Data()),"read");
-  if (inputFile) {
-    std::cout << "Loading workspace from file"<< std::endl;
-    combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
-    mConfig = (ModelConfig*)workspace->obj("ModelConfig");
+  //Form("%s/workspaceDM_%s.root",outputDir.Data(), DMSignal.Data()));
+  bool wsExists = true;
+  if (wsExists) {
   }
   else {
-    std::cout << "WARNING! Cannot locate requested workspace!"<< std::endl;
     createNewWS();
   }
 }
@@ -371,15 +365,15 @@ void DMWorkspace::createNewWS() {
   else std::cout << "allGoodFits = FALSE" << std::endl;
   std::cout << "Profiled muDM value : " << profiledMuValue << std::endl;
   
-  // Write the profiled mu value to file:
-  ofstream fileMuProf;
-  fileMuProf.open(Form("%s/mu/mu_%s.txt", outputDir.Data(), DMSignal.Data()));
-  fileMuProf << profiledMuValue << endl;
-  fileMuProf.close();
+  //ofstream file_muprof;
+  //file_muprof.open(Form("%s/profiled_mu_%iTeV_%ips.txt",
+  //                      output_directory_ws.Data(),lambda,lifetime));
+  //file_muprof << profiled_mu_value << endl;
+  //file_muprof.close();
   
   // Write workspace to file:
-  combinedWS->writeToFile(Form("%s/rootfiles/workspaceDM_%s.root",
-			       outputDir.Data(), DMSignal.Data()));
+  combinedWS->writeToFile(Form("%s/workspaceDM_%s.root",outputDir.Data(),
+			       DMSignal.Data()));
 }
 
 /**

@@ -14,16 +14,20 @@
 #ifndef DMTestStat_h
 #define DMTestStat_h
 
-#include "../inc/CommonHead.h"
-#include "../inc/CommonFunc.h"
-#include "../inc/RooFitHead.h"
-#include "../inc/statistics.hh"
+#include "CommonHead.h"
+#include "CommonFunc.h"
+#include "RooFitHead.h"
+#include "statistics.hh"
+#include "DMWorkspace.h"
 
 class DMTestStat {
   
  public:
     
-  DMTestStat(TString newJobName, TString newDMSignal, TString newOptions);
+  DMTestStat(TString newJobName, TString newDMSignal, TString newCateScheme, 
+	     TString newOptions);
+  DMTestStat(TString newJobName, TString newDMSignal, TString newOptions,
+	     RooWorkspace *newWorkspace);
   virtual ~DMTestStat() {};
   
   double accessValue(TString testStat, bool observed, int N);
@@ -45,6 +49,7 @@ class DMTestStat {
   
  private:
   
+  void loadStatsFromFile();
   bool mapValueExists(TString mapKey);
   
   // From the initialization:

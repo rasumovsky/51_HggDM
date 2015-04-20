@@ -208,7 +208,7 @@ bool DMTestStat::fitsAllConverged() {
    @param CL - the CL value to convert to CLs.
    @returns - the corresponding CLs value.
 */
-double getCLsFromCL(double CL) {
+double DMTestStat::getCLsFromCL(double CL) {
   return (1.0 - CL);
 }
 
@@ -217,7 +217,7 @@ double getCLsFromCL(double CL) {
    @param CLs - the CLs value to convert to CL.
    @returns - the corresponding CL value.
 */
-double getCLFromCLs(double CLs) {
+double DMTestStat::getCLFromCLs(double CLs) {
   return (1.0 - CLs);
 }
 

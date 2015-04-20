@@ -36,6 +36,7 @@ class DMTestStat {
   void clearData();
   bool fitsAllConverged();
   double getCLsFromCL(double CL);
+  double getCLFromCLs(double CLs);
   double getCLsFromQMu(double qMu, TString type);
   double getCLFromQMu(double qMu, TString type);
   double getQ0FromNLL(double nllMu0, double nllMuHat, double muHat);

@@ -90,12 +90,25 @@ int main( int argc, char **argv ) {
   // Step 4: Create the background model (spurious signal calculation):
   if (masterOption.Contains("BkgModel")) {
     cout << "DMMaster: Step 4 - Making the background model." << endl;
+    
+    if (masterOption.Contains("BkgModelNew")) {
+      
+    }
+    else {
+      
+    }
   }
   
   //--------------------------------------//
   // Step 5: Create the workspace for fitting:
   if (masterOption.Contains("Workspace")) {
     cout << "DMMaster: Step 5 - Making the workspace for fits." << endl;
+    
+    // loop over the DM signals:
+    if (masterOption.Contains("New")) {
+    }
+    else {
+    }
   }
   
   //--------------------------------------//
@@ -106,8 +119,12 @@ int main( int argc, char **argv ) {
   
   //--------------------------------------//
   // Step 7: Make the workspace:
-  if (masterOption.Contains("CalcCLs")) {
-    cout << "DMMaster: Step 7 - Calculating the CLs exclusion." << endl;
+  if (masterOption.Contains("TestStat")) {
+    cout << "DMMaster: Step 7 - Calculating the CL and p0 statistics." << endl;
+    if (masterOption.Contains("New")) {
+    }
+    else {
+    }
   }
   
   

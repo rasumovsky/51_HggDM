@@ -40,12 +40,12 @@ int main(int argc, char **argv) {
   TFile inputFile(copiedFile,"read");
   RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");
   
-  DMTestStat *ts = new DMTestStat(jobName, newDMSignal, "new", workspace);
+  DMTestStat *ts = new DMTestStat(jobName, DMSignal, "new", workspace);
   if (ts->fitsAllConverged()) {
     std::cout << "DMTestStatWrapper: All OK!" << std::endl;
   }
   
-  inputFile.close();
-  system(Form("rm %s",input_filename.Data()));
+  inputFile.Close();
+  system(Form("rm %s",copiedFile.Data()));
   return 0;
 }

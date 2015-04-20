@@ -70,11 +70,11 @@ namespace DMAnalysis {
   //        FOR JOB SUBMISSION          //
   ////////////////////////////////////////
   
-  TString exeWorkspace = "DMWorkspaceWrapper";
-  TString jobScriptWorkspace = "scripts/jobFileWorkspace.sh";
+  const TString exeWorkspace = "DMWorkspaceWrapper";
+  const TString jobScriptWorkspace = "scripts/jobFileWorkspace.sh";
   
-  TString exeTestStat = "DMTestStatWrapper";
-  TString jobScriptTestStat = "scripts/jobFileTestStat.sh";
+  const TString exeTestStat = "DMTestStatWrapper";
+  const TString jobScriptTestStat = "scripts/jobFileTestStat.sh";
     
   ////////////////////////////////////////
   //           MEMBER FUNCTIONS         //

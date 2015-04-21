@@ -71,6 +71,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   loadSMBR("2fermions");
   
   std::cout << "BRXSReader: Succesfully initialized!" << std::endl;
+  std::cout << "  Loaded " << massesHiggsXS.size() << " cross sections and "
+	    << massesHiggsBR.size() << " branching ratios." << std::endl;
 }
 
 /**
@@ -83,6 +85,10 @@ BRXSReader::BRXSReader(TString inputDirectory) {
 */
 float BRXSReader::getSMBR(double mass, TString decay, TString value) {
   TString currKey = getSMMapKey(mass, decay, value);
+  
+  std::cout << "THIS MUST WORK!" << valuesBR[getSMMapKey(125, decay, value)]
+	    << std::endl;
+
   if (hasKey(currKey,"BR")) {
     return valuesBR[currKey];
   }
@@ -401,7 +407,7 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
     else {
       std::cout << "BRXSReader: XS interpolation failed!" << std::endl;
       std::cout << "  Missing: " 
-		<< getSMMapKey(closestMasses.first, process, value)
+		<< getSMMapKey(closestMasses.first, process, value) << "\n"
 		<< getSMMapKey(closestMasses.second, process, value)
 		<< std::endl;
     }
@@ -415,7 +421,7 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
     else {
       std::cout << "BRXSReader: BR interpolation failed!" << std::endl;
       std::cout << "  Missing: " 
-		<< getSMMapKey(closestMasses.first, process, value)
+		<< getSMMapKey(closestMasses.first, process, value) << "\n"
 		<< getSMMapKey(closestMasses.second, process, value)
 		<< std::endl;
     }

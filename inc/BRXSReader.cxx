@@ -345,7 +345,6 @@ TString BRXSReader::getDMMapKey(int massMediator, int massFermion,
 TString BRXSReader::getSMMapKey(double mass, TString type, TString value) {
   int massInt = (int)(100*mass);
   TString key = Form("mH%dGeV_%s_%s", massInt, type.Data(), value.Data());
-  std::cout << "\t\tkey = " << key << std::endl;
   return key;
 }
 
@@ -356,16 +355,18 @@ TString BRXSReader::getSMMapKey(double mass, TString type, TString value) {
    @returns - true if the specified key is in the map. 
 */
 bool BRXSReader::hasKey(TString key, TString mapType) {
+  bool nonExistent;
   if (mapType.EqualTo("XS")) {
-    return (valuesXS.count(key) > 0);
+    nonExistent = (valuesXS.find(key) == valuesXS.end());
   }
   else if (mapType.EqualTo("BR")) {
-    return (valuesBR.count(key) > 0);
+    nonExistent = (valuesBR.find(key) == valuesBR.end());
   }
   else {
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
-    return false;
+    nonExistent = true;
   }
+  return !nonExistent;
 }
 
 std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
@@ -373,8 +374,6 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   std::pair<double,double> result;
   result.first = 0.0; result.second = 0.0;
   
-  std::cout << "Getting masses nearest to " << testMass << std::endl;
-
   std::vector<double> currMassList;
   if (mapType.EqualTo("XS")) currMassList = massesHiggsXS;
   else if (mapType.EqualTo("BR")) currMassList = massesHiggsBR;
@@ -382,29 +381,29 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   // Loop over defined XS or BR masses:
   for (int i = 0; i < currMassList.size(); i++) {
     
+    // Make result.first the last mass point below testMass:
     if ((currMassList[i] <= testMass) && 
 	fabs(currMassList[i] - testMass) <= fabs(result.first - testMass)) {
-      std::cout << "\tChange first: " << result.first << "-->" 
-		<< currMassList[i] << std::endl;
       result.first = currMassList[i];
     }
-    
+    // Make result.second the first mass point above testMass:
     else if ((currMassList[i] >= testMass) &&
 	     (fabs(currMassList[i] - testMass)
 	      <= fabs(result.second - testMass))) {
-      std::cout << "\tChange second: " << result.second << "-->" 
-		<< currMassList[i] << std::endl;
       result.second = currMassList[i];
     }
   }
 
-  std::cout << "\tgetNearbySMMasses will return: " << result.first << ", "
-	    << result.second << std::endl;
+  std::cout << "\tgetNearbySMMasses(" << testMass << ") will return: [" 
+	    << result.first << ", " << result.second << "]" << std::endl;
   return result;
 }
 
 float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
 					 TString process, TString value) {
+  
+  std::cout << "BRXSReader::getInterpolatedSMValue(" << mass << ", "
+	    << mapType << ", " << process << ", " << value << std::endl;
   
   std::pair<double,double> closestMasses = getNearbySMMasses(mass, mapType);
   std::pair<double,double> valuePair;

@@ -258,8 +258,8 @@ void DMEvtSelect::clearCounters() {
   for (it = cateSchemesAndSizes.begin(); 
        it != cateSchemesAndSizes.end(); it++) {
     for (int j = 0; j < it->second; j++) {
-      cateCount[Form("%s_%d",(it->first).Data(),it->second)] = 0;
-      cateCountWt[Form("%s_%d",(it->first).Data(),it->second)] = 0.0;
+      cateCount[Form("%s_%d", (it->first).Data(), j)] = 0;
+      cateCountWt[Form("%s_%d", (it->first).Data(), j)] = 0.0;
     }
   }
 }

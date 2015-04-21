@@ -231,10 +231,13 @@ void DMMassPoints::createNewMassPoints() {
   }
     
   // Loop over the input DMTree:
-  std::cout << "DMMassPoints: Loop over input DMTree." << std::endl;
   Long64_t entries = dmt->fChain->GetEntries();
+  std::cout << "DMMassPoints: Loop over DMTree with " << entries
+	    << " entries." << std::endl;
   for (Long64_t event = 0; event < entries; event++) {
     dmt->fChain->GetEntry(event);
+    
+    std::cout << "C1" << std::endl;
     
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0;
@@ -257,6 +260,8 @@ void DMMassPoints::createNewMassPoints() {
       }
     }
     
+    std::cout << "C2" << std::endl;
+
     // Check the cutflow (loose for background sample):
     if (sampleName.EqualTo("gg_gjet") && 
 	!selector->passesCut("looseCuts",evtWeight)) {
@@ -266,6 +271,8 @@ void DMMassPoints::createNewMassPoints() {
       continue;
     }
     
+    std::cout << "C3" << std::endl;
+
     // Save the categories:
     int currCate = selector->getCategoryNumber(cateScheme);
     if (currCate > 0) {
@@ -283,6 +290,7 @@ void DMMassPoints::createNewMassPoints() {
 	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << std::endl;
       }
     }
+    std::cout << "C4" << std::endl;
   }
   std::cout << "  DMMassPoints: End of loop over input DMTree." << std::endl;
   

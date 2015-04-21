@@ -368,8 +368,8 @@ bool BRXSReader::hasKey(TString key, TString mapType) {
 
 std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
 						       TString mapType) {
-  std::pair<double,double> result;
-  result.first = 0.0; result.second = 0.0;
+  std::pair<double,double> result; result.first = 0.0; result.second = 0.0;
+  std::cout << "  BRXSReader::getNearbySMMasses(" << testMass << ", " << mapType << ")" << std::endl;
   
   std::vector<double> currMassList;
   if (mapType.EqualTo("XS")) currMassList = massesHiggsXS;
@@ -390,6 +390,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
       result.second = currMassList[i];
     }
   }
+  std::cout << "    -> [" << result.first << ", " << result.second << std::endl;
   return result;
 }
 

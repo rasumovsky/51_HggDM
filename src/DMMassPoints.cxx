@@ -21,6 +21,8 @@
 
 #include "DMMassPoints.h"
 
+using namespace DMAnalysis;
+
 /**
    Initialize the DMMassPoint class and make a new observable RooRealVar and
    RooCategory.
@@ -85,7 +87,7 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 			   TString newCateScheme, TString newOptions,
 			   RooRealVar *newObservable,
 			   RooCategory *newCategories) {
-  std::cout << std::endl << "DMMassPoints::Initializing..." << std::endl;
+  std::cout << "\nDMMassPoints::Initializing..." << std::endl;
   
   // Assign member variables:
   jobName = newJobName;
@@ -107,6 +109,8 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
   // Either load the masspoints from file or create new ones:
   if (options.Contains("FromFile")) loadMassPointsFromFile();
   else createNewMassPoints();
+  
+  std::cout << "DMMassPoints: Successfully initialized!" << std::endl;
   return;
 }
 

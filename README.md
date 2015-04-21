@@ -2,7 +2,7 @@
 
 ## A search for dark matter associated with a Higgs boson (H->diphoton)
 
-### To do 4/17/2015:
+### To do 4/20/2015:
 
 1) Implement photon ID and isolation in DMEvtSelect
 
@@ -10,11 +10,7 @@
 
 3) Implement fit plots for the workspace. 
 
-4) Make test statistics in loop over DM names.
-
-5) Check job status code.
-
-6) Toy MC code for DM
+4) Toy MC code for DM
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
@@ -89,6 +85,10 @@ the option "FromScratch".
 #### BRXSReader
  Reads tables of SM Higgs cross sections and branching ratios and provides an 
  easy-to-use interface.
+
+#### DMCheckJobs
+ Checks to see whether the output files for a given program are available. It
+ also assembles a list of failed jobs that can be prepared for resubmission.
 
 #### DMEvtSelect
  This class implements the cutflow and counters for the analysis. It can be 

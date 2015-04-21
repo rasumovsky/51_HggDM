@@ -17,8 +17,9 @@
 //    - SigParam                                                              //
 //    - BkgModel                                                              //
 //    - Workspace                                                             //
-//    - ToyMC                                                                 //
-//    - CalcCLs                                                               //
+//    - ResubmitWorkspace                                                     //
+//    - TestStat                                                              //
+//    - ResubmitTestStat                                                      //
 //                                                                            //
 //  Need to rethink the DMSigParam handling of the RooDataSet. Maybe we       //
 //  should just hand it a RooDataSet?                                         //
@@ -133,9 +134,9 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 /**
    This is the main DMMaster method:
 */
-int main( int argc, char **argv ) {
+int main (int argc, char **argv) {
   // Check arguments:
-  if (argc < 3) {
+  if (argc < 4) {
     printf("\nUsage: %s <MasterJobName> <MasterOption>\n\n",argv[0]);
     exit(0);
   }
@@ -149,11 +150,11 @@ int main( int argc, char **argv ) {
   bool runInParallel = false;
   
   // Options for each step:
-  TString massPointOptions = "FromFile";
-  TString sigParamOptions  = "FromFile";
-  TString bkgModelOptions  = "FromFile";
-  TString workspaceOptions = "FromFile_nosys";
-  TString testStatOptions  = "FromFile";
+  TString massPointOptions = "New";//"FromFile";
+  TString sigParamOptions  = "New";//"FromFile";
+  TString bkgModelOptions  = "New";//"FromFile";
+  TString workspaceOptions = "New";//"FromFile_nosys";
+  TString testStatOptions  = "New";//"FromFile";
   
   //--------------------------------------//
   // Compile any wrappers that need to run remotely:
@@ -204,7 +205,8 @@ int main( int argc, char **argv ) {
   
   //--------------------------------------//
   // Step 5.1: Create the workspace for fitting:
-  if (masterOption.Contains("Workspace")) {
+  if (masterOption.Contains("Workspace") && 
+      !masterOption.Contains("ResubmitWorkspace")) {
     std::cout << "DMMaster: Step 5.1 - Making the workspaces." << std::endl;
     
     int jobCounterWS = 0;
@@ -271,7 +273,8 @@ int main( int argc, char **argv ) {
 
   //--------------------------------------//
   // Step 7.1: Calculate the test statistics:
-  if (masterOption.Contains("TestStat")) {
+  if (masterOption.Contains("TestStat") && 
+      !masterOption.Contains("ResubmitTestStat")) {
     std::cout << "DMMaster: Step 7.1 - Calculating CL and p0." << std::endl;
 
     int jobCounterTS = 0;

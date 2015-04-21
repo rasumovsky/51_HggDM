@@ -35,8 +35,6 @@
 #include "DMTree.h"
 #include "BRXSReader.h"
 
-using namespace DMAnalysis;
-
 class DMMassPoints {
   
  public:

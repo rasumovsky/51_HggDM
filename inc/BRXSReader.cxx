@@ -52,8 +52,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   valuesXS.clear();
   valuesBR.clear();
   
-  massesHiggsXS.clear();
-  massesHiggsBR.clear();
+  massesHiggsXS->clear();
+  massesHiggsBR->clear();
   
   // Open SM cross-section files and store values.
   loadSMXS("ggH");
@@ -194,7 +194,7 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	       >> currIn[14] >> currIn[15] >> currIn[16] >> currIn[17]
 	       >> currIn[18];
       
-      massesHiggsBR.push_back(currMass);
+      massesHiggsBR->push_back(currMass);
       
       if (decayClass.Contains("2bosons")) {
 	valuesBR[getSMMapKey(currMass, "gg", "BR")] = currIn[1];
@@ -291,7 +291,7 @@ void BRXSReader::loadSMXS(TString production) {
     while (!currFile.eof()) {
       currFile >> currMass >> currIn[1] >> currIn[2] >> currIn[3] >> currIn[4]
 	       >> currIn[5];
-      massesHiggsXS.push_back(currMass);
+      massesHiggsXS->push_back(currMass);
       valuesXS[getSMMapKey(currMass, production, "XS")] = currIn[1];
       valuesXS[getSMMapKey(currMass, production, "+QCD")] = currIn[2];
       valuesXS[getSMMapKey(currMass, production, "-QCD")] = currIn[3];
@@ -355,14 +355,16 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   result.first = 0.0;
   result.second = 0.0;
   
-  std::vector<double> currMasses;
+  std::cout << "Getting masses nearest to " << testMass << std::endl;
+  
+  std::vector<double> *currMasses;
   if (mapType.EqualTo("XS")) currMasses = massesHiggsXS;
   else if (mapType.EqualTo("BR")) currMasses = massesHiggsBR;
   else {
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
   }
   
-  for (int i = 0; i < (int)currMasses.size(); i++) {
+  for (int i = 0; i < (int)currMasses->size(); i++) {
     if (fabs(currMasses[i] - testMass) < fabs(result.first - testMass)) {
       std::cout << "Change first: " << result.first << "-->" << currMasses[i]
 		<< std::endl;

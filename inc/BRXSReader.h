@@ -47,7 +47,7 @@ class BRXSReader
   void loadSMBR(TString decayClass);
   void loadSMXS(TString production);
   void loadDMXS();
-  double getNearbySMMasses(double mass, TString mapType);
+  std::pair<double,double> getNearbySMMasses(double mass, TString mapType);
   double getInterpolatedSMValue(double mass, TString mapType, TString process,
 				TString value);
   

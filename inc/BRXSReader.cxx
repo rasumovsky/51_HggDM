@@ -349,8 +349,8 @@ bool BRXSReader::hasKey(TString key, TString mapType) {
   }
 }
 
-std::pair<double,double> BRXSReader::getNearbySMMasses(TString mapType,
-						       double mass) {
+std::pair<double,double> BRXSReader::getNearbySMMasses(double mass,
+						       TString mapType) {
   std::pair<double,double> result;
   result.first = 0; result.second = 0;
   
@@ -377,7 +377,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(TString mapType,
 double BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
 					  TString process, TString value) {
   
-  std::pair<double,double> closestMasses = getNearbySMMasses(mapType, mass);
+  std::pair<double,double> closestMasses = getNearbySMMasses(mass, mapType);
   std::pair<double,double> valuePair;
   if (mapType.EqualTo("XS")) {
     valuePair.first = getSMXS(closestMasses.first, process, value);

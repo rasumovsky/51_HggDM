@@ -349,27 +349,34 @@ bool BRXSReader::hasKey(TString key, TString mapType) {
   }
 }
 
-std::pair<double,double> BRXSReader::getNearbySMMasses(double mass,
+std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
 						       TString mapType) {
   std::pair<double,double> result;
-  result.first = 0; result.second = 0;
+  result.first = 0.0;
+  result.second = 0.0;
   
-  std::vector<double> currMassList;
-  if (mapType.EqualTo("XS")) currMassList = massesHiggsXS;
-  else if (mapType.EqualTo("BR")) currMassList = massesHiggsBR;
+  std::vector<double> currMasses;
+  if (mapType.EqualTo("XS")) currMasses = massesHiggsXS;
+  else if (mapType.EqualTo("BR")) currMasses = massesHiggsBR;
   else {
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
   }
   
-  for (int i = 0; i < (int)currMassList.size(); i++) {
-    if (fabs(currMassList[i] - mass) < fabs(result.first - mass)) {
+  for (int i = 0; i < (int)currMasses.size(); i++) {
+    if (fabs(currMasses[i] - testMass) < fabs(result.first - testMass)) {
+      std::cout << "Change first: " << result.first << "-->" << currMasses[i]
+		<< std::endl;
       result.second = result.first;
-      result.first = currMassList[i];
+      result.first = currMasses[i];
     }
-    else if (fabs(currMassList[i] - mass) < fabs(result.second - mass)) {
-      result.second = currMassList[i];
+    else if (fabs(currMasses[i] - testMass) < fabs(result.second - testMass)) {
+      std::cout << "Change first: " << result.second << "-->" << currMasses[i]
+		<< std::endl;
+      result.second = currMasses[i];
     }
   }
+  std::cout << "getNearbySMMasses: " << result.first << ", " << result.second
+	    << std::endl;
   return result;
 }
 
@@ -386,6 +393,10 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
     }
     else {
       std::cout << "BRXSReader: XS interpolation failed!" << std::endl;
+      std::cout << "  Missing: " 
+		<< getSMMapKey(closestMasses.first, process, value)
+		<< getSMMapKey(closestMasses.second, process, value)
+		<< std::endl;
     }
   }
   else if (mapType.EqualTo("BR")) {
@@ -396,6 +407,10 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
     }
     else {
       std::cout << "BRXSReader: BR interpolation failed!" << std::endl;
+      std::cout << "  Missing: " 
+		<< getSMMapKey(closestMasses.first, process, value)
+		<< getSMMapKey(closestMasses.second, process, value)
+		<< std::endl;
     }
   }
   else {

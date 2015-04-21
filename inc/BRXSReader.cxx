@@ -381,8 +381,8 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
   if (mapType.EqualTo("XS")) {
     if (hasKey(getSMMapKey(closestMasses.first, process, value), "XS") &&
 	hasKey(getSMMapKey(closestMasses.second, process, value), "XS")) {
-      valuePair.first = getDefSMXS(closestMasses.first, process, value);
-      valuePair.second = getDefSMXS(closestMasses.second, process, value);
+      valuePair.first = getSMXS(closestMasses.first, process, value);
+      valuePair.second = getSMXS(closestMasses.second, process, value);
     }
     else {
       std::cout << "BRXSReader: XS interpolation failed!" << std::endl;

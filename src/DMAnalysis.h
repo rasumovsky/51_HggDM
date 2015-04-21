@@ -82,8 +82,8 @@ namespace DMAnalysis {
   
   TString nameToFileList(TString name);
   TString cateToBkgFunc(TString category);
-  TString getIntermediaryName(TString modeName);
-  int getIntermediaryMass(TString modeName);
+  TString getMediatorName(TString modeName);
+  int getMediatorMass(TString modeName);
   int getDarkMatterMass(TString modeName);
   bool isSMSample(TString sampleName);
   bool isDMSample(TString sampleName);

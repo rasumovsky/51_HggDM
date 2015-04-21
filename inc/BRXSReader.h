@@ -49,8 +49,8 @@ class BRXSReader
   void loadSMXS(TString production);
   void loadDMXS();
   std::pair<double,double> getNearbySMMasses(double mass, TString mapType);
-  double getInterpolatedSMValue(double mass, TString mapType, TString process,
-				TString value);
+  float getInterpolatedSMValue(double mass, TString mapType, TString process,
+			       TString value);
   
   // Member objects:
   TString directory;

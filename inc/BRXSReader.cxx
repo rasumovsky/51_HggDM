@@ -379,20 +379,35 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double mass,
   return result;
 }
 
-double BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
-					  TString process, TString value) {
+float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
+					 TString process, TString value) {
   
   std::pair<double,double> closestMasses = getNearbySMMasses(mass, mapType);
   std::pair<double,double> valuePair;
   if (mapType.EqualTo("XS")) {
-    valuePair.first = getSMXS(closestMasses.first, process, value);
-    valuePair.second = getSMXS(closestMasses.second, process, value);
+    if (hasKey(getSMMapKey(valuePair.first, process, value), "XS") &&
+	hasKey(getSMMapKey(valuePair.second, process, value), "XS")) {
+      valuePair.first = getSMXS(closestMasses.first, process, value);
+      valuePair.second = getSMXS(closestMasses.second, process, value);
+    }
+    else {
+      std::cout << "BRXSReader: XS interpolation failed!" << std::endl;
+    }
   }
   else if (mapType.EqualTo("BR")) {
-    valuePair.first = getSMBR(closestMasses.first, process, value);
-    valuePair.second = getSMBR(closestMasses.second, process, value);
+    if (hasKey(getSMMapKey(valuePair.first, process, value), "BR") &&
+	hasKey(getSMMapKey(valuePair.second, process, value), "BR")) {
+      valuePair.first = getSMBR(closestMasses.first, process, value);
+      valuePair.second = getSMBR(closestMasses.second, process, value);
+    }
+    else {
+      std::cout << "BRXSReader: BR interpolation failed!" << std::endl;
+    }
+  }
+  else {
+    std::cout << "BRXSReader: Error! Improper mapType for interp." << std::endl;
   }
   // return the average of the two points.
-  double result = (valuePair.first + valuePair.second) / 2.0;
+  float result = (valuePair.first + valuePair.second) / 2.0;
   return result;
 }

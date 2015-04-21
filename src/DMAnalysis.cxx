@@ -73,7 +73,7 @@ TString DMAnalysis::cateToBkgFunc(TString category) {
    @param modeName - the name of the DM production mode.
    @param processName - the name of the process.
 */
-TString DMAnalysis::getIntermediaryName(TString modeName) {
+TString DMAnalysis::getMediatorName(TString modeName) {
   if (modeName.Contains("shxx_gg")) {
     return "shxx_gg";
   }
@@ -81,23 +81,23 @@ TString DMAnalysis::getIntermediaryName(TString modeName) {
     return "zphxx_gg";
   }
   else {
-    std::cout << "Analysis Error: no matching intermediary name" << std::endl;
+    std::cout << "Analysis Error: no matching mediator name" << std::endl;
     return "";
   }
 }
 
 /** 
-    Convert the DM sample name into an intermediary mass.
+    Convert the DM sample name into a mediator mass.
     @param modeName - the name of the DM production mode.
     @returns - the mass of the mediator particle.
 */
-int DMAnalysis::getIntermediaryMass(TString modeName) {
+int DMAnalysis::getMediatorMass(TString modeName) {
   for (int currMass = 100; currMass < 1000; currMass += 100) {
     if (modeName.Contains(Form("ms%d",currMass))) {
       return currMass;
     }
   }
-  std::cout << "Analysis Error: no matching intermediary mass" << std::endl;
+  std::cout << "Analysis Error: no matching mediator mass" << std::endl;
   return 0;
 }
 

@@ -244,19 +244,25 @@ void DMMassPoints::createNewMassPoints() {
     if (isWeighted) {
       evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
       
+      std::cout << "C1.1 " << evtWeight << std::endl;
+      
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (isSMSample(sampleName)) {
+	std::cout << "c1.2 " << evtWeight << std::endl;
 	evtWeight *= (analysisLuminosity *
-		      brxs->getSMBR(higgsMass, "gammagamma","BR") *
-		      brxs->getSMXS(higgsMass, sampleName, "BR"));
+		      (brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
+		      (brxs->getSMXS(higgsMass, sampleName, "BR")));
+	std::cout << "c1.2 " << evtWeight << std::endl;
       }
       // Dark matter XSBR includes cross-section and branching ratio.
       else if (isDMSample(sampleName)) {
+	std::cout << "c1.3 " << evtWeight << std::endl;
 	evtWeight *= (analysisLuminosity *
-		      brxs->getDMXSBR(getIntermediaryMass(sampleName),
-				      getDarkMatterMass(sampleName),
-				      getIntermediaryName(sampleName),
-				      "XS"));
+		      (brxs->getDMXSBR(getMediatorMass(sampleName),
+				       getDarkMatterMass(sampleName),
+				       getMediatorName(sampleName),
+				       "XS")));
+	std::cout << "c1.3 " << evtWeight << std::endl;
       }
     }
     

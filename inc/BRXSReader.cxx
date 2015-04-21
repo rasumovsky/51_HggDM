@@ -354,21 +354,20 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double mass,
   std::pair<double,double> result;
   result.first = 0; result.second = 0;
   
-  std::vector<double> definedMassVector;
-  if (mapType.EqualTo("XS")) definedMassVector = massesHiggsXS;
-  else if (mapType.EqualTo("BR")) definedMassVector = massesHiggsBR;
+  std::vector<double> currMassList;
+  if (mapType.EqualTo("XS")) currMassList = massesHiggsXS;
+  else if (mapType.EqualTo("BR")) currMassList = massesHiggsBR;
   else {
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
   }
   
-  for (std::vector<double>::iterator massIter = definedMassVector.begin();
-       massIter != definedMassVector.end(); massIter++) {
-    if (fabs(massIter - mass) < fabs(result.first - mass)) {
+  for (int i = 0; i < currMassList.size(); i++) {
+    if (fabs(currMassList[i] - mass) < fabs(result.first - mass)) {
       result.second = result.first;
-      result.first = massIter;
+      result.first = currMassList[i];
     }
-    else if (fabs(massIter - mass) < fabs(result.second - mass)) {
-      result.second = massIter;
+    else if (fabs(currMassList[i] - mass) < fabs(result.second - mass)) {
+      result.second = currMassList[i];
     }
   }
   return result;

@@ -88,9 +88,6 @@ float BRXSReader::getSMBR(double mass, TString decay, TString value) {
   }
   else {
     return getInterpolatedSMValue(mass, "BR", decay, value);
-    //std::cout << "BRXSReader Error! No match for " << mass << " and " 
-    //<< decay << " found." << std::endl;
-    //return 0;
   }
 }
 
@@ -131,9 +128,6 @@ float BRXSReader::getSMXS(double mass, TString production, TString value) {
     return valuesXS[currKey];
   }
   else {
-    //std::cout << "BRXSReader Error! No match for " << mass << " and " 
-    //<< production << " found." << std::endl;
-    //return 0;
     return getInterpolatedSMValue(mass, "XS", production, value);
   }
 }
@@ -385,18 +379,18 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
   std::pair<double,double> closestMasses = getNearbySMMasses(mass, mapType);
   std::pair<double,double> valuePair;
   if (mapType.EqualTo("XS")) {
-    if (hasKey(getSMMapKey(valuePair.first, process, value), "XS") &&
-	hasKey(getSMMapKey(valuePair.second, process, value), "XS")) {
-      valuePair.first = getSMXS(closestMasses.first, process, value);
-      valuePair.second = getSMXS(closestMasses.second, process, value);
+    if (hasKey(getSMMapKey(closestMasses.first, process, value), "XS") &&
+	hasKey(getSMMapKey(closestMasses.second, process, value), "XS")) {
+      valuePair.first = getDefSMXS(closestMasses.first, process, value);
+      valuePair.second = getDefSMXS(closestMasses.second, process, value);
     }
     else {
       std::cout << "BRXSReader: XS interpolation failed!" << std::endl;
     }
   }
   else if (mapType.EqualTo("BR")) {
-    if (hasKey(getSMMapKey(valuePair.first, process, value), "BR") &&
-	hasKey(getSMMapKey(valuePair.second, process, value), "BR")) {
+    if (hasKey(getSMMapKey(closestMasses.first, process, value), "BR") &&
+	hasKey(getSMMapKey(closestMasses.second, process, value), "BR")) {
       valuePair.first = getSMBR(closestMasses.first, process, value);
       valuePair.second = getSMBR(closestMasses.second, process, value);
     }

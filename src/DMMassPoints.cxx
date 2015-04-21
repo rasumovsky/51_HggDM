@@ -188,7 +188,7 @@ void DMMassPoints::createNewMassPoints() {
   
   // Alternative: use file list:
   TString listName = nameToFileList(sampleName);
-  TChain *chain = CommonFunc::MakeChain("", listName, "badfile");
+  TChain *chain = CommonFunc::MakeChain("CollectionTree", listName, "badfile");
   DMTree *dmt = new DMTree(chain);
   
   // Tool to implement the cutflow, categorization, and counting. 

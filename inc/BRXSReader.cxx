@@ -186,10 +186,14 @@ void BRXSReader::printSMXS(double mass, TString production) {
 void BRXSReader::loadSMBR(TString decayClass) {
   std::cout << "  BRXSReader: loadSMBR(" << decayClass << ")" << std::endl;
   
-  TString fileName = Form("%s/BR_%s.txt", directory.Data(), decayClass.Data());
+  TString fileName = Form("%s/branchingratio_%s.txt", directory.Data(),
+			  decayClass.Data());
   ifstream currFile(fileName);
-  if (currFile.is_open()) {
-    
+  if (!currFile) {
+    std::cout << "BRXSReader! Error loading file: " << std::endl;
+    std::cout << "\t" << fileName << std::endl;
+  }
+  else {
     double currMass;
     float currIn[19];
     
@@ -256,9 +260,12 @@ void BRXSReader::loadSMBR(TString decayClass) {
 void BRXSReader::loadDMXS() {
   std::cout << "  BRXSReader: loadDMXS()" << std::endl;
 
-  ifstream currFile(Form("%s/XS_DM.txt", directory.Data()));
-  if (currFile.is_open()) {
-    
+  ifstream currFile(Form("%s/xsection_DM.txt", directory.Data()));
+  if (!currFile) {
+    std::cout << "BRXSReader! Error loading file: " << std::endl;
+    std::cout << "\t" << fileName << std::endl;
+  }
+  else {
     TString mediatorName;
     int mediatorMass;
     int fermionMass;
@@ -287,10 +294,14 @@ void BRXSReader::loadDMXS() {
 void BRXSReader::loadSMXS(TString production) {
   std::cout << "  BRXSReader: loadSMXS(" << production << ")" << std::endl;
 
-  TString fileName = Form("%s/XS_%s.txt", directory.Data(), production.Data());
+  TString fileName = Form("%s/xsection_%s.txt", directory.Data(), 
+			  production.Data());
   ifstream currFile(fileName);
-  if (currFile.is_open()) {
-    
+  if (!currFile) {
+    std::cout << "BRXSReader! Error loading file: " << std::endl;
+    std::cout << "\t" << fileName << std::endl;
+  }
+  else {
     double currMass;
     float currIn[6];
     

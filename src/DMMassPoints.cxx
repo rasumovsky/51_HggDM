@@ -183,7 +183,6 @@ void DMMassPoints::setRooCategory(RooCategory *newCategories) {
    @returns void.
 */
 void DMMassPoints::createNewMassPoints() {
-  
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
   
   // Alternative: use file list:
@@ -207,6 +206,7 @@ void DMMassPoints::createNewMassPoints() {
   ofstream massFiles[20];
   
   // Loop over categories to define datasets and mass files:
+  std::cout << "  DMMassPoints: Define datasets & files." << std::endl;
   for (int i_c = 0; i_c < selector->getNCategories(cateScheme); i_c++) {
     
     massFiles[i_c].open(getMassPointsFileName(i_c));
@@ -231,6 +231,7 @@ void DMMassPoints::createNewMassPoints() {
   }
     
   // Loop over the input DMTree:
+  std::cout << "DMMassPoints: Loop over input DMTree." << std::endl;
   Long64_t entries = dmt->fChain->GetEntries();
   for (Long64_t event = 0; event < entries; event++) {
     dmt->fChain->GetEntry(event);
@@ -283,6 +284,7 @@ void DMMassPoints::createNewMassPoints() {
       }
     }
   }
+  std::cout << "  DMMassPoints: End of loop over input DMTree." << std::endl;
   
   // Print the cutflow and category yields (weighted if MC):
   selector->printCutflow(isWeighted);
@@ -305,6 +307,8 @@ void DMMassPoints::createNewMassPoints() {
 			    *args, RooFit::Index(*categories),
 			    RooFit::Import(dataMap),
 			    RooFit::WeightVar(wt));
+  
+  std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
 }
   
 /**

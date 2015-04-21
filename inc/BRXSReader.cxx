@@ -46,6 +46,7 @@
    @returns void.
 */
 BRXSReader::BRXSReader(TString inputDirectory) {
+  std::cout << "BRXSReader: Initializing..." << std::endl;
   
   directory = inputDirectory;
   valuesXS.clear();
@@ -68,6 +69,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   // Open BR files and store values.
   loadSMBR("2bosons");
   loadSMBR("2fermions");
+  
+  std::cout << "BRXSReader: Succesfully initialized!" << std::endl;
 }
 
 /**
@@ -181,6 +184,7 @@ void BRXSReader::printSMXS(double mass, TString production) {
    @returns void
 */
 void BRXSReader::loadSMBR(TString decayClass) {
+  std::cout << "  BRXSReader: loadSMBR(" << decayClass << ")" << std::endl;
   
   TString fileName = Form("%s/BR_%s.txt", directory.Data(), decayClass.Data());
   ifstream currFile(fileName);
@@ -250,6 +254,7 @@ void BRXSReader::loadSMBR(TString decayClass) {
    @returns - void.
 */
 void BRXSReader::loadDMXS() {
+  std::cout << "  BRXSReader: loadDMXS()" << std::endl;
 
   ifstream currFile(Form("%s/XS_DM.txt", directory.Data()));
   if (currFile.is_open()) {
@@ -280,7 +285,8 @@ void BRXSReader::loadDMXS() {
    @returns - void.
 */
 void BRXSReader::loadSMXS(TString production) {
-  
+  std::cout << "  BRXSReader: loadSMXS(" << production << ")" << std::endl;
+
   TString fileName = Form("%s/XS_%s.txt", directory.Data(), production.Data());
   ifstream currFile(fileName);
   if (currFile.is_open()) {

@@ -57,8 +57,8 @@ class BRXSReader
   std::map<TString,float> valuesXS;
   std::map<TString,float> valuesBR;
   
-  std::vector<double> *massesHiggsXS;
-  std::vector<double> *massesHiggsBR;
+  std::vector<double> massesHiggsXS;
+  std::vector<double> massesHiggsBR;
   
 };
 

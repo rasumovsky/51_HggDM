@@ -52,8 +52,8 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   valuesXS.clear();
   valuesBR.clear();
   
-  massesHiggsXS->clear();
-  massesHiggsBR->clear();
+  massesHiggsXS.clear();
+  massesHiggsBR.clear();
   
   // Open SM cross-section files and store values.
   loadSMXS("ggH");
@@ -194,7 +194,7 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	       >> currIn[14] >> currIn[15] >> currIn[16] >> currIn[17]
 	       >> currIn[18];
       
-      massesHiggsBR->push_back(currMass);
+      massesHiggsBR.push_back(currMass);
       
       if (decayClass.Contains("2bosons")) {
 	valuesBR[getSMMapKey(currMass, "gg", "BR")] = currIn[1];
@@ -291,7 +291,7 @@ void BRXSReader::loadSMXS(TString production) {
     while (!currFile.eof()) {
       currFile >> currMass >> currIn[1] >> currIn[2] >> currIn[3] >> currIn[4]
 	       >> currIn[5];
-      massesHiggsXS->push_back(currMass);
+      massesHiggsXS.push_back(currMass);
       valuesXS[getSMMapKey(currMass, production, "XS")] = currIn[1];
       valuesXS[getSMMapKey(currMass, production, "+QCD")] = currIn[2];
       valuesXS[getSMMapKey(currMass, production, "-QCD")] = currIn[3];
@@ -357,27 +357,31 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   
   std::cout << "Getting masses nearest to " << testMass << std::endl;
   
-  std::vector<double> *currMasses;
-  if (mapType.EqualTo("XS")) currMasses = massesHiggsXS;
-  else if (mapType.EqualTo("BR")) currMasses = massesHiggsBR;
-  else {
-    std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
-  }
+  int listSize = 0;
+  if (mapType.EqualTo("XS")) listSize = (int)massesHiggsXS.size();
+  else if (mapType.EqualTo("BR")) listSize = (int)massesHiggsBR.size();
+  else std::cout << "BRXSReader: ERROR! Improper mapType argument" << std::endl;
+
+  std::cout << "mass list size = " << listSize << std::endl;
   
-  for (int i = 0; i < (int)currMasses->size(); i++) {
-    if (fabs((currMasses->at(i))-testMass) <= fabs(result.first-testMass)) {
+  for (int i = 0; i < listSize; i++) {
+    double currMass = 0;
+    if (mapType.EqualTo("XS")) currMass = massesHiggsXS[i];
+    else if (mapType.EqualTo("BR")) currMass = massesHiggsBR[i];
+    std::cout << "  " << i << "  " << currMass << std::endl;
+    if (fabs(currMass - testMass) <= fabs(result.first - testMass)) {
       std::cout << "Change first: " << result.first << "-->" 
-		<< currMasses->at(i) << std::endl;
+		<< currMass << std::endl;
       result.second = result.first;
-      result.first = currMasses->at(i);
+      result.first = currMass;
     }
-    else if (fabs((currMasses->at(i))-testMass)
-	     <= fabs(result.second-testMass)) {
+    else if (fabs(currMass - testMass) <= fabs(result.second - testMass)) {
       std::cout << "Change first: " << result.second << "-->" 
-		<< currMasses->at(i) << std::endl;
-      result.second = currMasses->at(i);
+		<< currMass << std::endl;
+      result.second = currMass;
     }
   }
+
   std::cout << "getNearbySMMasses: " << result.first << ", " << result.second
 	    << std::endl;
   return result;

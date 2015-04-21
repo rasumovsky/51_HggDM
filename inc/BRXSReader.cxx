@@ -86,10 +86,6 @@ BRXSReader::BRXSReader(TString inputDirectory) {
 */
 float BRXSReader::getSMBR(double mass, TString decay, TString value) {
   TString currKey = getSMMapKey(mass, decay, value);
-  
-  std::cout << "THIS BR MUST WORK!" << valuesBR[getSMMapKey(125, decay, value)]
-	    << std::endl;
-
   if (hasKey(currKey,"BR")) {
     return valuesBR[currKey];
   }
@@ -212,6 +208,7 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	valuesBR[getSMMapKey(currMass, "gg", "+ERR")] = currIn[2];
 	valuesBR[getSMMapKey(currMass, "gg", "-ERR")] = currIn[3];
 	valuesBR[getSMMapKey(currMass, "gammagamma", "BR")] = currIn[4];
+	std::cout << " defined key: " << getSMMapKey(currMass, "gammagamma", "BR") << std::endl;
 	valuesBR[getSMMapKey(currMass, "gammagamma", "+ERR")] = currIn[5];
 	valuesBR[getSMMapKey(currMass, "gammagamma", "-ERR")] = currIn[6];
 	valuesBR[getSMMapKey(currMass, "Zgamma", "BR")] = currIn[7];
@@ -393,9 +390,6 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
       result.second = currMassList[i];
     }
   }
-
-  std::cout << "\tgetNearbySMMasses(" << testMass << ") will return: [" 
-	    << result.first << ", " << result.second << "]" << std::endl;
   return result;
 }
 
@@ -419,6 +413,7 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
 		<< getSMMapKey(closestMasses.first, process, value) << " "
 		<< getSMMapKey(closestMasses.second, process, value)
 		<< std::endl;
+      exit(0);
     }
   }
   else if (mapType.EqualTo("BR")) {
@@ -433,6 +428,7 @@ float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
 		<< getSMMapKey(closestMasses.first, process, value) << " "
 		<< getSMMapKey(closestMasses.second, process, value)
 		<< std::endl;
+      exit(0);
     }
   }
   else {

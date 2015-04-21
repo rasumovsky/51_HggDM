@@ -361,7 +361,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double mass,
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
   }
   
-  for (int i = 0; i < currMassList.size(); i++) {
+  for (int i = 0; i < (int)currMassList.size(); i++) {
     if (fabs(currMassList[i] - mass) < fabs(result.first - mass)) {
       result.second = result.first;
       result.first = currMassList[i];

@@ -380,7 +380,7 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
 /**
    Get the key for the value map.
 */
-void DMTestStat::getKey(TString testStat, bool observed, int N) {
+TString DMTestStat::getKey(TString testStat, bool observed, int N) {
   TString currKey = testStat;
   
   if (observed) currKey += "_obs";

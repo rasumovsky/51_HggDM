@@ -290,8 +290,8 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   }
   // Split MET - low and high MET categories.
   else if (cateScheme.Contains("splitETMiss")) {
-    if (evtTree->EventInfoAuxDyn_metref_final > 180.0) currCate = 0;
-    else currCate = 1;
+    if (evtTree->EventInfoAuxDyn_metref_final > 140.0) currCate = 1;
+    else currCate = 0;
   }
   
   // Add to category counters:
@@ -368,7 +368,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
       if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts")) {
 	continue;
       }
-      if (!passesCut(cutList[i])) {
+      if (!passesCut(cutList[i], weight)) {
 	passes = false;
 	break;
       }
@@ -381,7 +381,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
 	  cutList[i].EqualTo("photonIso") || cutList[i].EqualTo("photonID")) {
 	continue;
       }
-      if (!passesCut(cutList[i])) {
+      if (!passesCut(cutList[i], weight)) {
 	passes = false;
 	break;
       }
@@ -390,12 +390,12 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   
   // Add to total counters:
   evtCountTot[cutName]++;
-  evtCountTotWt[cutName]+=weight;
+  evtCountTotWt[cutName] += weight;
   
   // Add to passing counters:
   if (passes) {
     evtCountPass[cutName]++;
-    evtCountPassWt[cutName]+=weight;
+    evtCountPassWt[cutName] += weight;
   }
   return passes;
 }

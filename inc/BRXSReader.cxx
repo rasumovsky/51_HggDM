@@ -201,7 +201,6 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	       >> currIn[14] >> currIn[15] >> currIn[16] >> currIn[17]
 	       >> currIn[18];
       
-      std::cout << "Adding " << currMass << " to massesHiggsBR." << std::endl;
       massesHiggsBR.push_back(currMass);
       
       if (decayClass.Contains("2bosons")) {
@@ -209,7 +208,6 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	valuesBR[getSMMapKey(currMass, "gg", "+ERR")] = currIn[2];
 	valuesBR[getSMMapKey(currMass, "gg", "-ERR")] = currIn[3];
 	valuesBR[getSMMapKey(currMass, "gammagamma", "BR")] = currIn[4];
-	std::cout << " defined key: " << getSMMapKey(currMass, "gammagamma", "BR") << std::endl;
 	valuesBR[getSMMapKey(currMass, "gammagamma", "+ERR")] = currIn[5];
 	valuesBR[getSMMapKey(currMass, "gammagamma", "-ERR")] = currIn[6];
 	valuesBR[getSMMapKey(currMass, "Zgamma", "BR")] = currIn[7];
@@ -370,7 +368,6 @@ bool BRXSReader::hasKey(TString key, TString mapType) {
 std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
 						       TString mapType) {
   std::pair<double,double> result; result.first = 0.0; result.second = 0.0;
-  std::cout << "  BRXSReader::getNearbySMMasses(" << testMass << ", " << mapType << ")" << std::endl;
   
   std::vector<double> currMassList;
   if (mapType.EqualTo("XS")) currMassList = massesHiggsXS;
@@ -378,7 +375,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   else std::cout << "\tBRXSReader: ERROR! Improper mapType" << std::endl;
   // Loop over defined XS or BR masses:
   for (int i = 0; i < currMassList.size(); i++) {
-    std::cout << "    " << i << ", " << currMassList[i] << std::endl;
+    
     // Make result.first the last mass point below testMass:
     if ((currMassList[i] <= testMass) && 
 	fabs(currMassList[i] - testMass) <= fabs(result.first - testMass)) {
@@ -391,16 +388,12 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
       result.second = currMassList[i];
     }
   }
-  std::cout << "    -> [" << result.first << ", " << result.second << std::endl;
   return result;
 }
 
 float BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
 					 TString process, TString value) {
-  
-  std::cout << "BRXSReader::getInterpolatedSMValue(" << mass << ", "
-	    << mapType << ", " << process << ", " << value << std::endl;
-  
+    
   std::pair<double,double> closestMasses = getNearbySMMasses(mass, mapType);
   std::pair<double,double> valuePair;
   if (mapType.EqualTo("XS")) {

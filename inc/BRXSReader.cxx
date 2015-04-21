@@ -365,16 +365,17 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   }
   
   for (int i = 0; i < (int)currMasses->size(); i++) {
-    if (fabs(currMasses[i] - testMass) < fabs(result.first - testMass)) {
-      std::cout << "Change first: " << result.first << "-->" << currMasses[i]
-		<< std::endl;
+    if (fabs((currMasses->at(i))-testMass) <= fabs(result.first-testMass)) {
+      std::cout << "Change first: " << result.first << "-->" 
+		<< currMasses->at(i) << std::endl;
       result.second = result.first;
-      result.first = currMasses[i];
+      result.first = currMasses->at(i);
     }
-    else if (fabs(currMasses[i] - testMass) < fabs(result.second - testMass)) {
-      std::cout << "Change first: " << result.second << "-->" << currMasses[i]
-		<< std::endl;
-      result.second = currMasses[i];
+    else if (fabs((currMasses->at(i))-testMass)
+	     <= fabs(result.second-testMass)) {
+      std::cout << "Change first: " << result.second << "-->" 
+		<< currMasses->at(i) << std::endl;
+      result.second = currMasses->at(i);
     }
   }
   std::cout << "getNearbySMMasses: " << result.first << ", " << result.second

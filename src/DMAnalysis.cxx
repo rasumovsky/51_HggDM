@@ -81,8 +81,9 @@ TString DMAnalysis::getMediatorName(TString modeName) {
     return "zphxx_gg";
   }
   else {
-    std::cout << "Analysis Error: no matching mediator name" << std::endl;
-    return "";
+    std::cout << "Analysis Error: no matching mediator name: " 
+	      << modeName << std::endl;
+    exit(0);
   }
 }
 
@@ -93,12 +94,14 @@ TString DMAnalysis::getMediatorName(TString modeName) {
 */
 int DMAnalysis::getMediatorMass(TString modeName) {
   for (int currMass = 100; currMass < 1000; currMass += 100) {
-    if (modeName.Contains(Form("ms%d",currMass))) {
+    if (modeName.Contains(Form("ms%d",currMass)) || 
+	modeName.Contains(Form("mzp%d",currMass))) {
       return currMass;
     }
   }
-  std::cout << "Analysis Error: no matching mediator mass" << std::endl;
-  return 0;
+  std::cout << "Analysis Error: no matching mediator mass"
+	    << modeName << std::endl;
+  exit(0);
 }
 
 /** 
@@ -112,8 +115,9 @@ int DMAnalysis::getDarkMatterMass(TString modeName) {
       return currMass;
     }
   }
-  std::cout << "Analysis Error: no matching DM mass" << std::endl;
-  return 0;
+  std::cout << "Analysis Error: no matching DM mass" 
+	    << modeName << std::endl;
+  exit(0);
 }
 
 /** 

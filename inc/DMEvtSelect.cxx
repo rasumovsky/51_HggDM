@@ -174,12 +174,10 @@ void DMEvtSelect::printCategorization(bool weighted) {
     std::cout << "\t" << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
-	std::cout << cateCount[Form("%s_%d",(it->first).Data(),it->second)]
-		  << " ";
+	std::cout << cateCount[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
       else {
-	std::cout << cateCountWt[Form("%s_%d",(it->first).Data(),it->second)]
-		  << " ";
+	std::cout << cateCountWt[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
     }
     std::cout << std::endl;

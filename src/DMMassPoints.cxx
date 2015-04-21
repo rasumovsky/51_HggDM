@@ -87,7 +87,11 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 			   TString newCateScheme, TString newOptions,
 			   RooRealVar *newObservable,
 			   RooCategory *newCategories) {
-  std::cout << "\nDMMassPoints::Initializing..." << std::endl;
+  std::cout << "\nDMMassPoints::Initializing..." 
+	    << "\n\tjobName = " << newJobName
+	    << "\n\tsampleName = " << newSampleName 
+	    << "\n\tcateScheme = " << newCateScheme 
+	    << "\n\toptions = " << newOptions << std::endl;
   
   // Assign member variables:
   jobName = newJobName;

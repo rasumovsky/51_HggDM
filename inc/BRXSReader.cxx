@@ -201,6 +201,7 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	       >> currIn[14] >> currIn[15] >> currIn[16] >> currIn[17]
 	       >> currIn[18];
       
+      std::cout << "Adding " << currMass << " to massesHiggsBR." << std::endl;
       massesHiggsBR.push_back(currMass);
       
       if (decayClass.Contains("2bosons")) {
@@ -377,7 +378,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   else std::cout << "\tBRXSReader: ERROR! Improper mapType" << std::endl;
   // Loop over defined XS or BR masses:
   for (int i = 0; i < currMassList.size(); i++) {
-    
+    std::cout << "    " << i << ", " << currMassList[i] << std::endl;
     // Make result.first the last mass point below testMass:
     if ((currMassList[i] <= testMass) && 
 	fabs(currMassList[i] - testMass) <= fabs(result.first - testMass)) {

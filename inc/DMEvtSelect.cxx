@@ -54,7 +54,6 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   cutList.push_back("looseCuts");//same as allCuts but no photonID or photonIso
   cutList.push_back("allCuts");
   
-  
   // ADD CATE HERE ([name] = # categories):
   cateSchemesAndSizes.clear();
   cateSchemesAndSizes["inclusive"] = 1;
@@ -378,7 +377,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
     }
   }
   // Check whether event passes all of the cuts except ID and isolation.
-  else if (cutName.Contains("looseCuts")) {
+  else if (cutName.EqualTo("looseCuts")) {
     for (int i = 0; i < (int)cutList.size(); i++) {
       if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts") ||
 	  cutList[i].EqualTo("photonIso") || cutList[i].EqualTo("photonID")) {
@@ -421,7 +420,7 @@ bool DMEvtSelect::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 
   bool exists = (evtCountTot.find(cutName) == evtCountTot.end());
   if (!exists) {
-    std::cout << "DMEvtSelect: Cut not defined!" << std::endl;
+    std::cout << "DMEvtSelect: Cut " << cutName << " not defined!" << std::endl;
   }
   return exists;
 }

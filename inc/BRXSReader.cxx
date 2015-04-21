@@ -259,8 +259,8 @@ void BRXSReader::loadSMBR(TString decayClass) {
 */
 void BRXSReader::loadDMXS() {
   std::cout << "  BRXSReader: loadDMXS()" << std::endl;
-
-  ifstream currFile(Form("%s/xsection_DM.txt", directory.Data()));
+  TString fileName = Form("%s/xsection_DM.txt", directory.Data());
+  ifstream currFile(fileName);
   if (!currFile) {
     std::cout << "BRXSReader! Error loading file: " << std::endl;
     std::cout << "\t" << fileName << std::endl;

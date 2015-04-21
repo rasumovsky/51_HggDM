@@ -418,11 +418,11 @@ void DMEvtSelect::setTree(DMTree *newTree) {
 */
 bool DMEvtSelect::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 
-  bool exists = (evtCountTot.find(cutName) == evtCountTot.end());
-  if (!exists) {
+  bool nonExistent = (evtCountTot.find(cutName) == evtCountTot.end());
+  if (nonExistent) {
     std::cout << "DMEvtSelect: Cut " << cutName << " not defined!" << std::endl;
   }
-  return exists;
+  return !nonExistent;
 }
 
 /** 
@@ -432,10 +432,11 @@ bool DMEvtSelect::cutExists(TString cutName) {
 */
 bool DMEvtSelect::cateExists(TString cateScheme) {
   // Checks if there is a key corresponding to cateScheme in the map: 
-  bool exists = (cateCount.find(Form("%s_0",cateScheme.Data()))
-		 == cateCount.end());
-  if (!exists) {
-    std::cout << "DMEvtSelect: Category not defined!" << std::endl;
+  bool nonExistent = (cateCount.find(Form("%s_0",cateScheme.Data()))
+		      == cateCount.end());
+  if (nonExistent) {
+    std::cout << "DMEvtSelect: Category " << cateScheme << " not defined!"
+	      << std::endl;
   }
-  return exists;
+  return !nonExistent;
 }

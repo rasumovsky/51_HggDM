@@ -33,6 +33,9 @@
 //    type = "+ERR"   for the value of the BR + total error in %              //
 //           "-ERR"   for the value of the BR - total error in %              //
 //                                                                            //
+//  Note: the class now linearly interpolates cross-sections and branching    //
+//  ratios for the SM Higgs for all masses.                                   //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "BRXSReader.h"
@@ -47,6 +50,9 @@ BRXSReader::BRXSReader(TString inputDirectory) {
   directory = inputDirectory;
   valuesXS.clear();
   valuesBR.clear();
+  
+  massesHiggsXS.clear();
+  massesHiggsBR.clear();
   
   // Open SM cross-section files and store values.
   loadSMXS("ggH");
@@ -78,30 +84,31 @@ float BRXSReader::getSMBR(double mass, TString decay, TString value) {
     return valuesBR[currKey];
   }
   else {
-    std::cout << "BRXSReader Error! No match for " << mass << " and " 
-	      << decay << " found." << std::endl;
-    return 0;
+    return getInterpolatedSMValue(mass, "BR", decay, value);
+    //std::cout << "BRXSReader Error! No match for " << mass << " and " 
+    //<< decay << " found." << std::endl;
+    //return 0;
   }
 }
 
 /**
    Returns the cross-section, or related uncertainties, for a Dark Matter
-   production process at a particular intermediate and fermion mass.
-   @param massIntermediate - The scalar or Zprime mass.
+   production process at a particular mediator and fermion mass.
+   @param massMediator - The scalar or Zprime mass.
    @param massFermion - The dark matter particle mass.
    @param type - The production type (shxx_gg, zphxx_gg).
    @param value - The value (XS, +ERR, -ERR).
    @returns - The value of the production cross-section.
 */
-float BRXSReader::getDMXSBR(int massIntermediate, int massFermion, TString type,
+float BRXSReader::getDMXSBR(int massMediator, int massFermion, TString type,
 			    TString value) {
-  TString currKey = getDMMapKey(massIntermediate, massFermion, type, value);
+  TString currKey = getDMMapKey(massMediator, massFermion, type, value);
   if (hasKey(currKey,"XS")) {
     return valuesXS[currKey];
   }
   else {
     std::cout << "BRXSReader Error! No match for " << type << " "
-	      << massIntermediate << " and " << massFermion
+	      << massMediator << " and " << massFermion
 	      << " found." << std::endl;
     return 0;
   }
@@ -121,9 +128,10 @@ float BRXSReader::getSMXS(double mass, TString production, TString value) {
     return valuesXS[currKey];
   }
   else {
-    std::cout << "BRXSReader Error! No match for " << mass << " and " 
-	      << production << " found." << std::endl;
-    return 0;
+    //std::cout << "BRXSReader Error! No match for " << mass << " and " 
+    //<< production << " found." << std::endl;
+    //return 0;
+    return getInterpolatedSMValue(mass, "XS", production, value);
   }
 }
 
@@ -187,7 +195,9 @@ void BRXSReader::loadSMBR(TString decayClass) {
 	       >> currIn[10] >> currIn[11] >> currIn[12] >> currIn[13]
 	       >> currIn[14] >> currIn[15] >> currIn[16] >> currIn[17]
 	       >> currIn[18];
-           
+      
+      massesHiggsBR.push_back(currMass);
+      
       if (decayClass.Contains("2bosons")) {
 	valuesBR[getSMMapKey(currMass, "gg", "BR")] = currIn[1];
 	valuesBR[getSMMapKey(currMass, "gg", "+ERR")] = currIn[2];
@@ -244,21 +254,21 @@ void BRXSReader::loadDMXS() {
   ifstream currFile(Form("%s/XS_DM.txt", directory.Data()));
   if (currFile.is_open()) {
     
-    TString intermediateName;
-    int intermediateMass;
+    TString mediatorName;
+    int mediatorMass;
     int fermionMass;
     float currIn[3];
     
     while (!currFile.eof()) {
-      currFile >> intermediateName >> intermediateMass >> fermionMass
+      currFile >> mediatorName >> mediatorMass >> fermionMass
 	       >> currIn[0] >> currIn[1] >> currIn[5];
       
-      valuesXS[getDMMapKey(intermediateMass, fermionMass,
-			   intermediateName, "XS")] = currIn[0];
-      valuesXS[getDMMapKey(intermediateMass, fermionMass,
-			   intermediateName, "+ERR")] = currIn[1];
-      valuesXS[getDMMapKey(intermediateMass, fermionMass,
-			   intermediateName, "-ERR")] = currIn[2];
+      valuesXS[getDMMapKey(mediatorMass, fermionMass,
+			   mediatorName, "XS")] = currIn[0];
+      valuesXS[getDMMapKey(mediatorMass, fermionMass,
+			   mediatorName, "+ERR")] = currIn[1];
+      valuesXS[getDMMapKey(mediatorMass, fermionMass,
+			   mediatorName, "-ERR")] = currIn[2];
     }
   }
   currFile.close();
@@ -281,7 +291,7 @@ void BRXSReader::loadSMXS(TString production) {
     while (!currFile.eof()) {
       currFile >> currMass >> currIn[1] >> currIn[2] >> currIn[3] >> currIn[4]
 	       >> currIn[5];
-      
+      massesHiggsXS.push_back(currMass);
       valuesXS[getSMMapKey(currMass, production, "XS")] = currIn[1];
       valuesXS[getSMMapKey(currMass, production, "+QCD")] = currIn[2];
       valuesXS[getSMMapKey(currMass, production, "-QCD")] = currIn[3];
@@ -294,15 +304,15 @@ void BRXSReader::loadSMXS(TString production) {
 
 /**
    Convert variables to the key for the Dark Matter map.
-   @param massIntermediate - The mass of the scalar or Zprime intermediary. 
+   @param massMediator - The mass of the scalar or Zprime mediator. 
    @param massFermion - The mass of the fermionic dark matter particle.
-   @param type - The intermediate type (shxx_gg, zphxx_gg).
+   @param type - The mediator type (shxx_gg, zphxx_gg).
    @param value - The value (XS, +ERR, -ERR).
    @returns - the map key.
 */
-TString BRXSReader::getDMMapKey(int massIntermediate, int massFermion,
+TString BRXSReader::getDMMapKey(int massMediator, int massFermion,
 				TString type, TString value) {
-  TString key = Form("%s_%d_%d_%s", type.Data(), massIntermediate,
+  TString key = Form("%s_%d_%d_%s", type.Data(), massMediator,
 		     massFermion, value.Data());
   return key;
 }
@@ -337,4 +347,47 @@ bool BRXSReader::hasKey(TString key, TString mapType) {
     std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
     return false;
   }
+}
+
+std::pair<double,double> BRXSReader::getNearbySMMasses(TString mapType,
+						       double mass) {
+  std::pair<double,double> result;
+  result.first = 0; result.second = 0;
+  
+  std::vector<double> definedMassVector;
+  if (mapType.EqualTo("XS")) definedMassVector = massesHiggsXS;
+  else if (mapType.EqualTo("BR")) definedMassVector = massesHiggsBR;
+  else {
+    std::cout << "BRXSReader: Error! Improper mapType argument." << std::endl;
+  }
+  
+  for (std::vector<double>::iterator massIter = definedMassVector.begin();
+       massIter != definedMassVector.end(); massIter++) {
+    if (fabs(massIter - mass) < fabs(result.first - mass)) {
+      result.second = result.first;
+      result.first = massIter;
+    }
+    else if (fabs(massIter - mass) < fabs(result.second - mass)) {
+      result.second = massIter;
+    }
+  }
+  return result;
+}
+
+double BRXSReader::getInterpolatedSMValue(double mass, TString mapType,
+					  TString process, TString value) {
+  
+  std::pair<double,double> closestMasses = getNearbySMMasses(mapType, mass);
+  std::pair<double,double> valuePair;
+  if (mapType.EqualTo("XS")) {
+    valuePair.first = getSMXS(closestMasses.first, process, value);
+    valuePair.second = getSMXS(closestMasses.second, process, value);
+  }
+  else if (mapType.EqualTo("BR")) {
+    valuePair.first = getSMBR(closestMasses.first, process, value);
+    valuePair.second = getSMBR(closestMasses.second, process, value);
+  }
+  // return the average of the two points.
+  double result = (valuePair.first + valuePair.second) / 2.0;
+  return result;
 }

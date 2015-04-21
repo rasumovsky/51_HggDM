@@ -77,20 +77,10 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
    @returns - the test statistic value.
 */
 double DMTestStat::accessValue(TString testStat, bool observed, int N) {
-  // Construct the map key:
-  TString currMapKey = testStat;
-  if (observed) currMapKey += "_obs";
-  else currMapKey += "_exp";
-  if (N < 0) currMapKey += Form("_n%d",N);
-  else if (N > 0) currMapKey += Form("_p%d",N);
-  
+  TString currMapKey = getKey(testStat, observed, N);
   // Check that corresponding entry exists:
-  if (mapValueExists(currMapKey)) {
-    return calculatedValues[currMapKey];
-  }
-  else {
-    return 0;
-  }
+  if (mapValueExists(currMapKey)) return calculatedValues[currMapKey];
+  else return 0;
 }
 
 /**
@@ -110,12 +100,12 @@ void DMTestStat::calculateNewCL() {
   double expQMu = getQMuFromNLL(nllMu1Exp, nllMuHatExp, muHatExp, 1);
   
   // Calculate CL:
-  double expCLn2 = getCLFromQMu(expQMu, "exp_n2");
-  double expCLn1 = getCLFromQMu(expQMu, "exp_n1");
-  double expCLp1 = getCLFromQMu(expQMu, "exp_p1");
-  double expCLp2 = getCLFromQMu(expQMu, "exp_p2");
-  double expCL = getCLFromQMu(expQMu, "exp");
-  double obsCL = getCLFromQMu(obsQMu, "obs");
+  double expCLn2 = getCLFromQMu(expQMu, 0, -2);
+  double expCLn1 = getCLFromQMu(expQMu, 0, -1);
+  double expCLp1 = getCLFromQMu(expQMu, 0, 1);
+  double expCLp2 = getCLFromQMu(expQMu, 0, 2);
+  double expCL = getCLFromQMu(expQMu, 0, 0);
+  double obsCL = getCLFromQMu(obsQMu, 1, 0);
   
   // Write CL values to file:
   ofstream textCL;
@@ -139,19 +129,19 @@ void DMTestStat::calculateNewCL() {
   if (expQMu < 0) std::cout << "WARNING! expQMu < 0 : " << expQMu << std::endl;
   
   // save CL and CLs for later access:
-  calculatedValues["CL_exp_n2"] = expCLn2;
-  calculatedValues["CL_exp_n1"] = expCLn1;
-  calculatedValues["CL_exp"] = expCL;
-  calculatedValues["CL_exp_p1"] = expCLp1;
-  calculatedValues["CL_exp_p2"] = expCLp2;
-  calculatedValues["CL_obs"] = obsCL;
+  calculatedValues[getKey("CL",0,-2)] = expCLn2;
+  calculatedValues[getKey("CL",0,-1)] = expCLn1;
+  calculatedValues[getKey("CL",0,0)] = expCL;
+  calculatedValues[getKey("CL",0,1)] = expCLp1;
+  calculatedValues[getKey("CL",0,2)] = expCLp2;
+  calculatedValues[getKey("CL",1,0)] = obsCL;
   
-  calculatedValues["CLs_exp_n2"] = getCLsFromCL(expCLn2);
-  calculatedValues["CLs_exp_n1"] = getCLsFromCL(expCLn1);
-  calculatedValues["CLs_exp"] = getCLsFromCL(expCL);
-  calculatedValues["CLs_exp_p1"] = getCLsFromCL(expCLp1);
-  calculatedValues["CLs_exp_p2"] = getCLsFromCL(expCLp2);
-  calculatedValues["CLs_obs"] = getCLsFromCL(obsCL);
+  calculatedValues[getKey("CLs",0,-2)] = getCLsFromCL(expCLn2);
+  calculatedValues[getKey("CLs",0,-1)] = getCLsFromCL(expCLn1);
+  calculatedValues[getKey("CLs",0,0)] = getCLsFromCL(expCL);
+  calculatedValues[getKey("CLs",0,1)] = getCLsFromCL(expCLp1);
+  calculatedValues[getKey("CLs",0,2)] = getCLsFromCL(expCLp2);
+  calculatedValues[getKey("CLs",1,0)] = getCLsFromCL(obsCL);
 }
 
 /**
@@ -191,8 +181,8 @@ void DMTestStat::calculateNewP0() {
   }
   
   // Save p0 for later access:
-  calculatedValues["p0_obs"] = obsP0;
-  calculatedValues["p0_exp"] = expP0;
+  calculatedValues[getKey("p0",1,0)] = obsP0;
+  calculatedValues[getKey("p0",0,0)] = expP0;
 }
 
 /**
@@ -224,15 +214,12 @@ double DMTestStat::getCLFromCLs(double CLs) {
 /**
    Get the CLs value using qMu and the type.
    @param qMu - the value of the test statistic.
-   @param type - "exp_n2,... exp_p2, "exp", "obs"
+   @param observed - true of observed stat., false if expected result.
+   @param N - the sigma value (-2,-1,0,1,2). Use 0 for median.
    @returns - the CLs value.
 */
-double DMTestStat::getCLsFromQMu(double qMu, TString type) {
-  double N = 0.0;// default for exp or obs
-  if (type.Contains("exp_n2")) N = -2.0;
-  else if (type.Contains("exp_n1")) N = -1.0;
-  else if (type.Contains("exp_p1")) N = 1.0;
-  else if (type.Contains("exp_p2")) N = 2.0;
+double DMTestStat::getCLsFromQMu(double qMu, bool observed, double N) {
+  // N = 0 for exp and obs
   double pMu = getPMuFromQMu(qMu);
   double pB = getPbfromN(N);
   double CLs = pMu / (1.0 - pB);
@@ -242,11 +229,12 @@ double DMTestStat::getCLsFromQMu(double qMu, TString type) {
 /**
    Get the CL value using qMu and the type.
    @param qMu - the value of the test statistic.
-   @param type - "exp_n2,... exp_p2, "exp", "obs"
+   @param observed - true of observed stat., false if expected result.
+   @param N - the sigma value (-2,-1,0,1,2). Use 0 for median.
    @returns - the CLs value.
 */
-double DMTestStat::getCLFromQMu(double qMu, TString type) {
-  double CL = getCLFromCLs(getCLsFromQMu(qMu, type));
+double DMTestStat::getCLFromQMu(double qMu, bool observed, double N) {
+  double CL = getCLFromCLs(getCLsFromQMu(qMu, observed, N));
   return CL;
 }
 
@@ -274,12 +262,8 @@ double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuHat, double muHat) {
 double DMTestStat::getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
 				 double muTest) {
   double qMu = 0;
-  if (muHat < muTest) {
-    qMu = 2 * (nllMu - nllMuHat);
-  }
-  else {
-    qMu = 0.0;
-  }
+  if (muHat < muTest) qMu = 2 * (nllMu - nllMuHat);
+  else qMu = 0.0;
   return qMu;
 }
 
@@ -394,6 +378,21 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
 }
 
 /**
+   Get the key for the value map.
+*/
+void DMTestStat::getKey(TString testStat, bool observed, int N) {
+  TString currKey = testStat;
+  
+  if (observed) currKey += "_obs";
+  else currKey += "_exp";
+  
+  if (N > 0) currKey += Form("_p%d",N);
+  else if (N < 0) currKey += Form("_n%d",N);
+  
+  return currKey;
+}
+
+/**
    Load the statistics files (p0 and CL) that were previously generated. If none
    are found, then create from scratch automatically.
 */
@@ -420,8 +419,8 @@ void DMTestStat::loadStatsFromFile() {
     textP0 >> inName >> inExpP0 >> inObsP0;
     textP0.close();
   }
-  calculatedValues["p0_obs"] = inObsP0;
-  calculatedValues["p0_exp"] = inExpP0;
+  calculatedValues[getKey("p0",1,0)] = inObsP0;
+  calculatedValues[getKey("p0",0,0)] = inExpP0;
   
   // Read CL values:
   double inObsCL, inExpCLn2, inExpCLn1, inExpCL, inExpCLp1, inExpCLp2;
@@ -432,18 +431,19 @@ void DMTestStat::loadStatsFromFile() {
   textCL.close();
   
   // save CL and CLs for later access:
-  calculatedValues["CL_exp_n2"] = inExpCLn2;
-  calculatedValues["CL_exp_n1"] = inExpCLn1;
-  calculatedValues["CL_exp"] = inExpCL;
-  calculatedValues["CL_exp_p1"] = inExpCLp1;
-  calculatedValues["CL_exp_p2"] = inExpCLp2;
-  calculatedValues["CL_obs"] = inObsCL;
-  calculatedValues["CLs_exp_n2"] = getCLsFromCL(inExpCLn2);
-  calculatedValues["CLs_exp_n1"] = getCLsFromCL(inExpCLn1);
-  calculatedValues["CLs_exp"] = getCLsFromCL(inExpCL);
-  calculatedValues["CLs_exp_p1"] = getCLsFromCL(inExpCLp1);
-  calculatedValues["CLs_exp_p2"] = getCLsFromCL(inExpCLp2);
-  calculatedValues["CLs_obs"] = getCLsFromCL(inObsCL);
+  calculatedValues[getKey("CL",0,-2)] = inExpCLn2;
+  calculatedValues[getKey("CL",0,-1)] = inExpCLn1;
+  calculatedValues[getKey("CL",0,0)] = inExpCL;
+  calculatedValues[getKey("CL",0,1)] = inExpCLp1;
+  calculatedValues[getKey("CL",0,2)] = inExpCLp2;
+  calculatedValues[getKey("CL",1,0)] = inObsCL;
+  
+  calculatedValues[getKey("CLs",0,-2)] = getCLsFromCL(inExpCLn2);
+  calculatedValues[getKey("CLs",0,-1)] = getCLsFromCL(inExpCLn1);
+  calculatedValues[getKey("CLs",0,0)] = getCLsFromCL(inExpCL);
+  calculatedValues[getKey("CLs",0,1)] = getCLsFromCL(inExpCLp1);
+  calculatedValues[getKey("CLs",0,2)] = getCLsFromCL(inExpCLp2);
+  calculatedValues[getKey("CLs",1,0)] = getCLsFromCL(inObsCL);
 }
 
 /** 
@@ -454,10 +454,9 @@ void DMTestStat::loadStatsFromFile() {
 bool DMTestStat::mapValueExists(TString mapKey) {
 
   // Checks if there is a key corresponding to mapKey in the map: 
-  bool exists = (calculatedValues.find(Form("%s_0",mapKey.Data()))
-		 == calculatedValues.end());
-  if (!exists) {
+  bool nonExistent = (calculatedValues.find(mapKey) == calculatedValues.end());
+  if (nonExistent) {
     std::cout << "DMTestStat: key " << mapKey << " not defined!" << std::endl;
   }
-  return exists;
+  return !nonExistent;
 }

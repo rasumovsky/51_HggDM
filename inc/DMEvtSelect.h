@@ -68,11 +68,11 @@ class DMEvtSelect
   // Member objects:
   DMTree *evtTree;
   std::vector<TString> cutList;
+
   std::map<TString,int> evtCountPass;
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;
   std::map<TString,double> evtCountTotWt;
-  //bool recursiveCall;
   
   std::map<TString,int> cateSchemesAndSizes;
   std::map<TString,int> cateCount;

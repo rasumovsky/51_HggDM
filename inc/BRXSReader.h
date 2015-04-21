@@ -31,7 +31,7 @@ class BRXSReader
 
   // Accessors:
   float getSMBR(double mass, TString decay, TString value);
-  float getDMXSBR(int massIntermediate, int massFermion, TString type,
+  float getDMXSBR(int massMediator, int massFermion, TString type,
 		  TString value);
   float getSMXS(double mass, TString production, TString value);
   void printSMBR(double mass, TString decay);
@@ -40,18 +40,24 @@ class BRXSReader
  private:
   
   // Private accessors & mutators:
-  TString getDMMapKey(int massIntermediate, int massFermion, TString type,
+  TString getDMMapKey(int massMediator, int massFermion, TString type,
 		      TString value);
   TString getSMMapKey(double mass, TString type, TString value);
   bool hasKey(TString key, TString mapType);
   void loadSMBR(TString decayClass);
   void loadSMXS(TString production);
   void loadDMXS();
+  double getNearbySMMasses(double mass, TString mapType);
+  double getInterpolatedSMValue(double mass, TString mapType, TString process,
+				TString value);
   
   // Member objects:
   TString directory;
   std::map<TString,float> valuesXS;
   std::map<TString,float> valuesBR;
+  
+  std::vector<double> massesHiggsXS;
+  std::vector<double> massesHiggsBR;
   
 };
 

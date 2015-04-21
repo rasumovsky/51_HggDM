@@ -37,8 +37,8 @@ class DMTestStat {
   bool fitsAllConverged();
   double getCLsFromCL(double CL);
   double getCLFromCLs(double CLs);
-  double getCLsFromQMu(double qMu, TString type);
-  double getCLFromQMu(double qMu, TString type);
+  double getCLsFromQMu(double qMu, bool observed, double N);
+  double getCLFromQMu(double qMu, bool observed, double N);
   double getQ0FromNLL(double nllMu0, double nllMuHat, double muHat);
   double getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
 		       double muTest);
@@ -51,6 +51,8 @@ class DMTestStat {
 
   double getFitNLL(TString datasetName, double muVal, bool fixMu,
 		   double &profiledMu);
+  TString getKey(TString testStat, bool observed, int N);
+  
   void loadStatsFromFile();
   bool mapValueExists(TString mapKey);
   

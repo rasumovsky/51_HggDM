@@ -236,38 +236,28 @@ void DMMassPoints::createNewMassPoints() {
 	    << " entries." << std::endl;
   for (Long64_t event = 0; event < entries; event++) {
     dmt->fChain->GetEntry(event);
-    
-    std::cout << "C1" << std::endl;
-    
+        
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0;
     if (isWeighted) {
       evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
-      
-      std::cout << "C1.1 " << evtWeight << std::endl;
-      
+            
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (isSMSample(sampleName)) {
-	std::cout << "c1.2 " << evtWeight << std::endl;
 	evtWeight *= (analysisLuminosity *
 		      (brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
-		      (brxs->getSMXS(higgsMass, sampleName, "BR")));
-	std::cout << "c1.2 " << evtWeight << std::endl;
+		      (brxs->getSMXS(higgsMass, sampleName, "XS")));
       }
       // Dark matter XSBR includes cross-section and branching ratio.
       else if (isDMSample(sampleName)) {
-	std::cout << "c1.3 " << evtWeight << std::endl;
 	evtWeight *= (analysisLuminosity *
 		      (brxs->getDMXSBR(getMediatorMass(sampleName),
 				       getDarkMatterMass(sampleName),
 				       getMediatorName(sampleName),
 				       "XS")));
-	std::cout << "c1.3 " << evtWeight << std::endl;
       }
     }
     
-    std::cout << "C2" << std::endl;
-
     // Check the cutflow (loose for background sample):
     if (sampleName.EqualTo("gg_gjet") && 
 	!selector->passesCut("looseCuts",evtWeight)) {
@@ -277,8 +267,6 @@ void DMMassPoints::createNewMassPoints() {
       continue;
     }
     
-    std::cout << "C3" << std::endl;
-
     // Save the categories:
     int currCate = selector->getCategoryNumber(cateScheme);
     if (currCate > 0) {
@@ -296,7 +284,6 @@ void DMMassPoints::createNewMassPoints() {
 	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << std::endl;
       }
     }
-    std::cout << "C4" << std::endl;
   }
   std::cout << "  DMMassPoints: End of loop over input DMTree." << std::endl;
   

@@ -55,16 +55,16 @@ namespace DMAnalysis {
   ////////////////////////////////////////
   
   // Location of global input files:
-  const TString masterInput = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs";
+  const TString masterInput = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs";
   // Location of output directory:
-  const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HDM/FullAnalysis";
+  const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HggDM/FullAnalysis";
   
   // Location of this software package:
   const TString packageLocation = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
 
 
-  const TString fileNamePESValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Systematics/PES/table_PES.txt";
-  const TString fileNamePERValues = "/afs/cern.ch/work/a/ahard/files_HDM/GlobalInputs/Systematics/PER/table_PER.txt";
+  const TString fileNamePESValues = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs/Systematics/PES/table_PES.txt";
+  const TString fileNamePERValues = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs/Systematics/PER/table_PER.txt";
   
   ////////////////////////////////////////
   //        FOR JOB SUBMISSION          //

@@ -208,12 +208,12 @@ void DMTree::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   EventInfo = 0;
+   //EventInfo = 0;
    EventInfoAuxDyn_streamTagNames = 0;
    EventInfoAuxDyn_streamTagTypes = 0;
    EventInfoAuxDyn_streamTagObeysLumiblock = 0;
    EventInfoAuxDyn_subEventTime = 0;
-   EventInfoAuxDyn_subEventLink = 0;
+   //EventInfoAuxDyn_subEventLink = 0;
    EventInfoAuxDyn_subEventType = 0;
    EventInfoAuxDyn_mcEventWeights = 0;
    EventInfoAuxDyn_detDescrTags = 0;
@@ -223,7 +223,7 @@ void DMTree::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("EventInfo", &EventInfo, &b_EventInfo);
+   //fChain->SetBranchAddress("EventInfo", &EventInfo, &b_EventInfo);
    fChain->SetBranchAddress("EventInfoAuxDyn.eventTypeBitmask", &EventInfoAuxDyn_eventTypeBitmask, &b_EventInfoAuxDyn_eventTypeBitmask);
    fChain->SetBranchAddress("EventInfoAuxDyn.streamTagNames", &EventInfoAuxDyn_streamTagNames, &b_EventInfoAuxDyn_streamTagNames);
    fChain->SetBranchAddress("EventInfoAuxDyn.statusElement", &EventInfoAuxDyn_statusElement, &b_EventInfoAuxDyn_statusElement);
@@ -233,7 +233,7 @@ void DMTree::Init(TTree *tree)
    fChain->SetBranchAddress("EventInfoAuxDyn.level1TriggerType", &EventInfoAuxDyn_level1TriggerType, &b_EventInfoAuxDyn_level1TriggerType);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventTime", &EventInfoAuxDyn_subEventTime, &b_EventInfoAuxDyn_subEventTime);
    fChain->SetBranchAddress("EventInfoAuxDyn.actualInteractionsPerCrossing", &EventInfoAuxDyn_actualInteractionsPerCrossing, &b_EventInfoAuxDyn_actualInteractionsPerCrossing);
-   fChain->SetBranchAddress("EventInfoAuxDyn.subEventLink", &EventInfoAuxDyn_subEventLink, &b_EventInfoAuxDyn_subEventLink);
+   //fChain->SetBranchAddress("EventInfoAuxDyn.subEventLink", &EventInfoAuxDyn_subEventLink, &b_EventInfoAuxDyn_subEventLink);
    fChain->SetBranchAddress("EventInfoAuxDyn.averageInteractionsPerCrossing", &EventInfoAuxDyn_averageInteractionsPerCrossing, &b_EventInfoAuxDyn_averageInteractionsPerCrossing);
    fChain->SetBranchAddress("EventInfoAuxDyn.subEventType", &EventInfoAuxDyn_subEventType, &b_EventInfoAuxDyn_subEventType);
    fChain->SetBranchAddress("EventInfoAuxDyn.pixelFlags", &EventInfoAuxDyn_pixelFlags, &b_EventInfoAuxDyn_pixelFlags);

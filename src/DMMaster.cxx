@@ -53,7 +53,7 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("%s/%s_DMWorkspace", clusterFileLocationData(),
+  TString dir = Form("%s/%s_DMWorkspace", clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());

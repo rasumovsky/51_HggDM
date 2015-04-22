@@ -26,7 +26,7 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
 
    // Declaration of leaf types
-   xAOD::EventInfo_v1 *EventInfo;
+   //xAOD::EventInfo_v1 *EventInfo;
    UInt_t          EventInfoAuxDyn_eventTypeBitmask;
    vector<string>  *EventInfoAuxDyn_streamTagNames;
    UInt_t          EventInfoAuxDyn_statusElement;
@@ -36,7 +36,7 @@ public :
    UShort_t        EventInfoAuxDyn_level1TriggerType;
    vector<unsigned short> *EventInfoAuxDyn_subEventTime;
    Float_t         EventInfoAuxDyn_actualInteractionsPerCrossing;
-   vector<ElementLink<DataVector<xAOD::EventInfo_v1> > > *EventInfoAuxDyn_subEventLink;
+   //vector<ElementLink<DataVector<xAOD::EventInfo_v1> > > *EventInfoAuxDyn_subEventLink;
    Float_t         EventInfoAuxDyn_averageInteractionsPerCrossing;
    vector<unsigned short> *EventInfoAuxDyn_subEventType;
    UInt_t          EventInfoAuxDyn_pixelFlags;

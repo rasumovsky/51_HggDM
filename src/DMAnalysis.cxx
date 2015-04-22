@@ -21,11 +21,11 @@
 */
 TString DMAnalysis::nameToFileList(TString name) {
   TString result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_%s.txt",
-			masterInput.Data(), fileListDir.Data(), name);
+			masterInput.Data(), fileListDir.Data(), name.Data());
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
   if (name.EqualTo("bbH")) {
     result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_ggH.txt",
-		  masterInput.Data(), fileListDir.Data(), name);
+		  masterInput.Data(), fileListDir.Data());
   }
   return result;
 }

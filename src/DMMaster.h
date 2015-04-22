@@ -21,3 +21,5 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 		     TString exeCateScheme);
 
 void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal);
+
+void submitMLViaBsub(TString exeJobName, TString exeOptions, TString exeSignal);

@@ -53,7 +53,7 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s_DMWorkspace",
+  TString dir = Form("%s/%s_DMWorkspace", clusterFileLocationData(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -97,7 +97,7 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("/afs/cern.ch/work/a/ahard/jobfiles/%s_DMTestStat",
+  TString dir = Form("%s/%s_DMTestStat", clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -122,13 +122,59 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 			     exeDMSignal.Data());
   
   // Here you define the arguments for the job script:
-  TString nameJobScript = Form("%s/%s %s %s %s %s %s", packageLocation.Data(),
-			       jobScriptTestStat.Data(), exeJobName.Data(),
-			       inputFile.Data(), exeTestStat.Data(),
-			       exeDMSignal.Data(), exeOption.Data());
+  TString nameJobScript = Form("%s/jobFileTestStat.sh %s %s %s %s %s", 
+			       exe.Data(), exeJobName.Data(), inputFile.Data(),
+			       exeTestStat.Data(), exeDMSignal.Data(),
+			       exeOption.Data());
   
   // submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(),
+	      nameErrFile.Data(), nameJobScript.Data()));
+}
+
+
+/**
+   Submits the mu limit jobs to the lxbatch server. 
+   @param exeJobName - the job name.
+   @param exeOption - the job options for the executable.
+   @param exeDMSignal - the signal to process in the executable.
+*/
+void SubmitMuLimitViaBsub(TString exeJobName, TString exeOption,
+			  TString exeDMSignal) {
+  
+  // Make directories for job info:
+  TString dir = Form("%s/%s_DMMuLimit", clusterFileLocation.Data(),
+		     exeJobName.Data());
+  TString out = Form("%s/out", dir.Data());
+  TString err = Form("%s/err", dir.Data());
+  TString exe = Form("%s/exe", dir.Data());
+  system(Form("mkdir -vp %s", out.Data()));
+  system(Form("mkdir -vp %s", err.Data()));
+  system(Form("mkdir -vp %s", exe.Data()));
+  
+  // create .tar file with everything:
+  system(Form("tar zcf Cocoon.tar bin/%s", exeMuLimit.Data()));
+  system(Form("chmod +x %s", jobScriptMuLimit.Data()));
+  system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
+	      masterOutput.Data(), exeJobName.Data(), exeDMSignal.Data()));
+  system(Form("cp -f %s/%s %s/jobFileMuLimit.sh", packageLocation.Data(), 
+	      jobScriptMuLimit.Data(), exe.Data()));
+  system(Form("mv Cocoon.tar %s", exe.Data()));
+ 
+  TString inputFile = Form("%s/Cocoon.tar", exe.Data());
+  TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(), exeJobName.Data(),
+			     exeDMSignal.Data());
+  TString nameErrFile = Form("%s/err/%s_%s.err", dir.Data(), exeJobName.Data(),
+			     exeDMSignal.Data());
+  
+  // Here you define the arguments for the job script:
+  TString nameJobScript = Form("%s/jobFileMuLimit.sh %s %s %s %s %s", 
+			       exe.Data(), exeJobName.Data(), inputFile.Data(),
+			       exeMuLimit.Data(), exeDMSignal.Data(),
+			       exeOption.Data());
+  
+  // submit the job:
+  system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
 	      nameErrFile.Data(), nameJobScript.Data()));
 }
 

@@ -60,6 +60,9 @@ namespace DMAnalysis {
   // Location of this software package:
   const TString packageLocation = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
   
+  // Holding location of cluster job files:
+  const TString clusterFileLocation = "/afs/cern.ch/work/a/ahard/jobfiles";
+  
   // Sub-directory for file lists:
   TString fileListDir = "Apr21_15";
   

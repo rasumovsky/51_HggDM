@@ -343,8 +343,8 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Cut on the calo/track isolation of the photons.
   else if (cutName.EqualTo("photonIso")) {
-    passes = (EventInfoAuxDyn_y1_track_iso < 2.6 && 
-	      EventInfoAuxDyn_y2_track_iso < 2.6);
+    passes = (evtTree->EventInfoAuxDyn_y1_track_iso < 2.6 && 
+	      evtTree->EventInfoAuxDyn_y2_track_iso < 2.6);
   }
   // Cut on the ID variable of the photons.
   else if (cutName.EqualTo("photonID")) {

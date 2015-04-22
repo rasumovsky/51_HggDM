@@ -32,16 +32,17 @@
    Initializes the tool and loads XS, BR values from files. The input Tree is 
    set to NULL, and would have to be set later if used. 
 */
-DMEvtSelect::DMEvtSelect() {
-  DMEvtSelect(NULL);
-}
+//DMEvtSelect::DMEvtSelect() {
+//DMEvtSelect(NULL);
+//}
 
 /**
    Initializes the tool and loads XS, BR values from files. 
    @param newTree - the TTree which contains the sample.
 */
 DMEvtSelect::DMEvtSelect(DMTree* newTree) {
-    
+  std::cout << "DMEvtSelect: Initializing DMEvtSelect" << std::endl;
+  
   // ADD CUT HERE
   cutList.clear();
   cutList.push_back("photonPt");
@@ -220,12 +221,10 @@ void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
     outFile << "\t" << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
-	outFile << cateCount[Form("%s_%d",(it->first).Data(),it->second)]
-		<< " ";
+	outFile << cateCount[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
       else {
-	outFile << cateCountWt[Form("%s_%d",(it->first).Data(),it->second)]
-		<< " ";
+	outFile << cateCountWt[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
     }
     outFile << std::endl;
@@ -285,23 +284,22 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   // ADD CATE HERE:
   int currCate = -1;
   // Inclusive categorization - only 1 category.
-  if (cateScheme.Contains("inclusive")) {
+  if (cateScheme.EqualTo("inclusive")) {
     return 0;
   }
   // Split MET - low and high MET categories.
-  else if (cateScheme.Contains("splitETMiss")) {
+  else if (cateScheme.EqualTo("splitETMiss")) {
     if (evtTree->EventInfoAuxDyn_metref_final > 140.0) currCate = 1;
     else currCate = 0;
   }
+  else {
+    std::cout << "DMEvtSelect: Categorization not defined: "
+	      << cateScheme << std::endl;
+  }
   
-  // Add to category counters:
+    // Add to category counters:
   cateCount[Form("%s_%d",cateScheme.Data(),currCate)]++;
   cateCountWt[Form("%s_%d",cateScheme.Data(),currCate)] += weight;
-  
-  // Print error message before returning bad category value.
-  if (currCate == -1) { 
-    std::cout << "DMEvtSelect: Error! category not defined!" << std::endl;
-  }
   return currCate;
 }
 
@@ -437,6 +435,12 @@ bool DMEvtSelect::cateExists(TString cateScheme) {
   if (nonExistent) {
     std::cout << "DMEvtSelect: Category " << cateScheme << " not defined!"
 	      << std::endl;
+    
+    std::cout << "Printing cateCount and contents for reference." << std::endl;
+    std::map<TString,int>::iterator it;
+    for (it = cateCount.begin(); it != cateCount.end(); it++) {
+      std::cout << "\t" << it->first << "\t" << it->second << std::endl;
+    }
   }
   return !nonExistent;
 }

@@ -43,18 +43,14 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 */
 DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 		       TString newOptions, RooRealVar *newObservable) {
-  
-  // Load the selector to get category information.
-  selector = new DMEvtSelect();
-  nCategories = selector->getNCategories(newCateScheme);
-  
+    
   // Define a new RooCategory for the dataset, since none was provided:
   RooCategory *newCategories = new RooCategory(Form("categories_%s",
 						    newCateScheme.Data()),
 					       Form("categories_%s",
 						    newCateScheme.Data()));
   // Loop over categories to define categories:
-  for (int i_c = 0; i_c < nCategories; i_c++) {
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(newCateScheme); i_c++) {
     newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
     //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
   }
@@ -77,7 +73,10 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 		       TString newOptions, RooRealVar *newObservable,
 		       RooCategory *newCategories) {
-  std::cout << std::endl << "DMSigParam::Initializing..." << std::endl;
+  std::cout << "\nDMSigParam::Initializing..."
+	    << "\n\tjobName = " << newJobName
+	    << "\n\tcateScheme = " << newCateScheme 
+	    << "\n\toptions = " << newOptions << std::endl;
   
   // Assign member variables:
   jobName = newJobName;
@@ -87,32 +86,29 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
   // Assign the observable and categorization based on inputs:
   setMassObservable(newObservable);
   setRooCategory(newCategories);
-  
-  // Get the number of analysis categories if not already done:
-  if (!selector) {
-    selector = new DMEvtSelect();
-    nCategories = selector->getNCategories(newCateScheme);
-  }
-  
+    
   // Assign output directory, and make sure it exists:
-  outputDir = Form("%s/%s/SigParam",masterOutput.Data(),jobName.Data());
-  system(Form("mkdir -vp %s",outputDir.Data()));
-  system(Form("mkdir -vp %s/Plots",outputDir.Data())); 
-  system(Form("mkdir -vp %s/all",outputDir.Data()));
-
+  outputDir = Form("%s/%s/DMSigParam", masterOutput.Data(), jobName.Data());
+  system(Form("mkdir -vp %s", outputDir.Data()));
+  system(Form("mkdir -vp %s/Plots", outputDir.Data())); 
+  
   // Load the SM signal parameterization from file or start from scratch:
   for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
     system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigSMModes[i_SM]).Data()));
     createSigParam(sigSMModes[i_SM], (!options.Contains("FromFile")));
   }
-  // Also create the total SM parameterization:
-  createSigParam("SM", (!options.Contains("FromFile")));
   
   // Load the DM signal parameterization from file or start from scratch:
   for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
     system(Form("mkdir -vp %s/%s",outputDir.Data(),(sigDMModes[i_DM]).Data()));
     createSigParam(sigDMModes[i_DM], (!options.Contains("FromFile")));
   }
+  
+  // Also create the total SM parameterization:
+  system(Form("mkdir -vp %s/SM",outputDir.Data()));
+  createSigParam("SM", (!options.Contains("FromFile")));
+  
+  std::cout << "DMSigParam: Successfully initialized!" << std::endl;
   return;
 }
 
@@ -235,7 +231,7 @@ double DMSigParam::getCateSigYield(int cateIndex, TString process) {
 */
 double DMSigParam::getCombSigYield(TString process) {
   double sum = 0;
-  for (int i_c = 0; i_c < nCategories; i_c++) {
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
     sum += getCateSigYield(i_c, process);
   }
   return sum;
@@ -320,7 +316,12 @@ void DMSigParam::setRooCategory(RooCategory *newCategories) {
    @returns - void.
 */
 void DMSigParam::createSigParam(TString process, bool makeNew) {
-  std::cout << "DMSigParam: creating new signal fit from tree." << std::endl;
+  if (makeNew) {
+    std::cout << "DMSigParam: Make new " << process << " param." << std::endl;
+  }
+  else {
+    std::cout << "DMSigParam: Load " << process << " param." << std::endl;
+  }
   
   // Create output file or load input file.
   ofstream outputFitFile;
@@ -368,7 +369,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   }
   
   // Loop over categories and process modes:
-  for (int i_c = 0; i_c < nCategories; i_c++) {
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
     
     // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
     // Options are: "meanCB", "sigmaCB", "meanGA",
@@ -419,6 +420,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     // If making from scratch, use DMMassPoints to construct the RooDataSet:
     if (makeNew) {
       RooDataSet *currData = NULL;
+      // For the SM dataset, add up datasets for all production modes:
       if (process.EqualTo("SM")) {
 	for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
 	  if (i_SM == 0) {
@@ -426,16 +428,18 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 	  }
 	  else {
 	    RooDataSet *tempData = mps[i_SM]->getCateDataSet(i_c);
-	    if (!currData->merge(tempData)) {
-	      std::cout << "Error merging SM datasets" << std::endl;
-	    }
+	    currData->append(*tempData);
 	  }
 	}
       }
+      // Otherwise just load the process-specific dataset:
       else {
 	currData = mp->getCateDataSet(i_c);
       }
-
+      
+      std::cout << "DMSigParam: Starting signal fit on dataset: " << std::endl;
+      currData->Print("v");
+      
       // Store the signal yields in memory:
       vectorYield.push_back(currData->sumEntries());
       

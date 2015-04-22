@@ -34,7 +34,7 @@ class DMEvtSelect
   
  public:
   
-  DMEvtSelect();
+  //DMEvtSelect();
   DMEvtSelect(DMTree *newTree);
   virtual ~DMEvtSelect() {};
   
@@ -68,7 +68,7 @@ class DMEvtSelect
   // Member objects:
   DMTree *evtTree;
   std::vector<TString> cutList;
-
+  
   std::map<TString,int> evtCountPass;
   std::map<TString,double> evtCountPassWt;
   std::map<TString,int> evtCountTot;

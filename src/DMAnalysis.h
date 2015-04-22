@@ -87,6 +87,7 @@ namespace DMAnalysis {
   //           MEMBER FUNCTIONS         //
   ////////////////////////////////////////
   
+  int getNumCategories(TString cateScheme);
   TString nameToFileList(TString name);
   TString cateToBkgFunc(TString category);
   TString getMediatorName(TString modeName);

@@ -30,10 +30,10 @@
 #include "CommonFunc.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
-#include "DMEvtSelect.h"
-#include "DMAnalysis.h"
-#include "DMTree.h"
 #include "BRXSReader.h"
+#include "DMAnalysis.h"
+#include "DMEvtSelect.h"
+#include "DMTree.h"
 
 class DMMassPoints {
   

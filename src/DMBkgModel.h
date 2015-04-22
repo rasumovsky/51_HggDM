@@ -30,7 +30,6 @@
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "DMAnalysis.h"
-#include "DMEvtSelect.h"
 #include "RooBernsteinM.h"
 
 using namespace DMAnalysis;
@@ -73,10 +72,8 @@ class DMBkgModel
   TString cateScheme;
   TString options;
   
-  int nCategories;
   RooRealVar *m_yy;
   RooCategory *categories;
-  DMEvtSelect *selector;
   
 };
 

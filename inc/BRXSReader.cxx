@@ -374,7 +374,7 @@ std::pair<double,double> BRXSReader::getNearbySMMasses(double testMass,
   else if (mapType.EqualTo("BR")) currMassList = massesHiggsBR;
   else std::cout << "\tBRXSReader: ERROR! Improper mapType" << std::endl;
   // Loop over defined XS or BR masses:
-  for (int i = 0; i < currMassList.size(); i++) {
+  for (int i = 0; i < (int)currMassList.size(); i++) {
     
     // Make result.first the last mass point below testMass:
     if ((currMassList[i] <= testMass) && 

@@ -53,18 +53,14 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 			   TString newCateScheme, TString newOptions,
 			   RooRealVar *newObservable) {
   
-  // Load the selector to get category information.
-  DMEvtSelect *selector = new DMEvtSelect();
-  
   // Define a new RooCategory for the dataset, since none was provided:
   RooCategory *newCategories = new RooCategory(Form("categories_%s",
 						    newCateScheme.Data()),
 					       Form("categories_%s",
 						    newCateScheme.Data()));
   // Loop over categories to define categories:
-  for (int i_c = 0; i_c < selector->getNCategories(newCateScheme); i_c++) {
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(newCateScheme); i_c++) {
     newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
   }
   
   // Then call the full initializer:
@@ -151,8 +147,8 @@ RooRealVar* DMMassPoints::getMassObservable() {
    @returns The full path of the mass points text file.
 */
 TString DMMassPoints::getMassPointsFileName(int cateIndex) {
-  TString name = Form("%s/%s_%d.txt",outputDir.Data(),cateScheme.Data(),
-		      cateIndex);
+  TString name = Form("%s/%s_%d_%s.txt", outputDir.Data(), cateScheme.Data(),
+		      cateIndex, sampleName.Data());
   return name;
 }
 
@@ -210,25 +206,25 @@ void DMMassPoints::createNewMassPoints() {
   ofstream massFiles[20];
   
   // Loop over categories to define datasets and mass files:
-  std::cout << "  DMMassPoints: Define datasets & files." << std::endl;
-  for (int i_c = 0; i_c < selector->getNCategories(cateScheme); i_c++) {
+  std::cout << "DMMassPoints: Define datasets & files." << std::endl;
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
     
     massFiles[i_c].open(getMassPointsFileName(i_c));
     
     if (isWeighted) {
       args->add(wt);
-      cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
-				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
-				     RooArgSet(*m_yy,wt), 
+      cateData[i_c] = new RooDataSet(Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
+				     Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
+				     RooArgSet(*m_yy, wt), 
 				     RooFit::WeightVar(wt)); 
     }
     else {
-      cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
-				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
+      cateData[i_c] = new RooDataSet(Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
+				     Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
 				     *m_yy);
     }
     dataMap[Form("%s_%d",cateScheme.Data(),i_c)] = cateData[i_c];
@@ -270,8 +266,8 @@ void DMMassPoints::createNewMassPoints() {
     }
     
     // Save the categories:
-    int currCate = selector->getCategoryNumber(cateScheme);
-    if (currCate > 0) {
+    int currCate = selector->getCategoryNumber(cateScheme, evtWeight);
+    if (currCate >= 0) {
       
       m_yy->setVal(dmt->EventInfoAuxDyn_m_yy);
       
@@ -287,7 +283,7 @@ void DMMassPoints::createNewMassPoints() {
       }
     }
   }
-  std::cout << "  DMMassPoints: End of loop over input DMTree." << std::endl;
+  std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
   
   // Print the cutflow and category yields (weighted if MC):
   selector->printCutflow(isWeighted);
@@ -300,13 +296,13 @@ void DMMassPoints::createNewMassPoints() {
 				    sampleName.Data()), isWeighted);
   
   // Close output mass point files.
-  for (int i_f = 0; i_f < selector->getNCategories(cateScheme); i_f++) {
+  for (int i_f = 0; i_f < DMAnalysis::getNumCategories(cateScheme); i_f++) {
     massFiles[i_f].close();
   }
   
   // Create combined data set from individual categories:
-  combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
-			    Form("combData_%s",cateScheme.Data()),
+  combData = new RooDataSet(Form("combData_%s", cateScheme.Data()),
+			    Form("combData_%s", cateScheme.Data()),
 			    *args, RooFit::Index(*categories),
 			    RooFit::Import(dataMap),
 			    RooFit::WeightVar(wt));
@@ -320,44 +316,41 @@ void DMMassPoints::createNewMassPoints() {
    @returns void.
 */
 void DMMassPoints::loadMassPointsFromFile() {
-  
   std::cout << "DMMassPoints: loading mass points from .txt file." << std::endl;
-  
-  // Tool to implement the cutflow, categorization, and counting. 
-  DMEvtSelect *selector = new DMEvtSelect();
-  
-  std::map<string,RooDataSet*> dataMap;
-  dataMap.clear();
-  
+    
+  std::map<string,RooDataSet*> dataMap; dataMap.clear();
   RooArgSet *args = new RooArgSet();
   RooRealVar wt("wt","wt",1);
   args->add(*m_yy);
   
   // Loop over categories to define datasets and mass files:
-  for (int i_c = 0; i_c < selector->getNCategories(cateScheme); i_c++) {
+  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
     
     if (isWeighted) {
       args->add(wt);
-      cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
-				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
+      cateData[i_c] = new RooDataSet(Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
+				     Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
 				     RooArgSet(*m_yy,wt), 
 				     RooFit::WeightVar(wt)); 
     }
     else {
-      cateData[i_c] = new RooDataSet(Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
-				     Form("%s_%s_%d",sampleName.Data(),
-					  cateScheme.Data(),i_c),
+      cateData[i_c] = new RooDataSet(Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
+				     Form("%s_%s_%d", sampleName.Data(),
+					  cateScheme.Data(), i_c),
 				     *m_yy);
     }
         
     double readMass; double readWeight;
     ifstream massFile(getMassPointsFileName(i_c));
+    std::cout << "DMMassPoints: opening " << getMassPointsFileName(i_c)
+	      << std::endl;
+    
     // First check that file exists. If it does not, we need to create inputs.
     if (!massFile) {
-      std::cout << "Error! Cannot load mass points from file." << std::endl;
+      std::cout << "DMMassPoints: Error! Cannot load from file." << std::endl;
       createNewMassPoints();
       return;
     }
@@ -365,7 +358,7 @@ void DMMassPoints::loadMassPointsFromFile() {
       while (massFile >> readMass >> readWeight) {
 	wt.setVal(readWeight);
 	m_yy->setVal(readMass);
-	cateData[i_c]->add(RooArgSet(*m_yy,wt), readWeight);
+	cateData[i_c]->add(RooArgSet(*m_yy, wt), readWeight);
       }
     }
     else {
@@ -375,12 +368,14 @@ void DMMassPoints::loadMassPointsFromFile() {
       }
     }
     // Add the category dataset to the dataset map:
-    dataMap[Form("%s_%d",cateScheme.Data(),i_c)] = cateData[i_c];
+    dataMap[Form("%s_%d", cateScheme.Data(),i_c)] = cateData[i_c];
   }
     
   // Create combined data set from individual categories:
-  combData = new RooDataSet(Form("combData_%s",cateScheme.Data()),
-			    Form("combData_%s",cateScheme.Data()),
+  combData = new RooDataSet(Form("combData_%s", cateScheme.Data()),
+			    Form("combData_%s", cateScheme.Data()),
 			    *args, RooFit::Index(*categories),
 			    RooFit::Import(dataMap), RooFit::WeightVar(wt));
+  std::cout << "DMMassPoints: Finished loading data set: " << std::endl;
+  combData->Print("v");
 }

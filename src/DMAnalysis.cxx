@@ -14,6 +14,25 @@
 
 #include "DMAnalysis.h"
 
+/**
+   Get the number of categories for a particular categorization scheme based
+   on the name. --> NOTE: Be sure that all categories defined here are also 
+   implemented in the DMEvtSelect class.
+   @param cateScheme - the name of the categorization scheme.
+   @returns - the number of categories.
+*/
+int DMAnalysis::getNumCategories(TString cateScheme) {
+  int result = 0;
+  if (cateScheme.EqualTo("inclusive")) result = 1;
+  else if (cateScheme.EqualTo("splitETMiss")) result = 2;
+  else {
+    std::cout << "DMAnalysis: Error! Categorization " << cateScheme 
+	      << " has not been defined!." << std::endl;
+    exit(0);
+  }
+  return result;
+}
+
 /** 
     Convert the sample name to the corresponding file list.
     @param name - the name of the sample.

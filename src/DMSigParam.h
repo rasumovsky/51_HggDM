@@ -76,11 +76,9 @@ class DMSigParam
   TString options;
   TString outputDir;
   
-  int nCategories;
   RooRealVar *m_yy;
   RooCategory *categories;
-  DMEvtSelect *selector;
-
+  
   std::map<TString,std::vector<RooCBShape*> > sigCB;
   std::map<TString,std::vector<RooGaussian*> > sigGA;
   std::map<TString,std::vector<RooAddPdf*> > sigPDF;

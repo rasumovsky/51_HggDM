@@ -40,6 +40,12 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   cateScheme = newCateScheme;
   options = newOptions;
   
+  std::cout << "\nDMWorkspace: Initializing..."
+	    << "\n\tjobName = " << jobName
+	    << "\n\tsignal = " << DMSignal
+	    << "\n\tcateScheme = " << cateScheme 
+	    << "\n\toptions = " << options << std::endl;
+  
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/DMWorkspace",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
@@ -49,13 +55,12 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   
   // Set style for plots:
   SetAtlasStyle();
-  
-  // Instantiate important classes for global info.
-  selector = new DMEvtSelect();// for cate info
-  
+    
   // Make new or load old workspace:
   if (options.Contains("FromFile")) loadWSFromFile();
   else createNewWS();
+  
+  std::cout << "DMWorkspace: Successfully initialized!" << std::endl;
   return;
 }
 
@@ -109,7 +114,7 @@ void DMWorkspace::createNewWS() {
   std::cout << "Workspace parameters:" << std::endl;
   
   // Define and name analysis categories:
-  int nCategories = selector->getNCategories(cateScheme);
+  int nCategories = DMAnalysis::getNumCategories(cateScheme);
   std::cout << "  Number of categories = " << nCategories << std::endl;
   
   vector<TString> cateNames; cateNames.clear();
@@ -120,7 +125,7 @@ void DMWorkspace::createNewWS() {
     cateNamesS.push_back((string)currCateName);
     std::cout << "  \t" << currCateName << std::endl;
   }
-  std::cout << "Luminosity at 13 TeV:" << analysisLuminosity << std::endl;
+  std::cout << "Luminosity at 13 TeV: " << analysisLuminosity << std::endl;
   std::cout << "........................................" << std::endl;
   
   // Read tables of PES and PER and store values:

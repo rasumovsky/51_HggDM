@@ -64,7 +64,6 @@ class DMWorkspace
   // Helper classes:
   PESReader *pes;
   PERReader* per;
-  DMEvtSelect *selector;
   DMSigParam *currSigParam;
   DMBkgModel *currBkgModel;
   DMMassPoints *currMassPoints;

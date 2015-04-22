@@ -244,18 +244,16 @@ void DMMassPoints::createNewMassPoints() {
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0;
     if (isWeighted) {
-      evtWeight = dmt->EventInfoAuxDyn_PileupWeight;
+      evtWeight = (analysisLuminosity * dmt->EventInfoAuxDyn_PileupWeight);
             
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (isSMSample(sampleName)) {
-	evtWeight *= (analysisLuminosity *
-		      (brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
+	evtWeight *= ((brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
 		      (brxs->getSMXS(higgsMass, sampleName, "XS")));
       }
       // Dark matter XSBR includes cross-section and branching ratio.
       else if (isDMSample(sampleName)) {
-	evtWeight *= (analysisLuminosity *
-		      (brxs->getDMXSBR(getMediatorMass(sampleName),
+	evtWeight *= ((brxs->getDMXSBR(getMediatorMass(sampleName),
 				       getDarkMatterMass(sampleName),
 				       getMediatorName(sampleName),
 				       "XS")));

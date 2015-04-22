@@ -20,8 +20,9 @@
     @returns - the file list location.
 */
 TString DMAnalysis::nameToFileList(TString name) {
-  TString result = Form("%s/FileLists/",masterInput.Data());
-
+  TString result = Form("%s/FileLists/%s/", masterInput.Data(), 
+			fileListDir.Data());
+  
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
   if (name.EqualTo("ggH") || name.EqualTo("bbH")) {
     result += "list_H2yyMETAnalysis_ggH.txt";

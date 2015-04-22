@@ -33,20 +33,18 @@ namespace DMAnalysis {
   
   const double higgsMass = 125.09;// GeV
 
-  const double DMMyyRangeLo = 105.0;
-  const double DMMyyRangeHi = 160.0;
-  
-  //int const nSMModes = 6;
+  const double DMMyyRangeLo = 105.0;// GeV
+  const double DMMyyRangeHi = 160.0;// GeV
+
   const int nSMModes = 6;
   const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","bbH","ttH"};
   
-  //int const nDMModes = 8;
-  const int nDMModes = 3;
-  const TString sigDMModes[nDMModes] = {"shxx_gg_ms100_mx100",
-				  "shxx_gg_ms100_mx500",
-				  "zphxx_gg_mzp100_mx100"};  
+  const int nDMModes = 4;
+  const TString sigDMModes[nDMModes] = {"shxx_gg_ms1000_mx500",
+					"shxx_gg_ms100_mx100",
+					"zphxx_gg_mzp1000_mx500",
+					"zphxx_gg_mzp100_mx100"};
   
-  //int const nMCProcesses = 1;
   const int nMCProcesses = 1;
   const TString MCProcesses[nMCProcesses] = {"gg_gjet"};
   
@@ -61,8 +59,11 @@ namespace DMAnalysis {
   
   // Location of this software package:
   const TString packageLocation = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
-
-
+  
+  // Sub-directory for file lists:
+  TString fileListDir = "Apr21_15";
+  
+  // Locations of systematic uncertainty files:
   const TString fileNamePESValues = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs/Systematics/PES/table_PES.txt";
   const TString fileNamePERValues = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs/Systematics/PER/table_PER.txt";
   
@@ -75,7 +76,10 @@ namespace DMAnalysis {
   
   const TString exeTestStat = "DMTestStatWrapper";
   const TString jobScriptTestStat = "scripts/jobFileTestStat.sh";
-    
+  
+  const TString exeMuLimit = "DMMuLimit";
+  const TString jobScriptMuLimit = "scripts/jobFileMuLimit.sh";
+  
   ////////////////////////////////////////
   //           MEMBER FUNCTIONS         //
   ////////////////////////////////////////

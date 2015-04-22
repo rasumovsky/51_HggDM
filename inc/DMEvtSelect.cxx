@@ -174,10 +174,10 @@ void DMEvtSelect::printCategorization(bool weighted) {
     std::cout << "\t" << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
-	std::cout << cateCount[Form("%s_%d",(it->first).Data(), j)] << " ";
+	std::cout << cateCountWt[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
       else {
-	std::cout << cateCountWt[Form("%s_%d",(it->first).Data(), j)] << " ";
+	std::cout << cateCount[Form("%s_%d",(it->first).Data(), j)] << " ";
       }
     }
     std::cout << std::endl;
@@ -343,11 +343,13 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Cut on the calo/track isolation of the photons.
   else if (cutName.EqualTo("photonIso")) {
-    passes = true;
+    passes = (EventInfoAuxDyn_y1_track_iso < 2.6 && 
+	      EventInfoAuxDyn_y2_track_iso < 2.6);
   }
   // Cut on the ID variable of the photons.
   else if (cutName.EqualTo("photonID")) {
-    passes = true;
+    passes = (evtTree->EventInfoAuxDyn_y1_ID == 2 &&
+	      evtTree->EventInfoAuxDyn_y2_ID == 2);
   }
   // Cut on the diphoton invariant mass:
   else if (cutName.EqualTo("diphotonMass")) {

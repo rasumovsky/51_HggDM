@@ -20,6 +20,7 @@
 //    - ResubmitWorkspace                                                     //
 //    - TestStat                                                              //
 //    - ResubmitTestStat                                                      //
+//    - MuLimit                                                               //
 //                                                                            //
 //  Need to rethink the DMSigParam handling of the RooDataSet. Maybe we       //
 //  should just hand it a RooDataSet?                                         //
@@ -161,6 +162,7 @@ int main (int argc, char **argv) {
   if (runInParallel) {
     if (masterOption.Contains("Workspace")) makeExe(exeWorkspace);
     if (masterOption.Contains("TestStat")) makeExe(exeTestStat);
+    if (masterOption.Contains("MuLimit")) makeExe(exeMuLimit);
   }
   
   //--------------------------------------//
@@ -329,6 +331,12 @@ int main (int argc, char **argv) {
     }
     std::cout << "Resubmitted " << jobCounterTS << " jobs" << std::endl;
   }
-
+  
+  //--------------------------------------//
+  // Step 8: Calculate the limits on the dark matter signal strength.
+  if (masterOption.Contains("MuLimit")) {
+    
+  }
+  
   return 0;
 }

@@ -20,39 +20,12 @@
     @returns - the file list location.
 */
 TString DMAnalysis::nameToFileList(TString name) {
-  TString result = Form("%s/FileLists/%s/", masterInput.Data(), 
-			fileListDir.Data());
-  
+  TString result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_%s.txt",
+			masterInput.Data(), fileListDir.Data(), name);
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
-  if (name.EqualTo("ggH") || name.EqualTo("bbH")) {
-    result += "list_H2yyMETAnalysis_ggH.txt";
-  }
-  else if (name.EqualTo("VBF")) {
-    result += "list_H2yyMETAnalysis_VBF.txt";
-  }
-  else if (name.EqualTo("WH")) {
-    result += "list_H2yyMETAnalysis_WH.txt";
-  }
-  else if (name.EqualTo("ZH")) {
-    result += "list_H2yyMETAnalysis_ZH.txt";
-  }
-  else if (name.EqualTo("ttH")) {
-    result += "list_H2yyMETAnalysis_ttH.txt";
-  }
-  else if (name.EqualTo("gg_gjet")) {
-    result += "list_H2yyMETAnalysis_gg_gjet.txt";
-  }
-  else if (name.EqualTo("shxx_gg_ms100_mx100")) {
-    result += "list_H2yyMETAnalysis_shxx_gg_ms100_mx100.txt";
-  }
-  else if (name.EqualTo("shxx_gg_ms100_mx500")) {
-    result += "list_H2yyMETAnalysis_shxx_gg_ms100_mx500.txt";
-  }
-  else if (name.EqualTo("zphxx_gg_mzp100_mx100")) {
-    result += "list_H2yyMETAnalysis_zphxx_gg_mzp100_mx100.txt";
-  }
-  else {
-    std::cout << "nameToRootFile: Error! No corresponding file" << std::endl;
+  if (name.EqualTo("bbH")) {
+    result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_ggH.txt",
+		  masterInput.Data(), fileListDir.Data(), name);
   }
   return result;
 }

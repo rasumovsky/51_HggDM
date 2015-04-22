@@ -82,7 +82,7 @@ public :
    UInt_t          EventInfoAuxDyn_bcid;
    UInt_t          EventInfoAuxDyn_detectorMask0;
    UInt_t          EventInfoAuxDyn_detectorMask1;
-   vector<pair<string,string> > *EventInfoAuxDyn_detDescrTags;
+   //vector<pair<string,string> > *EventInfoAuxDyn_detDescrTags;
 
    // List of branches
    TBranch        *b_EventInfo;   //!
@@ -141,7 +141,7 @@ public :
    TBranch        *b_EventInfoAuxDyn_bcid;   //!
    TBranch        *b_EventInfoAuxDyn_detectorMask0;   //!
    TBranch        *b_EventInfoAuxDyn_detectorMask1;   //!
-   TBranch        *b_EventInfoAuxDyn_detDescrTags;   //!
+   //TBranch        *b_EventInfoAuxDyn_detDescrTags;   //!
 
    DMTree(TTree *tree=0);
    virtual ~DMTree();
@@ -216,7 +216,7 @@ void DMTree::Init(TTree *tree)
    //EventInfoAuxDyn_subEventLink = 0;
    EventInfoAuxDyn_subEventType = 0;
    EventInfoAuxDyn_mcEventWeights = 0;
-   EventInfoAuxDyn_detDescrTags = 0;
+   //EventInfoAuxDyn_detDescrTags = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -279,7 +279,7 @@ void DMTree::Init(TTree *tree)
    fChain->SetBranchAddress("EventInfoAuxDyn.bcid", &EventInfoAuxDyn_bcid, &b_EventInfoAuxDyn_bcid);
    fChain->SetBranchAddress("EventInfoAuxDyn.detectorMask0", &EventInfoAuxDyn_detectorMask0, &b_EventInfoAuxDyn_detectorMask0);
    fChain->SetBranchAddress("EventInfoAuxDyn.detectorMask1", &EventInfoAuxDyn_detectorMask1, &b_EventInfoAuxDyn_detectorMask1);
-   fChain->SetBranchAddress("EventInfoAuxDyn.detDescrTags", &EventInfoAuxDyn_detDescrTags, &b_EventInfoAuxDyn_detDescrTags);
+   //fChain->SetBranchAddress("EventInfoAuxDyn.detDescrTags", &EventInfoAuxDyn_detDescrTags, &b_EventInfoAuxDyn_detDescrTags);
    Notify();
 }
 

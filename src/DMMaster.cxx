@@ -156,7 +156,8 @@ int main (int argc, char **argv) {
   TString bkgModelOptions  = "New";//"FromFile";
   TString workspaceOptions = "New";//"FromFile_nosys";
   TString testStatOptions  = "New";//"FromFile";
-  
+  TString muLimitOptions   = "null";
+
   //--------------------------------------//
   // Compile any wrappers that need to run remotely:
   if (runInParallel) {
@@ -333,9 +334,56 @@ int main (int argc, char **argv) {
   }
   
   //--------------------------------------//
-  // Step 8: Calculate the limits on the dark matter signal strength.
-  if (masterOption.Contains("MuLimit")) {
+  // Step 8.1: Calculate the limits on the dark matter signal strength.
+  if (masterOption.Contains("MuLimit") &&
+      !masterOption.Contains("ResubmitMuLimit")) {
+    std::cout << "DMMaster: Step 8.1 - Calculate 95%CL mu value." << std::endl;
+
+    int jobCounterML = 0;
+    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+      TString currDMSignal = sigDMModes[i_DM];
+      
+      if (runInParallel) {
+	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
+      }
+      else {
+	system(Form("./bin/%s %s %s %s", exeMuLimit.Data(),
+		    masterJobName.Data(), currDMSignal.Data(),
+		    muLimitOptions.Data()));
+      }
+      jobCounterML++;
+    }
+    std::cout << "Submitted/completed " << jobCounterML << " jobs" << std::endl;
+  }
+  
+  //--------------------------------------//
+  // Step 8.2: Resubmit any failed test statistics jobs:
+  if (masterOption.Contains("ResubmitMuLimit")) {
+    std::cout << "DMMaster: Step 8.2 - Resubmit failed mu limits." << std::endl;
     
+    int jobCounterML = 0;
+    // Get the points to resubmit:
+    DMCheckJobs *dmc = new DMCheckJobs(masterJobName);
+    vector<TString> resubmitDMSignals = dmc->getResubmitList("DMMuLimit");
+    dmc->printResubmitList("DMMuLimit");
+    
+    // Then resubmit as necessary:
+    std::cout << "Resubmitting " << (int)resubmitDMSignals.size()
+	      << " workspace jobs." << std::endl;
+    for (int i_DM = 0; i_DM < (int)resubmitDMSignals.size(); i_DM++) {
+      TString currDMSignal = resubmitDMSignals[i_DM];
+      
+      if (runInParallel) {
+	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
+      }
+      else {
+	system(Form("./bin/%s %s %s %s", exeMuLimit.Data(),
+		    masterJobName.Data(), currDMSignal.Data(),
+		    muLimitOptions.Data()));
+      }
+      jobCounterML++;
+    }
+    std::cout << "Resubmitted " << jobCounterML << " jobs" << std::endl;
   }
   
   return 0;

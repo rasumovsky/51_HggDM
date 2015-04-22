@@ -93,6 +93,7 @@ namespace DMAnalysis {
   bool isDMSample(TString sampleName);
   bool isSignalSample(TString sampleName);
   bool isWeightedSample(TString sampleName);
+
 };
 
 #endif

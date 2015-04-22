@@ -42,6 +42,7 @@ class DMCheckJobs {
   TString jobName;
   std::vector<TString> listDMWorkspace;
   std::vector<TString> listDMTestStat;
+  std::vector<TString> listDMMuLimit;
   
 };
 

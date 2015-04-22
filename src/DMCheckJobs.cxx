@@ -21,6 +21,7 @@ DMCheckJobs::DMCheckJobs(TString newJobName) {
   jobName = newJobName;
   updateJobStatus("DMWorkspace");
   updateJobStatus("DMTestStat");
+  updateJobStatus("DMMuLimit");
   return;
 }
 
@@ -47,6 +48,9 @@ std::vector<TString> DMCheckJobs::getResubmitList(TString jobType) {
   else if (jobType.EqualTo("DMTestStat")) {
     result = listDMTestStat;
   }
+  else if (jobType.EqualTo("DMMuLimit")) {
+    result = listDMMuLimit;
+  }
   return result;
 }
 
@@ -60,6 +64,7 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
   // Save names of failed jobs:
   listDMWorkspace.clear();
   listDMTestStat.clear();
+  listDMMuLimit.clear();
   
   // Then loop over submissions to see whether output files exist:
   for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
@@ -78,7 +83,13 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
       fullName = Form("%s/%s/DMTestStat/CL/%s", masterOutput.Data(), 
 		      jobName.Data(), fileName.Data());
     }
-        
+    
+    if (jobType.EqualTo("DMMuLimit")) {
+      fileName = Form("text_CLs_%s.txt", currDMSignal.Data());
+      fullName = Form("%s/%s/DMMuLimit/single_files/%s", masterOutput.Data(), 
+		      jobName.Data(), fileName.Data());
+    }
+
     // Then test the existence of the file.
     std::ifstream testFile(fullName);
     if (!testFile) {
@@ -86,7 +97,10 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
 	listDMWorkspace.push_back(currDMSignal);
       }
       if (jobType.EqualTo("DMTestStat")) {
-	listDMWorkspace.push_back(currDMSignal);
+	listDMTestStat.push_back(currDMSignal);
+      }
+      if (jobType.EqualTo("DMMuLimit")) {
+	listDMMuLimit.push_back(currDMSignal);
       }
     }
   }

@@ -15,6 +15,9 @@
 // Header file for the classes stored in the TTree if any.
 #include <vector>
 
+using namespace std;
+using std::vector;
+
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
 class DMTree {

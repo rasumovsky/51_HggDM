@@ -4,9 +4,6 @@
 #include <TStyle.h>
 #include <TCanvas.h>
 
-using namespace std;
-using std::vector;
-
 void DMTree::Loop()
 {
 //   In a ROOT session, you can do:

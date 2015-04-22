@@ -64,7 +64,7 @@ namespace DMAnalysis {
   const TString clusterFileLocation = "/afs/cern.ch/work/a/ahard/jobfiles";
   
   // Sub-directory for file lists:
-  TString fileListDir = "Apr21_15";
+  const TString fileListDir = "Apr21_15";
   
   // Locations of systematic uncertainty files:
   const TString fileNamePESValues = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs/Systematics/PES/table_PES.txt";

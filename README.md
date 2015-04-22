@@ -2,15 +2,11 @@
 
 ## A search for dark matter associated with a Higgs boson (H->diphoton)
 
-### To do 4/20/2015:
+### To do 4/21/2015:
 
-1) Implement photon ID and isolation in DMEvtSelect
-
-2) Figure out gg_gjet normalization
-
-3) Implement fit plots for the workspace. 
-
-4) Toy MC code for DM
+1) Figure out gg_gjet normalization (and that of other samples)
+2) Implement fit plots for the workspace, signal parameterization. 
+3) Toy MC code for DM
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look

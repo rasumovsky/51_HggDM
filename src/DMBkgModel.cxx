@@ -14,22 +14,6 @@
 #include "DMBkgModel.h"
 
 /**
-   Initialize the DMBkgModel class and make a new observable RooRealVar and
-   RooCategory.
-   classes (instead of importing them).
-   @param newJobName - The name of the job 
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @returns void.
-*/
-DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme, 
-		       TString newOptions) {
-  RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
-					     DMMyyRangeHi);
-  DMBkgModel(newJobName, newCateScheme, newOptions, newObservable);
-}
-
-/**
    Initialize the DMBkgModel class and make a new RooCategory.
    @param newJobName - The name of the job 
    @param newCateScheme - The name of the event categorization
@@ -39,47 +23,23 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
 */
 DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
 		       TString newOptions, RooRealVar *newObservable) {
-  
-  // Define a new RooCategory for the dataset, since none was provided:
-  RooCategory *newCategories = new RooCategory(Form("categories_%s",
-						    newCateScheme.Data()),
-					       Form("categories_%s",
-						    newCateScheme.Data()));
-  // Loop over categories to define categories:
-  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(newCateScheme); i_c++) {
-    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
-  }
-  
-  // Then call the full initializer:
-  DMBkgModel(newJobName, newCateScheme, newOptions, newObservable,
-	     newCategories);
-}
-
-/**
-   Initialize the DMBkgModel class using previously defined observable 
-   RooRealVar and RooCategory classes.
-   @param newJobName - The name of the job 
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @param newObservable - The RooRealVar to be used in fits (m_yy).
-   @param newCategories - The RooCategory to be used in the combined PDF.
-   @returns void.
-*/
-DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
-		       TString newOptions, RooRealVar *newObservable,
-		       RooCategory *newCategories) {
-  std::cout << std::endl << "DMBkgModel::Initializing..." << std::endl;
+  std::cout << "\nDMBkgModel::Initializing..." 
+	    << "\n\tjobName = " << newJobName
+	    << "\n\tcateScheme = " << newCateScheme 
+	    << "\n\toptions = " << newOptions << std::endl;
   
   // Assign member variables:
   jobName = newJobName;
   cateScheme = newCateScheme;
   options = newOptions;
   
-  // Assign the observable and categorization based on inputs:
-  m_yy = newObservable;
-  categories = newCategories;
-  
+  // Assign the observable based on inputs:
+  if (newObservable == NULL) {
+    m_yy = new RooRealVar("m_yy", "m_yy", DMMyyRangeLo, DMMyyRangeHi);
+  }
+  else {
+    setMassObservable(newObservable);
+  }
   return;
 }
 
@@ -209,14 +169,6 @@ RooRealVar* DMBkgModel::getMassObservable() {
 }
 
 /**
-   Returns a pointer to the RooCategory used in the combined dataset.
-   @returns pointer to the RooCategory object.
-*/
-RooCategory* DMBkgModel::getRooCategory() {
-  return categories;
-}
-
-/**
    Set the pointer to the observable. 
    @param newObservable - The new RooRealVar observable to use for datasets. 
    @returns void.
@@ -226,14 +178,10 @@ void DMBkgModel::setMassObservable(RooRealVar *newObservable) {
 }
 
 /**
-   Set the pointer to the RooCategory object. 
-   @param newCategories - The new RooCategory to use for the combined dataset. 
-   @returns void.
- */
-void DMBkgModel::setRooCategory(RooCategory *newCategories) {
-  categories = newCategories;
-}
-
+   Get the order of the function from the name.
+   @param fitFunc - the name of the function.
+   @returns - the order of the function.
+*/
 int DMBkgModel::getOrderFromFunc(TString fitFunc) {
   for (int i_o = 0; i_o < 10; i_o++) {
     if (fitFunc.Contains(Form("O%d",i_o))) {

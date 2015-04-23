@@ -40,25 +40,17 @@ class DMMassPoints {
  public:
   
   DMMassPoints(TString newJobName, TString newSampleName, TString newCateScheme,
-	       TString newOptions);
-  DMMassPoints(TString newJobName, TString newSampleName, TString newCateScheme,
 	       TString newOptions, RooRealVar *newObservable);
-  DMMassPoints(TString newJobName, TString newSampleName, TString newCateScheme,
-	       TString newOptions, RooRealVar *newObservable,
-	       RooCategory *newCategories);
   virtual ~DMMassPoints() {};
   
   // Accessors:
   RooDataSet* getCateDataSet(int cateIndex);
-  RooDataSet* getCombDataSet();
   RooRealVar* getMassObservable();
   TString getMassPointsFileName(int cateIndex);
-  RooCategory* getRooCategory();
-
+  
   // Mutators:
   void setMassObservable(RooRealVar *newObservable);
-  void setRooCategory(RooCategory *newCategories);
-  
+   
  private:
   
   // Member methods:
@@ -75,9 +67,8 @@ class DMMassPoints {
   bool isWeighted;
   
   RooDataSet *cateData[20];
-  RooDataSet *combData;
   RooRealVar *m_yy;
-  RooCategory *categories;
+
 };
 
 #endif

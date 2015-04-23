@@ -18,22 +18,6 @@
 #include "DMSigParam.h"
 
 /**
-   Initialize the DMSigParam class with new observable RooRealVar and
-   RooCategory.
-   classes (instead of importing them).
-   @param newJobName - The name of the job 
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @returns void.
-*/
-DMSigParam::DMSigParam(TString newJobName, TString newCateScheme, 
-		       TString newOptions) {
-  RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
-					     DMMyyRangeHi);
-  DMSigParam(newJobName, newCateScheme, newOptions, newObservable);
-}
-
-/**
    Initialize the DMSigParam class with a new RooCategory.
    @param newJobName - The name of the job 
    @param newCateScheme - The name of the event categorization
@@ -43,36 +27,6 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 */
 DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
 		       TString newOptions, RooRealVar *newObservable) {
-    
-  // Define a new RooCategory for the dataset, since none was provided:
-  RooCategory *newCategories = new RooCategory(Form("categories_%s",
-						    newCateScheme.Data()),
-					       Form("categories_%s",
-						    newCateScheme.Data()));
-  // Loop over categories to define categories:
-  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(newCateScheme); i_c++) {
-    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-    //newCategories->setRange(Form("rangeName_",i_b,i_r),Form("%s_%d",cateScheme.Data(),i_c));
-  }
-  
-  // Then call the full initializer:
-  DMSigParam(newJobName, newCateScheme, newOptions, newObservable,
-	     newCategories);
-}
-
-/**
-   Initialize the DMSigParam class using previously defined observable
-   RooRealVar and RooCategory classes.
-   @param newJobName - The name of the job 
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @param newObservable - The RooRealVar to be used in fits (m_yy).
-   @param newCategories = The RooCategory to be used in the combined PDF.
-   @returns void.
-*/
-DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
-		       TString newOptions, RooRealVar *newObservable,
-		       RooCategory *newCategories) {
   std::cout << "\nDMSigParam::Initializing..."
 	    << "\n\tjobName = " << newJobName
 	    << "\n\tcateScheme = " << newCateScheme 
@@ -83,10 +37,14 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
   cateScheme = newCateScheme;
   options = newOptions;
   
-  // Assign the observable and categorization based on inputs:
-  setMassObservable(newObservable);
-  setRooCategory(newCategories);
-    
+  if (newObservable == NULL) {
+    m_yy = new RooRealVar("m_yy", "m_yy", DMMyyRangeLo, DMMyyRangeHi);
+  }
+  else {
+    // Assign the observable and categorization based on inputs:
+    setMassObservable(newObservable);
+  }
+  
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/DMSigParam", masterOutput.Data(), jobName.Data());
   system(Form("mkdir -vp %s", outputDir.Data()));
@@ -117,50 +75,52 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
    Also include the important energy scale and energy resolution systematic
    uncertainties. 
    @param workspace - The workspace to which we are adding the signal PDF.
-   @param namesESS - The names of the energy scale systematic uncertainties.
-   @param namesRes - The names of the resolution systematic uncertainties.
+   @param namesPES - The names of the photon energy scale systematics.
+   @param namesPER - The names of the photon resolution systematics.
    @param process - The signal production process.
    @param cateIndex - The index of the current analysis category in cateScheme. 
    @returns void. 
 */
 void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
-				std::vector<TString> namesESS,
-				std::vector<TString> namesRes, TString process,
+				std::vector<TString> namesPES,
+				std::vector<TString> namesPER, TString process,
 				int cateIndex) {
   
   // A variable that converts any DM process name into "DM" for simplicity:
   TString processType = (isDMSample(process)) ? "DM" : process;
   
   // Create list of ess to multiply:
-  TString listESS = "";
-  for (int i_e = 0; i_e < (int)namesESS.size(); i_e++) {
-    TString atlasExpNameESS = Form("atlas_expected_%s", namesESS[i_e].Data());
-    if (!(bool)workspace->obj(atlasExpNameESS)) {
-      workspace->factory(Form("%s[1]",atlasExpNameESS.Data()));
+  TString listPES = ",";//added comma
+  for (int i_e = 0; i_e < (int)namesPES.size(); i_e++) {
+    TString atlasExpNamePES = Form("atlas_expected_%s", namesPES[i_e].Data());
+    if (!(bool)workspace->obj(atlasExpNamePES)) {
+      workspace->factory(Form("%s[1]",atlasExpNamePES.Data()));
     }
-    if (i_e < ((int)namesESS.size()-1)) {
-      listESS.Append(Form("%s,",atlasExpNameESS.Data()));//added comma
+    if (i_e < ((int)namesPES.size()-1)) {
+      listPES.Append(Form("%s,",atlasExpNamePES.Data()));//added comma
     }
     else {
-      listESS.Append(Form("%s",atlasExpNameESS.Data()));//no comma
+      listPES.Append(Form("%s",atlasExpNamePES.Data()));//no comma
     }
   }
+  if (listPES.EqualTo(",")) listPES = "";
   
   // Create list of res to multiply (process dependent implementation):
-  TString listRes = "";
-  for (int i_r = 0; i_r < (int)namesRes.size(); i_r++) {
-    TString atlasExpNameRes = Form("atlas_expected_%s",namesRes[i_r].Data());
-    if (!(bool)workspace->obj(atlasExpNameRes)) {
-      workspace->factory(Form("%s%s[1]",atlasExpNameRes.Data(),
+  TString listPER = ",";//added comma
+  for (int i_r = 0; i_r < (int)namesPER.size(); i_r++) {
+    TString atlasExpNamePER = Form("atlas_expected_%s",namesPER[i_r].Data());
+    if (!(bool)workspace->obj(atlasExpNamePER)) {
+      workspace->factory(Form("%s%s[1]",atlasExpNamePER.Data(),
 			      processType.Data()));
     }
-    if (i_r < ((int)namesRes.size()-1)) {
-      listRes.Append(Form("%s%s,",atlasExpNameRes.Data(),processType.Data()));
+    if (i_r < ((int)namesPER.size()-1)) {
+      listPER.Append(Form("%s%s,",atlasExpNamePER.Data(),processType.Data()));
     }
     else {
-      listRes.Append(Form("%s%s",atlasExpNameRes.Data(),processType.Data()));
+      listPER.Append(Form("%s%s",atlasExpNamePER.Data(),processType.Data()));
     }
   }
+  if (listPER.EqualTo(",")) listPER = "";
   
   TString meanCB = Form("%f", getSigParam(process, "meanCB", cateIndex));
   TString massResCB = Form("%f", getSigParam(process, "sigmaCB", cateIndex));
@@ -170,9 +130,9 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
-  workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s],%s), prod::massResCB%s(massResNomCB%s[%s],%s), alphaCB%s[%s], nCB[%s])", processType.Data(), processType.Data(), processType.Data(), meanCB.Data(), listESS.Data(), processType.Data(), processType.Data(), massResCB.Data(), listRes.Data(), processType.Data(), alphaCB.Data(), nCB.Data()));
+  workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s]%s), prod::massResCB%s(massResNomCB%s[%s]%s), alphaCB%s[%s], nCB%s[%s])", processType.Data(), processType.Data(), processType.Data(), meanCB.Data(), listPES.Data(), processType.Data(), processType.Data(), massResCB.Data(), listPER.Data(), processType.Data(), alphaCB.Data(), processType.Data(), nCB.Data()));
   
-  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s],%s), prod::massResGA%s(massResNomGA%s[%s],%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listESS.Data(), processType.Data(), processType.Data(), massResGA.Data(), listRes.Data()));
+  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s]%s), prod::massResGA%s(massResNomGA%s[%s]%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listPES.Data(), processType.Data(), processType.Data(), massResGA.Data(), listPER.Data()));
   
   workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", processType.Data(), processType.Data(), frac.Data(), processType.Data(), processType.Data())); 
 }
@@ -246,14 +206,6 @@ RooRealVar* DMSigParam::getMassObservable() {
 }
 
 /**
-   Returns a pointer to the RooCategory used in the combined dataset.
-   @returns pointer to the RooCategory object.
-*/
-RooCategory* DMSigParam::getRooCategory() {
-  return categories;
-}
-
-/**
    Get the value of a particular parameter of the signal PDF. 
    @param process - The signal production process of interest. Possibilities
    are listed in DMHeader.h
@@ -268,8 +220,10 @@ double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
   RooRealVar* currIter = NULL;
   while ((currIter = (RooRealVar*)iterArgs->Next())) {
     if (((TString)currIter->GetName()).Contains(param)) {
+      std::cout << "DMSigParam::getSigParam(" << process << ", " << param
+		<< ", " << cateIndex << ")=" << currIter->getVal() << std::endl;
       return currIter->getVal();
-      break;
+      
     }
   }
   std::cout << "DMSigParam: requested signal parameter not found." << std::endl;
@@ -297,15 +251,6 @@ TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
  */
 void DMSigParam::setMassObservable(RooRealVar *newObservable) {
   m_yy = newObservable;
-}
-
-/**
-   Set the pointer to the RooCategory object. 
-   @param newCategories - The new RooCategory to use for the combined dataset. 
-   @returns void.
- */
-void DMSigParam::setRooCategory(RooCategory *newCategories) {
-  categories = newCategories;
 }
 
 /**
@@ -358,23 +303,18 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     if (process.EqualTo("SM")) {
       for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
 	mps[i_SM] = new DMMassPoints(jobName, sigSMModes[i_SM], cateScheme,
-				     "FromFile", m_yy, categories);
+				     "FromFile", m_yy);
       }
     }
     // Otherwise, just load a particular mode.
     else {
-      mp = new DMMassPoints(jobName, process, cateScheme, "FromFile", m_yy,
-			    categories);
+      mp = new DMMassPoints(jobName, process, cateScheme, "FromFile", m_yy);
     }
   }
   
   // Loop over categories and process modes:
   for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
     
-    // WARNING: ALL THE PARAMETER RANGES MUST BE SET:
-    // Options are: "meanCB", "sigmaCB", "meanGA",
-    // "sigmaGA", "alphaCB", "nCB", "frac"
-
     // Define the fit variables (Can't avoid using >80 char per line...):
     RooRealVar *meanCB = new RooRealVar(Form("meanCB_%s_%d",process.Data(),i_c),
 					Form("meanCB_%s_%d",process.Data(),i_c),

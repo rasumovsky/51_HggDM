@@ -200,7 +200,7 @@ int main (int argc, char **argv) {
   TString massPointOptions = "New";//"FromFile";
   TString sigParamOptions  = "New";//"FromFile";
   TString bkgModelOptions  = "New";//"FromFile";
-  TString workspaceOptions = "New";//"FromFile_nosys";
+  TString workspaceOptions = "New_nosys";//"FromFile_nosys";
   TString testStatOptions  = "New";//"FromFile";
   TString muLimitOptions   = "null";
 
@@ -220,15 +220,18 @@ int main (int argc, char **argv) {
     // Loop over SM, DM, MC samples:
     for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
       DMMassPoints *mp = new DMMassPoints(masterJobName, sigSMModes[i_SM],
-					  masterCateScheme, massPointOptions);
+					  masterCateScheme, massPointOptions,
+					  NULL);
     }
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
       DMMassPoints *mp = new DMMassPoints(masterJobName, sigDMModes[i_DM],
-					  masterCateScheme, massPointOptions);
+					  masterCateScheme, massPointOptions,
+					  NULL);
     }
     for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
       DMMassPoints *mp = new DMMassPoints(masterJobName, MCProcesses[i_MC],
-					  masterCateScheme, massPointOptions);
+					  masterCateScheme, massPointOptions,
+					  NULL);
     }
   }
   
@@ -237,7 +240,7 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("SigParam")) {
     cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
     DMSigParam *sp = new DMSigParam(masterJobName, masterCateScheme,
-				    sigParamOptions);
+				    sigParamOptions, NULL);
   }
   
   //--------------------------------------//

@@ -133,9 +133,9 @@ void DMWorkspace::createNewWS() {
   per = new PERReader(fileNamePERValues, nCategories);
   
   // Instantiate the signal parameterization class using the observable:
-  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile");
+  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile", NULL);
   // Instantiate the background parameterization class using the observable:
-  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile");
+  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", NULL);
   
   //--------------------------------------//
   // Initialize classes relevant to workspace:
@@ -623,7 +623,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->defineSet("observables","m_yy");
   
   // Construct the signal PDFs:
-  //currSigParam->addSigToCateWS(tempWS, pesList, perList, "DM", currCateIndex);
+  std::cout << "DMWorkspace: Adding signal parameterizations." << std::endl;
   currSigParam->addSigToCateWS(tempWS, pesList, perList, DMSignal,
 			       currCateIndex);
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "SM", currCateIndex);
@@ -642,17 +642,23 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Normalization for each process follows such pattern:
   // mu*isEM*lumi*migr => expectationCommon
-  tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
-		       currSigParam->getCateSigYield(currCateIndex,"SM")));
-  //tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
-  //currSigParam->getCateSigYield(currCateIndex,"DM")));
-  tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
-		       currSigParam->getCateSigYield(currCateIndex,DMSignal)));
+  tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)", currSigParam->getCateSigYield(currCateIndex,"SM")));
+  tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)", currSigParam->getCateSigYield(currCateIndex,DMSignal)));
+  
+  tempWS->factory(Form("prod::nSigggH(nggH[%f],expectationCommon,expectationProc_ggH)", currSigParam->getCateSigYield(currCateIndex,"ggH")));
+  tempWS->factory(Form("prod::nSigVBF(nVBF[%f],expectationCommon,expectationProc_VBF)", currSigParam->getCateSigYield(currCateIndex,"VBF")));
+  tempWS->factory(Form("prod::nSigWH(nWH[%f],expectationCommon,expectationProc_WH)", currSigParam->getCateSigYield(currCateIndex,"WH")));
+  tempWS->factory(Form("prod::nSigZH(nZH[%f],expectationCommon,expectationProc_ZH)", currSigParam->getCateSigYield(currCateIndex,"ZH")));
+  tempWS->factory(Form("prod::nSigbbH(nbbH[%f],expectationCommon,expectationProc_bbH)", currSigParam->getCateSigYield(currCateIndex,"bbH")));
+  tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
+  
+
+
   
   // Model with combined SM production modes:
-  tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
+  tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfSM,nBkg*bkgPdf)");
   // Model with separated SM production modes:
-  tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfInc,nBkg*bkgPdf)");
+  tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfSM,nBkg*bkgPdf)");
   tempWS->Print();
   
   // Only attach constraint term to first category. If constraint terms were
@@ -797,8 +803,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   
   // Import the observed data set:
-  if (doBlind) {
-
+  if (DMAnalysis::doBlind) {
     currMassPoints = new DMMassPoints(jobName, "gg_gjet",
 				      cateScheme, "FromFile",
 				      categoryWS->var("m_yy_"+currCateName));
@@ -808,7 +813,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 				      cateScheme, "FromFile",
 				      categoryWS->var("m_yy_"+currCateName));
   }
-
+  
   RooDataSet *obsData = currMassPoints->getCateDataSet(currCateIndex);
   obsData->SetNameTitle("obsData","obsData");
   

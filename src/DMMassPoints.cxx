@@ -24,23 +24,6 @@
 using namespace DMAnalysis;
 
 /**
-   Initialize the DMMassPoint class and make a new observable RooRealVar and
-   RooCategory.
-   @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @returns void.
-*/
-DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
-			   TString newCateScheme, TString newOptions) {
-  RooRealVar *newObservable = new RooRealVar("m_yy","m_yy",DMMyyRangeLo,
-					     DMMyyRangeHi);
-  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions, 
-	       newObservable);
-}
-
-/**
    Initialize the DMMassPoint class and make a new RooCategory.
    @param newJobName - The name of the job 
    @param newSampleName - The name of the data/MC sample
@@ -52,37 +35,6 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
 DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
 			   TString newCateScheme, TString newOptions,
 			   RooRealVar *newObservable) {
-  
-  // Define a new RooCategory for the dataset, since none was provided:
-  RooCategory *newCategories = new RooCategory(Form("categories_%s",
-						    newCateScheme.Data()),
-					       Form("categories_%s",
-						    newCateScheme.Data()));
-  // Loop over categories to define categories:
-  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(newCateScheme); i_c++) {
-    newCategories->defineType(Form("%s_%d",newCateScheme.Data(),i_c));
-  }
-  
-  // Then call the full initializer:
-  DMMassPoints(newJobName, newSampleName, newCateScheme, newOptions, 
-	       newObservable, newCategories);
-}
-
-/**
-   Initialize the DMMassPoint class using previously defined observable
-   RooRealVar and RooCategory classes.
-   @param newJobName - The name of the job 
-   @param newSampleName - The name of the data/MC sample
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile")
-   @param newObservable - The RooRealVar to be used in the datasets (m_yy).
-   @param newCategories - The RooCategory to be used in the combined dataset.
-   @returns void.
-*/
-DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName, 
-			   TString newCateScheme, TString newOptions,
-			   RooRealVar *newObservable,
-			   RooCategory *newCategories) {
   std::cout << "\nDMMassPoints::Initializing..." 
 	    << "\n\tjobName = " << newJobName
 	    << "\n\tsampleName = " << newSampleName 
@@ -95,10 +47,14 @@ DMMassPoints::DMMassPoints(TString newJobName, TString newSampleName,
   cateScheme = newCateScheme;
   options = newOptions;
   
-  // Assign the observable and categorization based on inputs:
-  setMassObservable(newObservable);
-  setRooCategory(newCategories);
-
+  // Assign the observable based on inputs:
+  if (newObservable == NULL) {
+    m_yy = new RooRealVar("m_yy", "m_yy", DMMyyRangeLo, DMMyyRangeHi);
+  }
+  else {
+    setMassObservable(newObservable);
+  }
+  
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/DMMassPoints",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
@@ -125,15 +81,6 @@ RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
 }
 
 /**
-   Create a RooDataSet containing the mass points in all categories.
-   @returns The combined RooDataSet object for the given categorization.
-*/
-RooDataSet* DMMassPoints::getCombDataSet() {
-  combData->Print("v");
-  return combData;
-}
-
-/**
    Returns a pointer to the mass observable used in the dataset.
    @returns pointer to the observable (m_yy).
 */
@@ -153,29 +100,12 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex) {
 }
 
 /**
-   Returns a pointer to the RooCategory used in the combined dataset.
-   @returns pointer to the RooCategory object.
-*/
-RooCategory* DMMassPoints::getRooCategory() {
-  return categories;
-}
-
-/**
    Set the pointer to the observable. 
    @param newObservable - The new RooRealVar observable to use for datasets. 
    @returns void.
  */
 void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
   m_yy = newObservable;
-}
-
-/**
-   Set the pointer to the RooCategory object. 
-   @param newCategories - The new RooCategory to use for the combined dataset. 
-   @returns void.
- */
-void DMMassPoints::setRooCategory(RooCategory *newCategories) {
-  categories = newCategories;
 }
 
 /**
@@ -299,14 +229,7 @@ void DMMassPoints::createNewMassPoints() {
   for (int i_f = 0; i_f < DMAnalysis::getNumCategories(cateScheme); i_f++) {
     massFiles[i_f].close();
   }
-  
-  // Create combined data set from individual categories:
-  combData = new RooDataSet(Form("combData_%s", cateScheme.Data()),
-			    Form("combData_%s", cateScheme.Data()),
-			    *args, RooFit::Index(*categories),
-			    RooFit::Import(dataMap),
-			    RooFit::WeightVar(wt));
-  
+    
   std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
 }
   
@@ -370,12 +293,5 @@ void DMMassPoints::loadMassPointsFromFile() {
     // Add the category dataset to the dataset map:
     dataMap[Form("%s_%d", cateScheme.Data(),i_c)] = cateData[i_c];
   }
-    
-  // Create combined data set from individual categories:
-  combData = new RooDataSet(Form("combData_%s", cateScheme.Data()),
-			    Form("combData_%s", cateScheme.Data()),
-			    *args, RooFit::Index(*categories),
-			    RooFit::Import(dataMap), RooFit::WeightVar(wt));
   std::cout << "DMMassPoints: Finished loading data set: " << std::endl;
-  combData->Print("v");
 }

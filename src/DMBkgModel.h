@@ -53,13 +53,10 @@ class DMBkgModel
   void addBkgToCateWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
 		      int cateIndex);
   RooAbsPdf* getCateBkgPDF(int cateIndex);
-  RooSimultaneous* getCombBkgPDF();
   RooAbsPdf* getBkgPDFByName(TString name, TString fitFunc);
   RooRealVar* getMassObservable();
-  RooCategory* getRooCategory();
   
   // Mutators:
-  void setRooCategory(RooCategory *newCategories);
   void setMassObservable(RooRealVar *newObservable);
       
  private:
@@ -73,7 +70,6 @@ class DMBkgModel
   TString options;
   
   RooRealVar *m_yy;
-  RooCategory *categories;
   
 };
 

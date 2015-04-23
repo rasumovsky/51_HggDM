@@ -67,7 +67,7 @@ class DMWorkspace
   DMSigParam *currSigParam;
   DMBkgModel *currBkgModel;
   DMMassPoints *currMassPoints;
-  
+    
   // Updated for each call to createNewCategoryWS():
   int currCateIndex;
   TString currCateName;

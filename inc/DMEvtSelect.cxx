@@ -368,7 +368,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
       if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts")) {
 	continue;
       }
-      if (!passesCut(cutList[i], weight)) {
+      else if (!passesCut(cutList[i], weight)) {
 	passes = false;
 	break;
       }
@@ -381,7 +381,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
 	  cutList[i].EqualTo("photonIso") || cutList[i].EqualTo("photonID")) {
 	continue;
       }
-      if (!passesCut(cutList[i], weight)) {
+      else if (!passesCut(cutList[i], weight)) {
 	passes = false;
 	break;
       }

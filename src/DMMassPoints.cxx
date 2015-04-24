@@ -196,7 +196,8 @@ void DMMassPoints::createNewMassPoints() {
 	!selector->passesCut("looseCuts",evtWeight)) {
       continue;
     }
-    else if (!selector->passesCut("allCuts",evtWeight)) {
+    else if (!sampleName.EqualTo("gg_gjet") && 
+	     !selector->passesCut("allCuts",evtWeight)) {
       continue;
     }
     

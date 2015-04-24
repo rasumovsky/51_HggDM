@@ -175,7 +175,7 @@ void DMMassPoints::createNewMassPoints() {
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0 / nGeneratedEvt;
     if (isWeighted) {
-      evtWeight = (analysisLuminosity * dmt->EventInfoAuxDyn_PileupWeight);
+      evtWeight *= (analysisLuminosity * dmt->EventInfoAuxDyn_PileupWeight);
             
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (isSMSample(sampleName)) {

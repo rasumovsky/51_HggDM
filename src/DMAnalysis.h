@@ -89,6 +89,7 @@ namespace DMAnalysis {
   
   int getNumCategories(TString cateScheme);
   TString nameToFileList(TString name);
+  TString nameToxAODCutFile(TString name);
   TString cateToBkgFunc(TString category);
   TString getMediatorName(TString modeName);
   int getMediatorMass(TString modeName);

@@ -123,6 +123,11 @@ void DMMassPoints::createNewMassPoints() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt);
   
+  // Tool to get the total number of events at the generator level.
+  DMxAODCutflow *dmx
+    = new DMxAODCutflow(DMAnalysis::nameToxAODCutFile(sampleName));
+  double nGeneratedEvt = dmx->getEventsPassingCut(1);
+  
   // Tool to load cross sections and branching ratios:
   BRXSReader *brxs = new BRXSReader(Form("%s/XSBRInputs/",masterInput.Data()));
   
@@ -168,7 +173,7 @@ void DMMassPoints::createNewMassPoints() {
     dmt->fChain->GetEntry(event);
         
     // Calculate the weights for the cutflow first!
-    double evtWeight = 1.0;
+    double evtWeight = 1.0 / nGeneratedEvt;
     if (isWeighted) {
       evtWeight = (analysisLuminosity * dmt->EventInfoAuxDyn_PileupWeight);
             

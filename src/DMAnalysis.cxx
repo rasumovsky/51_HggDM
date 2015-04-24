@@ -49,6 +49,22 @@ TString DMAnalysis::nameToFileList(TString name) {
   return result;
 }
 
+/**
+   Converts the sample name to the corresponding cutflow histogram.
+   @param name - the name of the sample.
+   @returns - the file list location.
+*/
+TString DMAnalysis::nameToxAODCutFile(TString name) {
+  TString result = Form("%s/xAODCutFlows/%s/hist_H2yyMETAnalysis_%s.root",
+			masterInput.Data(), fileListDir.Data(), name.Data());
+  // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
+  if (name.EqualTo("bbH")) {
+    result = Form("%s/xAODCutFlows/%s/hist_H2yyMETAnalysis_ggH.root",
+		  masterInput.Data(), fileListDir.Data());
+  }
+  return result;
+}
+
 /** 
     Determine the background PDF based on the category.
     @param category - the category name. 

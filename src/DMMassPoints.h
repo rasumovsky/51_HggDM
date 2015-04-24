@@ -34,6 +34,7 @@
 #include "DMAnalysis.h"
 #include "DMEvtSelect.h"
 #include "DMTree.h"
+#include "DMxAODCutflow.h"
 
 class DMMassPoints {
   

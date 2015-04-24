@@ -4,9 +4,11 @@
 
 ### To do 4/21/2015:
 
-1) Figure out gg_gjet normalization (and that of other samples)
-2) Implement fit plots for the workspace, signal parameterization. 
-3) Toy MC code for DM
+1) Figure out weights of gg_gjet in DMEvtSelect
+2) Load sample weights.
+3) Figure out gg_gjet normalization (and that of other samples)
+4) Implement fit plots for the workspace, signal parameterization.
+5) Toy MC code for DM
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look

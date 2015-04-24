@@ -56,7 +56,7 @@ class DMSigParam
   RooRealVar* getMassObservable(); 
   double getSigParam(TString process, TString param, int cateIndex);
   TString getSigParamFileName(TString process, TString fileType, int cateIndex);
-
+  
   // Mutators:
   void setMassObservable(RooRealVar *newObservable);
   

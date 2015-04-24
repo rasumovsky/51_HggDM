@@ -54,7 +54,7 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   system(Form("mkdir -vp %s/mu/",outputDir.Data()));
   
   // Set style for plots:
-  SetAtlasStyle();
+  CommonFunc::SetAtlasStyle();
     
   // Make new or load old workspace:
   if (options.Contains("FromFile")) loadWSFromFile();

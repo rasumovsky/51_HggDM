@@ -37,6 +37,8 @@ DMSigParam::DMSigParam(TString newJobName, TString newCateScheme,
   cateScheme = newCateScheme;
   options = newOptions;
   
+  CommonFunc::SetAtlasStyle();
+  
   if (newObservable == NULL) {
     m_yy = new RooRealVar("m_yy", "m_yy", DMMyyRangeLo, DMMyyRangeHi);
   }
@@ -413,6 +415,26 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       outputYieldFile << i_c << " "
 		      << currData->sumEntries() << " " 
 		      << currData->numEntries() << std::endl;
+      
+      // Then plot the parameterization and the data used for the fit:
+      TCanvas *can = new TCanvas();
+      RooPlot* frame = m_yy->frame(Bins(40, Range(higgsMass-10,higgsMass+10)));
+      currData->plotOn(frame);
+
+      currSignal->plotOn(frame, LineColor(2));
+      currSignal->plotOn(frame, Components((*cateWS->pdf("pdfCB"))),
+			 LineColor(4));
+      currSignal->plotOn(frame, Components((*cateWS->pdf("pdfGA"))),
+			 LineColor(3));
+      frame->SetYTitle("Events/0.5 GeV");
+      frame->SetXTitle("M_{#gamma#gamma} [GeV]");
+      frame->Draw();
+      TLatex text; text.SetNDC(); text.SetTextColor(1);
+      text.DrawLatex(0.5, 0.78, Form("Category %d", cateIndex));
+      text.DrawLatex(0.5, 0.72, Form("Signal %s", process.Data()));
+      can->Print(Form("%s/Plots/%s_%s_%d.eps",outputDir.Data(),process.Data(),
+		      cateScheme.Data(), cateIndex));
+
     }
     // If using previous parameterization, just load params from .txt file.
     else {

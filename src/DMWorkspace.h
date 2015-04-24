@@ -65,9 +65,7 @@ class DMWorkspace
   PESReader *pes;
   PERReader* per;
   DMSigParam *currSigParam;
-  DMBkgModel *currBkgModel;
-  DMMassPoints *currMassPoints;
-    
+  
   // Updated for each call to createNewCategoryWS():
   int currCateIndex;
   TString currCateName;

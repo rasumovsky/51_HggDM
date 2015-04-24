@@ -135,7 +135,7 @@ void DMWorkspace::createNewWS() {
   // Instantiate the signal parameterization class using the observable:
   currSigParam = new DMSigParam(jobName, cateScheme, "FromFile", NULL);
   // Instantiate the background parameterization class using the observable:
-  currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", NULL);
+  //currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", NULL);
   
   //--------------------------------------//
   // Initialize classes relevant to workspace:
@@ -635,11 +635,13 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "ttH", currCateIndex);
   
   // Construct the background PDF:
+  DMBkgModel *currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", 
+					    tempWS->var("m_yy"));
   currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateIndex);
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
-  
+    
   // Normalization for each process follows such pattern:
   // mu*isEM*lumi*migr => expectationCommon
   tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)", currSigParam->getCateSigYield(currCateIndex,"SM")));
@@ -651,9 +653,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->factory(Form("prod::nSigZH(nZH[%f],expectationCommon,expectationProc_ZH)", currSigParam->getCateSigYield(currCateIndex,"ZH")));
   tempWS->factory(Form("prod::nSigbbH(nbbH[%f],expectationCommon,expectationProc_bbH)", currSigParam->getCateSigYield(currCateIndex,"bbH")));
   tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
-  
-
-
   
   // Model with combined SM production modes:
   tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfSM,nBkg*bkgPdf)");
@@ -803,6 +802,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   
   // Import the observed data set:
+  DMMassPoints *currMassPoints = NULL;
   if (DMAnalysis::doBlind) {
     currMassPoints = new DMMassPoints(jobName, "gg_gjet",
 				      cateScheme, "FromFile",

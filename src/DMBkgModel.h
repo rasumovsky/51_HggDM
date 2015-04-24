@@ -48,8 +48,6 @@ class DMBkgModel
   virtual ~DMBkgModel() {};
   
   // Accessors:
-  //void fitCateBkgPDF(int cateIndex);
-  //void fitCombBkgPDF();
   void addBkgToCateWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
 		      int cateIndex);
   RooAbsPdf* getCateBkgPDF(int cateIndex);

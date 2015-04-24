@@ -85,6 +85,7 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
 				std::vector<TString> namesPES,
 				std::vector<TString> namesPER, TString process,
 				int cateIndex) {
+  std::cout << "DMSigParam: Adding " << process << " to workspace" << std::endl;
   
   // A variable that converts any DM process name into "DM" for simplicity:
   TString processType = (isDMSample(process)) ? "DM" : process;
@@ -135,6 +136,9 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s]%s), prod::massResGA%s(massResNomGA%s[%s]%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listPES.Data(), processType.Data(), processType.Data(), massResGA.Data(), listPER.Data()));
   
   workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", processType.Data(), processType.Data(), frac.Data(), processType.Data(), processType.Data())); 
+  
+  std::cout << "DMSigParam: Finished adding " << process << " to workspace."
+	    << std::endl;
 }
 
 /**
@@ -220,10 +224,9 @@ double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
   RooRealVar* currIter = NULL;
   while ((currIter = (RooRealVar*)iterArgs->Next())) {
     if (((TString)currIter->GetName()).Contains(param)) {
-      std::cout << "DMSigParam::getSigParam(" << process << ", " << param
-		<< ", " << cateIndex << ")=" << currIter->getVal() << std::endl;
+      //std::cout << "DMSigParam::getSigParam(" << process << ", " << param
+      //<< ", " << cateIndex << ")=" << currIter->getVal() << std::endl;
       return currIter->getVal();
-      
     }
   }
   std::cout << "DMSigParam: requested signal parameter not found." << std::endl;
@@ -238,9 +241,10 @@ double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
    @param fileType - The file type (either "yield" or "fit").
    @returns The filename for loading/saving signal parameters (yield and fit).
 */
-TString DMSigParam::getSigParamFileName(TString process, TString fileType) {
-  TString name = Form("%s/%s/%s_%s.txt",outputDir.Data(),process.Data(),
-		      fileType.Data(),cateScheme.Data());
+TString DMSigParam::getSigParamFileName(TString process, TString fileType,
+					int cateIndex) {
+  TString name = Form("%s/%s/%s_%s_%d.txt", outputDir.Data(), process.Data(),
+		      fileType.Data(), cateScheme.Data(), cateIndex);
   return name;
 }
 
@@ -268,26 +272,6 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     std::cout << "DMSigParam: Load " << process << " param." << std::endl;
   }
   
-  // Create output file or load input file.
-  ofstream outputFitFile;
-  ofstream outputYieldFile;
-  ifstream inputFitFile;
-  ifstream inputYieldFile;
-  if (makeNew) {
-    outputFitFile.open(getSigParamFileName(process,"fit"));
-    outputYieldFile.open(getSigParamFileName(process,"yield"));
-  }
-  else {
-    inputFitFile.open(getSigParamFileName(process,"fit"));
-    inputYieldFile.open(getSigParamFileName(process,"yield"));
-    // Check that the input files exist, and if they don't, make new param. 
-    if (!inputFitFile || !inputYieldFile) {
-      makeNew = true;
-      outputFitFile.open(getSigParamFileName(process,"fit"));
-      outputYieldFile.open(getSigParamFileName(process,"yield"));
-    }
-  }
-
   // Vectors to store fitted PDFs
   std::vector<RooCBShape*> vectorCB; vectorCB.clear();
   std::vector<RooGaussian*> vectorGA; vectorGA.clear();
@@ -314,6 +298,26 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
   
   // Loop over categories and process modes:
   for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
+        
+    // Create output file or load input file.
+    ofstream outputFitFile;
+    ofstream outputYieldFile;
+    ifstream inputFitFile;
+    ifstream inputYieldFile;
+    if (makeNew) {
+      outputFitFile.open(getSigParamFileName(process,"fit",i_c));
+      outputYieldFile.open(getSigParamFileName(process,"yield",i_c));
+    }
+    else {
+      inputFitFile.open(getSigParamFileName(process,"fit",i_c));
+      inputYieldFile.open(getSigParamFileName(process,"yield",i_c));
+    
+      // Check that the input files exist, and if they don't, make new param. 
+      if (!inputFitFile || !inputYieldFile) {
+	createSigParam(process, true);
+	return;
+      }
+    }
     
     // Define the fit variables (Can't avoid using >80 char per line...):
     RooRealVar *meanCB = new RooRealVar(Form("meanCB_%s_%d",process.Data(),i_c),
@@ -434,20 +438,21 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       }
     }
     
-    // Save the fitted PDFs:
+    // Save the fitted PDFs for this category:
     vectorCB.push_back(currCB);
     vectorGA.push_back(currGA);
     vectorSignal.push_back(currSignal);
-  }
-  
-  if (makeNew) {
-    outputFitFile.close();
-    outputYieldFile.close();
-  }
-  else {
-    inputFitFile.close();
-    inputYieldFile.close();
-  }
+
+    // Close input/output files for this category.
+    if (makeNew) {
+      outputFitFile.close();
+      outputYieldFile.close();
+    }
+    else {
+      inputFitFile.close();
+      inputYieldFile.close();
+    }
+  }// end of loop over categories.
   
   // Add signal shapes in all categories to the map.
   sigCB[process] = vectorCB;

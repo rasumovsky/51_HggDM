@@ -56,7 +56,8 @@ TString DMAnalysis::nameToFileList(TString name) {
 */
 TString DMAnalysis::cateToBkgFunc(TString category) {
   TString result = "";
-  result = "Exppol01";
+  // WARNING!! THERE IS CURRENTLY A PROBLEM WITH EXPONENTIALS IN DMBKGMODEL.
+  result = "Bern02";//"Exppol01";
   //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
   return result;
 }

@@ -51,8 +51,10 @@ DMBkgModel::DMBkgModel(TString newJobName, TString newCateScheme,
                        parameters will be added.
    @param cateIndex - The index of the current analysis category. 
 */
-void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
+void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace, 
 				RooArgSet *&nuisParams, int cateIndex) {
+  std::cout << "DMBkgModel: Adding category " << cateIndex
+	    << " background model to the workspace" << std::endl;
   
   // First, call the function to get the background PDF:
   RooAbsPdf* currBkgModel = getCateBkgPDF(cateIndex);
@@ -71,6 +73,9 @@ void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
   // Finally, include a normalization parameter for the background:
   workspace->factory("nBkg[100,0,1000000]");
   nuisParams->add(*workspace->var("nBkg"));
+  
+  std::cout << "DMBkgModel: Finished adding category " << cateIndex
+	    << " background model to the workspace" << std::endl;
 }
 
 /**
@@ -80,7 +85,7 @@ void DMBkgModel::addBkgToCateWS(RooWorkspace *&workspace,
 */
 RooAbsPdf* DMBkgModel::getCateBkgPDF(int cateIndex) {
   TString cateName = Form("%s_%d",cateScheme.Data(),cateIndex);
-  TString currFunction = cateToBkgFunc(cateName);
+  TString currFunction = DMAnalysis::cateToBkgFunc(cateName);
   TString currFuncName = Form("bkg_%d",cateIndex);
   return getBkgPDFByName(currFuncName, currFunction);
 }
@@ -99,8 +104,8 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   int order = getOrderFromFunc(fitFunc);
     
   // Set the range of the m_yy variable from DMHeader.h:
-  RooConstVar min("min","min",DMMyyRangeLo);
-  RooConstVar max("max","max",DMMyyRangeHi);
+  RooConstVar min("min", "min", DMMyyRangeLo);
+  RooConstVar max("max", "max", DMMyyRangeHi);
   
   // Background fit variables:
   RooArgList *bkgArgs = new RooArgList();

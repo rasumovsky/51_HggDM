@@ -135,8 +135,7 @@ void DMxAODCutflow::printxAODCutflow() {
   std::cout << "DMxAODCutflow: Printing the xAOD cutflow." << std::endl;
   for (int i_c = 0; i_c < nCuts; i_c++) {
     std::cout << "\t" << cutList[i_c] << "\t" << passCounter[cutList[i_c]] 
-	      << "\t" << getAccXEffAtCut(cutList[i_c]) << 
-	      << "percent." << std::endl;
+	      << "\t" << getAccXEffAtCut(cutList[i_c]) << "%%." << std::endl;
   }
 }
 

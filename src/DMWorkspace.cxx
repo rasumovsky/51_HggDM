@@ -653,11 +653,19 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
   
   // Model with combined SM production modes:
-  tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfSM,nBkg*bkgPdf)");
-  // Model with separated SM production modes:
-  tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfSM,nBkg*bkgPdf)");
+  // QUESTION: SHOULD SPURIOUS SIGNAL BE * PDFSM or PDFDM? I WOULD GUESS PDFDM
+  if (m_bgm) {
+    tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,expectedBias*sigPdfDM,nBkg*bkgPdf)");
+    // Model with separated SM production modes:
+    tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfDM,nBkg*bkgPdf)");
+  }
+  else {
+    tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,nBkg*bkgPdf)");
+    // Model with separated SM production modes:
+    tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,nBkg*bkgPdf)");
+  }
   tempWS->Print();
-  
+
   // Only attach constraint term to first category. If constraint terms were
   // attached to each category, constraints would effectively be multiplied.
   if (currCateIndex == 0) {
@@ -775,7 +783,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Set some of the mu values constant:
   RooArgSet* muConstCateWS = new RooArgSet();
-  muConstCateWS->add(*categoryWS->var("mu_SM"));
+  //muConstCateWS->add(*categoryWS->var("mu_SM"));
   muConstCateWS->add(*categoryWS->var("mu_ggH"));
   muConstCateWS->add(*categoryWS->var("mu_VBF"));
   muConstCateWS->add(*categoryWS->var("mu_WH"));

@@ -173,10 +173,11 @@ void DMMassPoints::createNewMassPoints() {
     dmt->fChain->GetEntry(event);
         
     // Calculate the weights for the cutflow first!
-    double evtWeight = 1.0 / nGeneratedEvt;
+    double evtWeight = 1.0;
     if (isWeighted) {
-      evtWeight *= (analysisLuminosity * dmt->EventInfoAuxDyn_PileupWeight);
-            
+      evtWeight *= (DMAnalysis::analysisLuminosity * 
+		    dmt->EventInfoAuxDyn_PileupWeight / nGeneratedEvt);
+      
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (isSMSample(sampleName)) {
 	evtWeight *= ((brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
@@ -188,6 +189,9 @@ void DMMassPoints::createNewMassPoints() {
 				       getDarkMatterMass(sampleName),
 				       getMediatorName(sampleName),
 				       "XS")));
+      }
+      else if (sampleName.EqualTo("gg_gjet")) {
+	evtWeight *= 57.24;//xsection*filter-eff for Sherpa gg+gj
       }
     }
     

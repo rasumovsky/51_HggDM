@@ -103,3 +103,33 @@ the option "FromScratch".
 #### PERReader
  This is a simple class for loading and accessing energy resolution systematics
  based on an input file. 
+
+### Setting up the package. 
+
+#### Initial modifications
+New users will need to modify src/DMAnalysis.h and possibly the makefile in 
+order to run the code. All input and output file locations for the programs
+are built around the locations provided in DMAnalysis.h (masterInput, 
+masterOutput, packageLocation, clusterFileLocation, and fileName*). Sub-
+directories will be created as necessary by the program.
+
+#### Input files.
+To be uploaded shortly. For the moment, they are located in the following lxplus
+directory: ~ahard/public/GlobalInputs. The masterInput directory should point to
+these files.
+
+### Running the code
+First compile the master program, which executes the analysis code:
+     > make bin/DMMaster
+
+Then to run, 
+     > ./bin/DMMaster <JobName> <Program> <Categorization>
+
+The job name can be whatever you want. The program can be any of the following
+options: MassPoints, SigParam, Workspace. The code will automatically run any
+required upstream programs in order to ensure that it has all required inputs.
+For instance, if you want to create a workspace from scratch, using two ETMiss 
+categories, just run:
+     > ./bin/DMMaster WSJob Workspace splitETMiss
+
+Make sure that you are running in a directory from which EOS is accesssible. 

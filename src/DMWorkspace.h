@@ -51,7 +51,9 @@ class DMWorkspace
   void makeShapeNP(TString varnameNP, TString process, double setup[4],
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
-  void plotFit(RooWorkspace *cateWS, double valMuDM);
+  void plotSingleCateFit(RooWorkspace *cateWS, double valMuDM);
+  void plotFinalFits(RooWorkspace *combWS, map<string,RooDataSet*> dataMap,
+		     TString dataset, TString fitType);
   //void plotNuisParams();// Take this from NPP?
   
   // Member variables:
@@ -60,6 +62,7 @@ class DMWorkspace
   TString cateScheme;
   TString options;
   TString outputDir;
+  int nCategories;
   
   // Helper classes:
   PESReader *pes;

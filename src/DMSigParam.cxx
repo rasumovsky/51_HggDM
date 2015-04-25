@@ -418,23 +418,34 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       
       // Then plot the parameterization and the data used for the fit:
       TCanvas *can = new TCanvas();
-      RooPlot* frame = m_yy->frame(Bins(40, Range(higgsMass-10,higgsMass+10)));
+      RooPlot* frame = m_yy->frame(Bins(40), Range(higgsMass-10, higgsMass+10));
       currData->plotOn(frame);
-
       currSignal->plotOn(frame, LineColor(2));
-      currSignal->plotOn(frame, Components((*cateWS->pdf("pdfCB"))),
-			 LineColor(4));
-      currSignal->plotOn(frame, Components((*cateWS->pdf("pdfGA"))),
-			 LineColor(3));
+      currSignal->plotOn(frame, Components(*currCB), LineColor(4));
+      currSignal->plotOn(frame, Components(*currGA), LineColor(3));
       frame->SetYTitle("Events/0.5 GeV");
       frame->SetXTitle("M_{#gamma#gamma} [GeV]");
       frame->Draw();
       TLatex text; text.SetNDC(); text.SetTextColor(1);
-      text.DrawLatex(0.5, 0.78, Form("Category %d", cateIndex));
-      text.DrawLatex(0.5, 0.72, Form("Signal %s", process.Data()));
-      can->Print(Form("%s/Plots/%s_%s_%d.eps",outputDir.Data(),process.Data(),
-		      cateScheme.Data(), cateIndex));
-
+      text.DrawLatex(0.2, 0.76, Form("Category %d", i_c));
+      text.DrawLatex(0.2, 0.82, Form("Signal %s", process.Data()));
+      TH1F *histGA = new TH1F("histGA", "histGA", 1, 0, 1);
+      TH1F *histCB = new TH1F("histCB", "histCB", 1, 0, 1);
+      TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
+      histGA->SetLineColor(3);
+      histCB->SetLineColor(4);
+      histSig->SetLineColor(2);
+      TLegend leg(0.2, 0.6, 0.4, 0.74);
+      leg.SetFillColor(0);
+      leg.SetTextSize(0.04);
+      leg.SetBorderSize(0);
+      leg.AddEntry(histGA, "Gaussian", "l");
+      leg.AddEntry(histCB, "Crystal-Ball", "l");
+      leg.AddEntry(histSig, "Total Signal", "l");
+      leg.Draw("SAME");
+      
+      can->Print(Form("%s/Plots/%s_%s_%d.eps", outputDir.Data(), process.Data(),
+		      cateScheme.Data(), i_c));
     }
     // If using previous parameterization, just load params from .txt file.
     else {

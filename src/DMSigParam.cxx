@@ -10,8 +10,8 @@
 //  the SM and DM production modes. For now, the program uses a single mass   //
 //  point (125 GeV), and only has the SM production modes.                    //
 //                                                                            //
-//  NOTE: functionality for a RooCategory has been provided, but has not yet  //
-//  been utilized. Consider implementing for easy access to combined PDF.     //
+//  NOTE: Fit now uses the same mean value for the Crystal Ball and Gaussian  //
+//  components. 
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -129,13 +129,15 @@ void DMSigParam::addSigToCateWS(RooWorkspace *&workspace,
   TString massResCB = Form("%f", getSigParam(process, "sigmaCB", cateIndex));
   TString alphaCB = Form("%f", getSigParam(process, "alphaCB", cateIndex));
   TString nCB = Form("%f", getSigParam(process, "nCB", cateIndex));
-  TString meanGA = Form("%f", getSigParam(process, "meanGA", cateIndex));
+  //TString meanGA = Form("%f", getSigParam(process, "meanGA", cateIndex));
+  TString meanGA = Form("%f", getSigParam(process, "meanCB", cateIndex));
   TString massResGA = Form("%f", getSigParam(process, "sigmaGA", cateIndex));
   TString frac = Form("%f", getSigParam(process, "frac", cateIndex));
   
   workspace->factory(Form("RooCBShape::pdfCB%s(m_yy, prod::meanCB%s(meanCBNom%s[%s]%s), prod::massResCB%s(massResNomCB%s[%s]%s), alphaCB%s[%s], nCB%s[%s])", processType.Data(), processType.Data(), processType.Data(), meanCB.Data(), listPES.Data(), processType.Data(), processType.Data(), massResCB.Data(), listPER.Data(), processType.Data(), alphaCB.Data(), processType.Data(), nCB.Data()));
   
-  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s]%s), prod::massResGA%s(massResNomGA%s[%s]%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listPES.Data(), processType.Data(), processType.Data(), massResGA.Data(), listPER.Data()));
+  //workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanGANom%s[%s]%s), prod::massResGA%s(massResNomGA%s[%s]%s))", processType.Data(), processType.Data(), processType.Data(), meanGA.Data(), listPES.Data(), processType.Data(), processType.Data(), massResGA.Data(), listPER.Data()));
+  workspace->factory(Form("RooGaussian::pdfGA%s(m_yy, prod::meanGA%s(meanCBNom%s[%s]%s), prod::massResGA%s(massResNomGA%s[%s]%s))", processType.Data(), processType.Data(), processType.Data(), meanCB.Data(), listPES.Data(), processType.Data(), processType.Data(), massResGA.Data(), listPER.Data()));
   
   workspace->factory(Form("SUM::sigPdf%s(frac%s[%s]*pdfCB%s,pdfGA%s)", processType.Data(), processType.Data(), frac.Data(), processType.Data(), processType.Data())); 
   
@@ -221,6 +223,8 @@ RooRealVar* DMSigParam::getMassObservable() {
    @returns The value of the specified signal parameter. 
 */
 double DMSigParam::getSigParam(TString process, TString param, int cateIndex) {
+  // Require the Gaussian to have the same mean as the CB.
+  if (param.EqualTo("meanGA")) param = "meanCB";
   RooArgSet *currArgs = ((sigPDF[process])[cateIndex])->getVariables();
   TIterator *iterArgs = currArgs->createIterator();
   RooRealVar* currIter = NULL;
@@ -336,9 +340,9 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
     RooRealVar *nCB = new RooRealVar(Form("nCB_%s_%d",process.Data(),i_c),
 				     Form("nCB_%s_%d",process.Data(),i_c),
 				     10,0.001,20);
-    RooRealVar *meanGA = new RooRealVar(Form("meanGA_%s_%d",process.Data(),i_c),
-					Form("meanGA_%s_%d",process.Data(),i_c),
-					125.4,123.0,128.0);
+    //RooRealVar *meanGA = new RooRealVar(Form("meanGA_%s_%d",process.Data(),i_c),
+    //					Form("meanGA_%s_%d",process.Data(),i_c),
+    //					125.4,123.0,128.0);
     RooRealVar *sigmaGA = new RooRealVar(Form("sigmaGA_%s_%d",process.Data(),
 					      i_c),
 					 Form("sigmaGA_%s_%d",process.Data(),
@@ -356,7 +360,8 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 					       i_c),
 					  Form("pdfGA_%s_%d",process.Data(),
 					       i_c),
-					  *m_yy, *meanGA, *sigmaGA);
+					  *m_yy, *meanCB, *sigmaGA);
+					  //*m_yy, *meanGA, *sigmaGA);
     RooAddPdf *currSignal = new RooAddPdf(Form("sigPdf_%s_%d",process.Data(),
 					       i_c),
 					  Form("sigPdf_%s_%d",process.Data(),
@@ -399,7 +404,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
       sigmaCB->setConstant(true);
       alpha->setConstant(true);
       nCB->setConstant(true);
-      meanGA->setConstant(true);
+      //meanGA->setConstant(true);
       sigmaGA->setConstant(true);
       frac->setConstant(true);
       
@@ -409,7 +414,8 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 		    << sigmaCB->getVal() << " "
 		    << alpha->getVal()   << " "
 		    << nCB->getVal()     << " "
-		    << meanGA->getVal()  << " "
+	//<< meanGA->getVal()  << " "
+		    << meanCB->getVal()  << " "
 		    << sigmaGA->getVal() << " "
 		    << frac->getVal() << std::endl;
       outputYieldFile << i_c << " "
@@ -458,7 +464,7 @@ void DMSigParam::createSigParam(TString process, bool makeNew) {
 	sigmaCB->setVal(rSigmaCB);
 	alpha->setVal(rAlpha);
 	nCB->setVal(rNCB);
-	meanGA->setVal(rMeanGA);
+	//meanGA->setVal(rMeanGA);
 	sigmaGA->setVal(rSigmaGA);
 	frac->setVal(rFrac);
 	break;

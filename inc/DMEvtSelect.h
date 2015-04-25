@@ -78,6 +78,8 @@ class DMEvtSelect
   std::map<TString,int> cateCount;
   std::map<TString,double> cateCountWt;
   
+  TString selectionUsed;
+  TString categoryUsed;
 };
 
 #endif

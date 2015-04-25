@@ -61,7 +61,9 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   cateSchemesAndSizes["splitETMiss"] = 2;
   
   evtTree = newTree;
-
+  selectionUsed = "";
+  categoryUsed = "";
+  
   // Reset event counters and initialize values to zero:
   clearCounters();
   std::cout << "DMEvtSelect: Successfully initialized!" << std::endl;
@@ -150,6 +152,12 @@ void DMEvtSelect::printCutflow(bool weighted) {
   std::cout << "Printing Cutflow: " << std::endl;
   // Loop over the cuts and print the name as well as the pass ratio:
   for (int i = 0; i < (int)cutList.size(); i++) {
+    if (selectionUsed.EqualTo("looseCuts") && cutList[i].EqualTo("allCuts")) {
+      continue;
+    }
+    if (selectionUsed.EqualTo("allCuts") && cutList[i].EqualTo("looseCuts")) {
+      continue;
+    }
     // Print the weighted cutflow (for MC):
     if (weighted) {
       std::cout << "\t" << cutList[i] << "\t" << evtCountPassWt[cutList[i]]
@@ -194,6 +202,12 @@ void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
   ofstream outFile(fileName);
   // Loop over the cuts and print the name as well as the pass ratio:
   for (int i = 0; i < (int)cutList.size(); i++) {
+    if (selectionUsed.EqualTo("looseCuts") && cutList[i].EqualTo("allCuts")) {
+      continue;
+    }
+    if (selectionUsed.EqualTo("allCuts") && cutList[i].EqualTo("looseCuts")) {
+      continue;
+    }
     // Print the weighted cutflow (for MC):
     if (weighted) {
       outFile << "\t" << cutList[i] << "\t" << evtCountPassWt[cutList[i]]
@@ -285,10 +299,12 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   int currCate = -1;
   // Inclusive categorization - only 1 category.
   if (cateScheme.EqualTo("inclusive")) {
+    categoryUsed = "inclusive";
     currCate = 0;
   }
   // Split MET - low and high MET categories.
   else if (cateScheme.EqualTo("splitETMiss")) {
+    categoryUsed = "splitETMiss";
     if (evtTree->EventInfoAuxDyn_metref_final > 140.0) currCate = 1;
     else currCate = 0;
   }
@@ -364,6 +380,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Check whether event passes all of the cuts above:
   else if (cutName.EqualTo("allCuts")) {
+    selectionUsed = "allCuts";
     for (int i = 0; i < (int)cutList.size(); i++) {
       if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts")) {
 	continue;
@@ -376,6 +393,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Check whether event passes all of the cuts except ID and isolation.
   else if (cutName.EqualTo("looseCuts")) {
+    selectionUsed = "looseCuts";
     for (int i = 0; i < (int)cutList.size(); i++) {
       if (cutList[i].EqualTo("allCuts") || cutList[i].EqualTo("looseCuts") ||
 	  cutList[i].EqualTo("photonIso") || cutList[i].EqualTo("photonID")) {

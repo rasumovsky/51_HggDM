@@ -8,13 +8,6 @@
 //                                                                            //
 //  This class builds the workspace for the dark matter analysis fits.        //
 //                                                                            //
-//  First: build signal and background models.                                //
-//  Second: add asimov data function.                                         //
-//  Third: make plots a la spin analysis or better yet NPP.                   //
-//                                                                            //
-//  Note: 18/4/2015. Need to specify a single DM signal process to be used in //
-//  the construction of this statistical model. One workspace per DM model.   //
-//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMWorkspace.h"
@@ -39,6 +32,7 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   DMSignal = newDMSignal;
   cateScheme = newCateScheme;
   options = newOptions;
+  allGoodFits = true;
   
   std::cout << "\nDMWorkspace: Initializing..."
 	    << "\n\tjobName = " << jobName
@@ -49,7 +43,7 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
   // Assign output directory, and make sure it exists:
   outputDir = Form("%s/%s/DMWorkspace",masterOutput.Data(),jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
-  system(Form("mkdir -vp %s/figures/",outputDir.Data()));
+  system(Form("mkdir -vp %s/Plots/",outputDir.Data()));
   system(Form("mkdir -vp %s/rootfiles/",outputDir.Data()));
   system(Form("mkdir -vp %s/mu/",outputDir.Data()));
   
@@ -197,8 +191,6 @@ void DMWorkspace::createNewWS() {
   
   // Import PDFs and parameters to combined workspace:
   combinedWS->import(combinedPdf);
-  //nuisanceParameters->add(*combinedWS->var("mu_DM"));
-  //nuisanceParameters->add(*combinedWS->var("mu_SM"));
   // might need to add others in version with separate production modes.
   combinedWS->defineSet("nuisanceParameters",*nuisanceParameters);
   combinedWS->defineSet("muSMConstants",*muSMConstants);
@@ -234,12 +226,17 @@ void DMWorkspace::createNewWS() {
   combinedWS->import(*asimovDataMu0);
   combinedWS->import(*asimovDataMu1);
   
+  RooArgSet *nuisParamsAndSMMu = new RooArgSet();
+  nuisParamsAndSMMu->add(*combinedWS->set("nuisanceParameters"));
+  nuisParamsAndSMMu->add(*combinedWS->set("muSMConstants"));
+  
   // Define the ModelConfig:
   mConfig = new ModelConfig("mConfig",combinedWS);
   mConfig->SetPdf(*combinedWS->pdf("combinedPdf"));
   mConfig->SetObservables(*combinedWS->set("observables"));
   mConfig->SetParametersOfInterest((*combinedWS->set("poi")));
-  mConfig->SetNuisanceParameters((*combinedWS->set("nuisanceParameters")));
+  //mConfig->SetNuisanceParameters((*combinedWS->set("nuisanceParameters")));
+  mConfig->SetNuisanceParameters(*nuisParamsAndSMMu);
   mConfig->SetGlobalObservables((*combinedWS->set("globalObservables")));
   combinedWS->import(*mConfig);
   
@@ -278,12 +275,15 @@ void DMWorkspace::createNewWS() {
   statistics::constSet(globs, true);
   poi->setVal(1.0);
   poi->setConstant(true);
-  RooFitResult* resMu1;
-  // If analysis is blind, fit and plot Asimov data:
-  resMu1 = pdf->fitTo(*combinedWS->data(dataToPlot), PrintLevel(0), Save(true));
+  combinedWS->var("mu_SM")->setVal(0);
+  combinedWS->var("mu_SM")->setConstant(true);
+  
+  RooFitResult* resMu1 = pdf->fitTo(*combinedWS->data(dataToPlot),
+				    PrintLevel(0), Save(true));
   
   // Track whether all fits converge:
-  allGoodFits = (resMu1->status() == 0);
+  if (resMu1->status() != 0) allGoodFits = false;
+  
   double nllMu1 = resMu1->minNll();
   combinedWS->saveSnapshot("paramsProfileMu1",*poiAndNuis);
   
@@ -303,11 +303,15 @@ void DMWorkspace::createNewWS() {
   statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(true);
-  RooFitResult* resMu0;
-  resMu0 = pdf->fitTo(*combinedWS->data(dataToPlot), PrintLevel(0), Save(true));
+  combinedWS->var("mu_SM")->setVal(0);
+  combinedWS->var("mu_SM")->setConstant(true);
+  
+  RooFitResult* resMu0 = pdf->fitTo(*combinedWS->data(dataToPlot),
+				    PrintLevel(0), Save(true));
   
   // Track whether all fits converge:
-  allGoodFits = (resMu0->status() == 0);
+  if (resMu0->status() != 0) allGoodFits = false;
+  
   double nllMu0 = resMu0->minNll();
   combinedWS->saveSnapshot("paramsProfileMu0",*poiAndNuis);
   
@@ -327,12 +331,14 @@ void DMWorkspace::createNewWS() {
   statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(false);
-  RooFitResult* resMuFree;
-  resMuFree = pdf->fitTo(*combinedWS->data(dataToPlot), PrintLevel(0),
-			 Save(true));
+  combinedWS->var("mu_SM")->setVal(0);
+  combinedWS->var("mu_SM")->setConstant(true);
+  
+  RooFitResult* resMuFree = pdf->fitTo(*combinedWS->data(dataToPlot),
+				       PrintLevel(0), Save(true));
     
   // Track whether all fits converge:
-  allGoodFits = (resMuFree->status() == 0);
+  if (resMuFree->status() != 0) allGoodFits = false;
   double nllMuFree = resMuFree->minNll();
   double profiledMuValue = poi->getVal();
   combinedWS->saveSnapshot("paramsProfile_muFree",*poiAndNuis);
@@ -348,7 +354,8 @@ void DMWorkspace::createNewWS() {
   combinedWS->loadSnapshot("paramsOrigin");
   statistics::constSet(poiAndNuis, false);
   statistics::constSet(globs, true);
-  
+  combinedWS->var("mu_SM")->setConstant(true);
+
   // Print summary of the fits:
   std::cout.precision(10);
   std::cout << "\nPrinting likelihood results: " << std::endl;
@@ -556,7 +563,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // Parameters of interest (POIs):
-  double muMin = 0; double muMax = 100;
+  double muMin = -1; double muMax = 100;
   RooRealVar *mu_DM = new RooRealVar("mu_DM", "mu_DM", 1, muMin, muMax);
   RooRealVar *mu_SM = new RooRealVar("mu_SM", "mu_SM", 1, muMin, muMax);
   /*
@@ -640,8 +647,12 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     
   // Normalization for each process follows such pattern:
   // Definition of expectationCommon = mu*isEM*lumi*migr
-  tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)", currSigParam->getCateSigYield(currCateIndex,"SM")));
-  tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)", currSigParam->getCateSigYield(currCateIndex,DMSignal)));
+  tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
+		       currSigParam->getCateSigYield(currCateIndex,"SM")));
+  
+  tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
+		       currSigParam->getCateSigYield(currCateIndex,DMSignal)));
+  
   
   std::cout << "getCateSigYield(" << currCateIndex << "," << DMSignal << ") = "
 	    << currSigParam->getCateSigYield(currCateIndex,DMSignal) 
@@ -765,7 +776,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   TIterator *iterGlobs = globalObs->createIterator();
   RooRealVar *currGlobs;
   while ((currGlobs = (RooRealVar*)iterGlobs->Next())) {
-    
     TString globName = currGlobs->GetName()+(TString)"_"+currCateName;
     if ((bool)categoryWS->obj(globName)) {
       globsCateWS->add(*(RooRealVar*)categoryWS->obj(globName));
@@ -791,6 +801,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   }
   
   // Set some of the mu values constant:
+  std::cout << "DMWorkspace: Setting SM signals constant." << std::endl;
   RooArgSet* muConstCateWS = new RooArgSet();
   muConstCateWS->add(*categoryWS->var("mu_SM"));
   /*
@@ -804,11 +815,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   TIterator *iterMuConst = muConstCateWS->createIterator();
   RooRealVar *currMuConst;
   while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
+    currMuConst->setVal(1.0);
     currMuConst->setConstant(true);
   }
-  
-  // Make sure the SM signal strength is constant. Degenerate with muDM in fit.
-  //categoryWS->var("mu_SM")->setConstant(true);
   
   categoryWS->defineSet("muConstants", *muConstCateWS);
   categoryWS->defineSet("observables", *obsCateWS);
@@ -818,13 +827,11 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // Import the observed data set:
   DMMassPoints *currMassPoints = NULL;
   if (DMAnalysis::doBlind) {
-    currMassPoints = new DMMassPoints(jobName, "gg_gjet",
-				      cateScheme, "FromFile",
+    currMassPoints = new DMMassPoints(jobName,"gg_gjet",cateScheme,"FromFile",
 				      categoryWS->var("m_yy_"+currCateName));
   }
   else {
-    currMassPoints = new DMMassPoints(jobName, "data",
-				      cateScheme, "FromFile",
+    currMassPoints = new DMMassPoints(jobName, "data", cateScheme, "FromFile",
 				      categoryWS->var("m_yy_"+currCateName));
   }
   
@@ -838,9 +845,15 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->numEntries());
   nuisBkgCateWS->Print("v");
   categoryWS->import(*obsData);
+    
+  // Create Asimov mu_DM = 0,1 data:
+  RooRealVar wt("wt","wt",1);
+  createAsimovData(categoryWS, obsData, wt, 0, 1);
+  createAsimovData(categoryWS, obsData, wt, 1, 1);
+  //createAsimovData(categoryWS, obsData, wt, 0, 0);
+  //createAsimovData(categoryWS, obsData, wt, 1, 0);
   
   // Create a binned observed data set:
-  RooRealVar wt("wt","wt",1);
   RooArgSet* obsPlusWt = new RooArgSet();
   obsPlusWt->add(wt);
   obsPlusWt->add(*categoryWS->var("m_yy_"+currCateName));
@@ -868,11 +881,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 		       weightVal);
   }
   categoryWS->import(*obsDataBinned);
-  
-  // Create Asimov mu_DM = 0,1 data:
-  createAsimovData(categoryWS, obsData, wt, 1, 1);
-  createAsimovData(categoryWS, obsData, wt, 0, 1);
-  
+    
   // Plot the single-channel fit:
   plotSingleCateFit(categoryWS, 1.0);
   
@@ -1071,21 +1080,19 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
   RooDataSet *asimovData = new RooDataSet(Form("asimovMu%d", valMuDM), Form("asimovMu%d", valMuDM), RooArgSet(*cateWS->var("m_yy_"+currCateName),wt), WeightVar(wt));
   
   // Load the PDF from the workspace:
-  RooAbsPdf *currPdf = (RooAbsPdf*)(cateWS->pdf("model_"+currCateName));
-    
+  RooAbsPdf *currPdf = (RooAbsPdf*)(cateWS->pdf("modelSB_"+currCateName));
+  
   std::cout << "DMWorkspace: Printing Asimov model." << std::endl;
   currPdf->Print("v");
   
+  double fValMuDM = (double)valMuDM;
+  double fValMuSM = (double)valMuSM;
+  std::cout << "DMWorkspace: printing floating vals: " << fValMuDM << ", "
+	    << fValMuSM << std::endl;
   double initialMuDM = (cateWS->var("mu_DM"))->getVal();
   double initialMuSM = (cateWS->var("mu_SM"))->getVal();
-  cateWS->var("mu_DM")->setVal(valMuDM);
-  cateWS->var("mu_SM")->setVal(valMuSM);
-  
-  std::cout << "DMWorkspace: Printing DM mu value"
-	    << cateWS->var("mu_DM")->getVal() << std::endl;
-  std::cout << "DMWorkspace: Printing SM mu value"
-	    << cateWS->var("mu_SM")->getVal() << std::endl;
-  std::cout << "DMWorkspace: Printed" << std::endl;
+  cateWS->var("mu_DM")->setVal(fValMuDM);
+  cateWS->var("mu_SM")->setVal(fValMuSM);
   cateWS->var("mu_DM")->setConstant(true);
   cateWS->var("mu_SM")->setConstant(true);
   
@@ -1117,6 +1124,7 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, RooDataSet *obsData,
   cateWS->import(*asimovData);
   cateWS->var("mu_DM")->setVal(initialMuDM);
   cateWS->var("mu_SM")->setVal(initialMuSM);
+  cateWS->var("mu_DM")->setConstant(false);
   cateWS->var("mu_SM")->setConstant(true);
 }
 
@@ -1161,7 +1169,7 @@ void DMWorkspace::plotSingleCateFit(RooWorkspace *cateWS, double valMuDM) {
   leg.AddEntry(histSM, "SM Higgs", "l");
   leg.AddEntry(histNR, "Non-resonant", "l");
   leg.Draw("SAME");
-  can->Print(Form("%s/figures/cateFit_%s_%s.eps", outputDir.Data(),
+  can->Print(Form("%s/Plots/cateFit_%s_%s.eps", outputDir.Data(),
 		  DMSignal.Data(), currCateName.Data()));
   delete can;
 }
@@ -1186,10 +1194,10 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS,
     RooPlot* frame =  (*combWS->var("m_yy_"+currCateName)).frame(55);
     dataMap[(string)currCateName]->plotOn(frame);
     
-    (*combWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
-    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("bkgPdf_"+currCateName))), LineColor(4));
     (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfDM_"+currCateName))), LineColor(3));
     (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfSM_"+currCateName))), LineColor(5));
+    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("bkgPdf_"+currCateName))), LineColor(4));
+    (*combWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
     
     //double chi2 = frame->chiSquare();
     frame->SetYTitle("Events / GeV");
@@ -1199,24 +1207,24 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS,
     TLatex text; text.SetNDC(); text.SetTextColor(1);
     text.DrawLatex(0.2, 0.81, Form("Category %d", currCateIndex));
     text.DrawLatex(0.2, 0.87, Form("Signal %s", DMSignal.Data()));
-    TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
     TH1F *histDM = new TH1F("histDM", "histDM", 1, 0, 1);
-    TH1F *histNR = new TH1F("histNR", "histNR", 1, 0, 1);
+    TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
+    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
     TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
-    histSM->SetLineColor(5);
     histDM->SetLineColor(3);
-    histNR->SetLineColor(4);
+    histSM->SetLineColor(5);
+    histBkg->SetLineColor(4);
     histSig->SetLineColor(2);
     TLegend leg(0.61, 0.63, 0.89, 0.77);
     leg.SetFillColor(0);
     leg.SetTextSize(0.04);
     leg.SetBorderSize(0);
-    leg.AddEntry(histSig, "Sig. + bkg.", "l");
     leg.AddEntry(histDM, "Dark matter", "l");
     leg.AddEntry(histSM, "SM Higgs", "l");
-    leg.AddEntry(histNR, "Non-resonant", "l");
+    leg.AddEntry(histBkg, "Non-resonant", "l");
+    leg.AddEntry(histSig, "Sig. + bkg.", "l");
     leg.Draw("SAME");
-    can->Print(Form("%s/figures/combFit_%s_%s_%s.eps", outputDir.Data(),
+    can->Print(Form("%s/Plots/combFit_%s_%s_%s.eps", outputDir.Data(),
 		    DMSignal.Data(), fitType.Data(), currCateName.Data()));
   }
   delete can;

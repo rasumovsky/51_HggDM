@@ -74,7 +74,7 @@ TString DMAnalysis::cateToBkgFunc(TString category) {
   TString result = "";
   // WARNING!! THERE IS CURRENTLY A PROBLEM WITH EXPONENTIALS IN DMBKGMODEL.
   // ALSO, MAKE SURE THIS IS 'O' AND NOT '0'
-  result = "BernO2";//"ExppolO1";
+  result = "ExppolO1";//"ExppolO1";
   //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
   return result;
 }

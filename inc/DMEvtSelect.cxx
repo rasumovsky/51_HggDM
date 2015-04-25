@@ -285,7 +285,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   int currCate = -1;
   // Inclusive categorization - only 1 category.
   if (cateScheme.EqualTo("inclusive")) {
-    return 0;
+    currCate = 0;
   }
   // Split MET - low and high MET categories.
   else if (cateScheme.EqualTo("splitETMiss")) {

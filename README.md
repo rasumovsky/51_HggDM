@@ -122,14 +122,16 @@ these files.
 First compile the master program, which executes the analysis code:
      > make bin/DMMaster
 
-Then to run, 
-     > ./bin/DMMaster <JobName> <Program> <Categorization>
+Then to run,
+
+     ./bin/DMMaster <JobName> <Program> <Categorization>
 
 The job name can be whatever you want. The program can be any of the following
 options: MassPoints, SigParam, Workspace. The code will automatically run any
 required upstream programs in order to ensure that it has all required inputs.
 For instance, if you want to create a workspace from scratch, using two ETMiss 
-categories, just run:
-     > ./bin/DMMaster WSJob Workspace splitETMiss
+categories, just run,
+
+     ./bin/DMMaster WSJob Workspace splitETMiss
 
 Make sure that you are running in a directory from which EOS is accesssible. 

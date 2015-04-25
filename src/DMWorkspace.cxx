@@ -796,6 +796,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     currMuConst->setConstant(true);
   }
   
+  // Make sure the SM signal strength is constant. Degenerate with muDM in fit.
+  categoryWS->var("mu_SM")->setConstant(true);
+  
   categoryWS->defineSet("muConstants", *muConstCateWS);
   categoryWS->defineSet("observables", *obsCateWS);
   categoryWS->defineSet("nuisanceParameters", *nuisCateWS);
@@ -1203,8 +1206,8 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS,
     leg.AddEntry(histSM, "SM Higgs", "l");
     leg.AddEntry(histNR, "Non-resonant", "l");
     leg.Draw("SAME");
-    can->Print(Form("%s/figures/combFit_%s_%s.eps", outputDir.Data(),
-		    DMSignal.Data(), currCateName.Data()));
+    can->Print(Form("%s/figures/combFit_%s_%s_%s.eps", outputDir.Data(),
+		    DMSignal.Data(), fitType.Data(), currCateName.Data()));
   }
   delete can;
 }

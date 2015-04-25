@@ -276,6 +276,11 @@ int main (int argc, char **argv) {
 	if (dmw->fitsAllConverged()) {
 	  jobCounterWS++;
 	}
+	else {
+	  std::cout << "DMMaster: Fits in previous workspace job failed for "
+		    << currDMSignal << " and " << masterCateScheme << std::endl;
+	  exit(0);
+	}
       }
     }
     std::cout << "Submitted/completed " << jobCounterWS << " jobs" << std::endl;

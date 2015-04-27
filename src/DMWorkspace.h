@@ -54,8 +54,8 @@ class DMWorkspace
   void plotSingleCateFit(RooWorkspace *cateWS, TString dataset);
   void plotFinalFits(RooWorkspace *combWS, map<string,RooDataSet*> dataMap,
 		     TString fitType);
-  //void plotNuisParams();// Take this from NPP?
-  
+  void PlotNuisParams(RooArgSet nuisParams, TString type);
+
   // Member variables:
   TString jobName;
   TString DMSignal;

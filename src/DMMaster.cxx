@@ -265,6 +265,13 @@ int main (int argc, char **argv) {
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
       TString currDMSignal = sigDMModes[i_DM];
       
+      // Temporary, for testing workspaces:
+      if (i_DM > 0) {
+	std::cout << "DMMaster: Exiting prematurely for test reasons." 
+		  << std::endl;
+	exit(0);
+      }
+      
       if (runInParallel) {
 	submitWSViaBsub(masterJobName, workspaceOptions, currDMSignal,
 			masterCateScheme);

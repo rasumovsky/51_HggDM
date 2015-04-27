@@ -81,7 +81,6 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 			       exe.Data(), exeJobName.Data(), inputFile.Data(),
 			       exeOption.Data(), exeWorkspace.Data(),
 			       exeDMSignal.Data(), exeCateScheme.Data());
-  
   // Submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
 	      nameErrFile.Data(), nameJobScript.Data()));
@@ -122,11 +121,10 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeDMSignal,
 			     exeDMSignal.Data());
   
   // Here you define the arguments for the job script:
-  TString nameJobScript = Form("%s/jobFileTestStat.sh %s %s %s %s %s", 
+  TString nameJobScript = Form("%s/jobFileTestStat.sh %s %s %s %s %s %s", 
 			       exe.Data(), exeJobName.Data(), inputFile.Data(),
 			       exeTestStat.Data(), exeDMSignal.Data(),
-			       exeOption.Data());
-  
+			       exeCateScheme.Data(), exeOption.Data());
   // submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(),
 	      nameErrFile.Data(), nameJobScript.Data()));
@@ -352,7 +350,8 @@ int main (int argc, char **argv) {
       }
       else {
 	DMTestStat *dmts = new DMTestStat(masterJobName, currDMSignal, 
-					  masterCateScheme, testStatOptions);
+					  masterCateScheme, testStatOptions,
+					  NULL);
 	if (dmts->fitsAllConverged()) {
 	  jobCounterTS++;
 	}
@@ -385,7 +384,8 @@ int main (int argc, char **argv) {
       }
       else {
 	DMTestStat *dmts = new DMTestStat(masterJobName, currDMSignal,
-					  masterCateScheme, testStatOptions);
+					  masterCateScheme, testStatOptions,
+					  NULL);
 	if (dmts->fitsAllConverged()) {
 	  jobCounterTS++;
 	}

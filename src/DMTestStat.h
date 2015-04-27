@@ -23,11 +23,9 @@
 class DMTestStat {
   
  public:
-    
-  DMTestStat(TString newJobName, TString newDMSignal, TString newCateScheme, 
-	     TString newOptions);
-  DMTestStat(TString newJobName, TString newDMSignal, TString newOptions,
-	     RooWorkspace *newWorkspace);
+  
+  DMTestStat(TString newJobName, TString newDMSignal, TString newCateScheme,
+	     TString newOptions, RooWorkspace *newWorkspace);
   virtual ~DMTestStat() {};
   
   double accessValue(TString testStat, bool observed, int N);
@@ -61,6 +59,7 @@ class DMTestStat {
   TString DMSignal;
   TString options;
   TString outputDir;
+  DMWorkspace *dmw;
   
   // Check whether all fits successful:
   bool allGoodFits;

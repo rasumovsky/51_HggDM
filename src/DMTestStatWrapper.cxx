@@ -16,14 +16,15 @@
 int main(int argc, char **argv) {
   
   // Check that arguments are provided.
-  if (argc < 4) {
-    std::cout << "\nUsage: " << argv[0] << " <jobName> <DMSignal> <options>"
-	      << std::endl;
+  if (argc < 5) {
+    std::cout << "\nUsage: " << argv[0]
+	      << " <jobName> <DMSignal> <cateScheme> <options>" << std::endl;
     exit(0);
   }
   TString jobName = argv[1];
   TString DMSignal = argv[2];
-  TString options = argv[3];
+  TString cateScheme = argv[3];
+  TString options = argv[4];
   
   // Define the input file, then make a local copy (for remote jobs):
   TString originFile = Form("%s/%s/workspaces/rootfiles/workspaceDM_%s.root",
@@ -36,7 +37,8 @@ int main(int argc, char **argv) {
   TFile inputFile(copiedFile,"read");
   RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");
   
-  DMTestStat *ts = new DMTestStat(jobName, DMSignal, "new", workspace);
+  DMTestStat *ts = new DMTestStat(jobName, DMSignal, cateScheme, "new",
+				  workspace);
   if (ts->fitsAllConverged()) {
     std::cout << "DMTestStatWrapper: All OK!" << std::endl;
   }

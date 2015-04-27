@@ -14,25 +14,6 @@
 #include "DMTestStat.h"
 
 /**
-   Calculate the test statistic, using the nominal (expected) location of the
-   workspace.
-   @param newJobName - The name of the job
-   @param newDMSignal - The Dark Matter signal to incorporate in the model.
-   @param newCateScheme - The name of the event categorization
-   @param newOptions - The job options ("New", "FromFile"), etc.
-*/
-DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
-		       TString newCateScheme, TString newOptions) {
-  
-  // Load the workspace from the nominal location.
-  DMWorkspace *dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme,
-				     "FromFile");
-  RooWorkspace *newWorkspace = dmw->getCombinedWorkspace();
-  DMTestStat(newJobName, newDMSignal, newOptions, newWorkspace);
-  return;
-}
-
-/**
    Constructor for the DMTestStat class. 
    @param newJobName - The name of the job
    @param newDMSignal - The Dark Matter signal to incorporate in the model.
@@ -40,14 +21,23 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
    @param newWorkspace - The workspace with the model for the test stats. 
 */
 DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
-		       TString newOptions, RooWorkspace *newWorkspace) {
+		       TString newCateScheme, TString newOptions,
+		       RooWorkspace *newWorkspace) {
 
   // Assign input variables: 
   jobName = newJobName;
   DMSignal = newDMSignal;
   options = newOptions;
   allGoodFits = true;
-  workspace = newWorkspace;
+  
+  // Load the workspace from the nominal location.
+  if (newWorkspace == NULL) {
+    dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme, "FromFile");
+    workspace = (dmw->getCombinedWorkspace());
+  }
+  else {
+    workspace = newWorkspace;
+  }
   
   // Map storing all calculations:
   calculatedValues.clear();
@@ -320,11 +310,11 @@ double DMTestStat::getPbfromN(double N) {
 */
 double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
 			     double& profiledMu) { 
-  std::cout << "getFitNLL( " << datasetName << ", " << muVal << ", " << fixMu
-	    << " )" << endl;
+  std::cout << "DMTestStat: getFitNLL( " << datasetName << ", " << muVal
+	    << ", " << fixMu << " )" << std::endl;
   
   // Load the relevant quantities from the ModelConfig:
-  ModelConfig* mc = (ModelConfig*)workspace->obj("ModelConfig");
+  ModelConfig* mc = (ModelConfig*)workspace->obj("modelConfig");
   RooAbsPdf* combPdf = mc->GetPdf();
   RooArgSet* nuisanceParameters = (RooArgSet*)mc->GetNuisanceParameters();
   RooArgSet* globalObservables = (RooArgSet*)mc->GetGlobalObservables();

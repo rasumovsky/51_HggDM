@@ -98,7 +98,7 @@ void DMWorkspace::loadWSFromFile() {
   if (inputFile.IsOpen()) {
     std::cout << "Loading workspace from file"<< std::endl;
     combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
-    mConfig = (ModelConfig*)combinedWS->obj("ModelConfig");
+    mConfig = (ModelConfig*)combinedWS->obj("modelConfig");
   }
   else {
     std::cout << "WARNING! Cannot locate requested workspace!"<< std::endl;
@@ -242,7 +242,7 @@ void DMWorkspace::createNewWS() {
   combinedWS->import(*asimovDataMu1);
   
   // Define the ModelConfig:
-  mConfig = new ModelConfig("mConfig",combinedWS);
+  mConfig = new ModelConfig("modelConfig",combinedWS);
   mConfig->SetPdf((*combinedWS->pdf("combinedPdf")));
   mConfig->SetObservables((*combinedWS->set("observables")));
   mConfig->SetParametersOfInterest((*combinedWS->set("poi")));

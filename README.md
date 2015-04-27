@@ -2,19 +2,11 @@
 
 ## A search for dark matter associated with a Higgs boson (H->diphoton)
 
-### To do 4/21/2015:
-
-1) Figure out weights of gg_gjet in DMEvtSelect
-2) Load sample weights.
-3) Figure out gg_gjet normalization (and that of other samples)
-4) Implement fit plots for the workspace, signal parameterization.
-5) Toy MC code for DM
-
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
 for Higgs bosons produced in association with dark matter particles. The Higgs
 decay is identified by a diphoton resonance, while the dark matter particle
-would manifest as missing transverse energy.
+would manifest as missing transverse energy in the detector.
 
 The code has been structured so that all of the general analysis settings are 
 stored in the DMAnalysis namespace. *A typical user should only need to adjust
@@ -36,35 +28,35 @@ the option "FromScratch".
 
 ### Package contents:
 
-#### DMAnalysis
+##### DMAnalysis
   This namespace should store all important analysis information. The idea is to
   avoid hard-coding anything in the supporting classes. Luminosity, higgs mass,
   m_yy range, file names, script locations, produciton modes should all go here.
   Functions that are used to access these global parameters are also included.
 
-#### DMMaster
+##### DMMaster
   This is the master 'wrapper' class for the analysis. Using this class, all the
   analysis tools can be run. The file organization is automated, using a 
   directory structure based on the 'masterInput' and 'masterOutput' strings in 
   DMAnalysis, as well as the masterJobName.
 
-#### DMMassPoints
+##### DMMassPoints
  This program uses a TTree of data events to produce a series of mass points
  that can be used as inputs for the signal parameterization or workspace 
  creation. The cutflow is implemented using the DMEvtSelect class.
   
-#### DMSigParam
+##### DMSigParam
  This program uses signal MC to fit the resonance shape for the SM Higgs and
  the DM signal and saves the parameters for use in workspace generation. The
  fit is performed on masspoints generated with DMMassPoints. Signal cross-
  sections are provided by the BRXSReader tool.
 
-#### DMBkgModel
+##### DMBkgModel
  This program implements all of the possible background models, and can return 
  either a RooAbsPdf object, a CombinedPdf, or add a PDF directly to the analysis
  workspace.
 
-#### DMWorkspace
+##### DMWorkspace
  This program produces the statistical model for the DM analysis. It includes SM
  signal, a single DM signal, and background PDFs, as well as associated 
  systematic uncertainties. The parameter of interest is "mu_DM", the signal 
@@ -73,47 +65,47 @@ the option "FromScratch".
  comes from data. There is the option of fitting the SM signal strengths 
  individually. 
 
-#### DMTestStat
+##### DMTestStat
  This program calculates the 95% CL, CLs, and p0 values for a given DM signal. 
 
-#### DMPseudoexperiments (TBA)
+##### DMPseudoexperiments (TBA)
 
 ### Supporting Classes:
 
-#### BRXSReader
+##### BRXSReader
  Reads tables of SM Higgs cross sections and branching ratios and provides an 
  easy-to-use interface.
 
-#### DMCheckJobs
+##### DMCheckJobs
  Checks to see whether the output files for a given program are available. It
  also assembles a list of failed jobs that can be prepared for resubmission.
 
-#### DMEvtSelect
+##### DMEvtSelect
  This class implements the cutflow and counters for the analysis. It can be 
  initialized using a pointer to the DMTree. 
 
-#### DMTree
+##### DMTree
  This class is automatically generated based on the MxAOD structure. It provides
  a useful interface for code to the TTrees. 
 
-#### PESReader
+##### PESReader
  This is a simple class for loading and accessing energy scale systematics based
  on an input file. 
 
-#### PERReader
+##### PERReader
  This is a simple class for loading and accessing energy resolution systematics
  based on an input file. 
 
 ### Setting up the package. 
 
-#### Initial modifications
+##### User modifications
 New users will need to modify src/DMAnalysis.h and possibly the makefile in 
 order to run the code. All input and output file locations for the programs
 are built around the locations provided in DMAnalysis.h (masterInput, 
 masterOutput, packageLocation, clusterFileLocation, and fileName*). Sub-
 directories will be created as necessary by the program.
 
-#### Input files.
+##### Input files.
 To be uploaded shortly. For the moment, they are located in the following lxplus
 directory: ~ahard/public/GlobalInputs. The masterInput directory should point to
 these files.

@@ -93,7 +93,7 @@ ModelConfig* DMWorkspace::getModelConfig() {
 */
 void DMWorkspace::loadWSFromFile() {
   //Check to see if the workspace has actually been made.
-  TFile inputFile(Form("%s/workspaceDM_%s.root", outputDir.Data(),
+  TFile inputFile(Form("%s/rootfiles/workspaceDM_%s.root", outputDir.Data(),
 		       DMSignal.Data()),"read");
   if (inputFile.IsOpen()) {
     std::cout << "Loading workspace from file"<< std::endl;
@@ -288,14 +288,17 @@ void DMWorkspace::createNewWS() {
   // Profile and save snapshot for mu=1 fixed:
   std::cout << "\nDMWorkspace: Profile mu_DM = 1:" << std::endl;
   statistics::constSet(poiAndNuis, false);
-  //statistics::constSet(globs, true);
+  statistics::constSet(globs, true);
   poi->setVal(1.0);
   poi->setConstant(true);
   combinedWS->var("mu_SM")->setVal(muNominalSM);
   combinedWS->var("mu_SM")->setConstant(true);
-  RooFitResult* resMu1 = pdf->fitTo(*combinedWS->data(dataToPlot),
+  // Perform the fit:
+  RooFitResult* resMu1 = pdf->fitTo(*combinedWS->data(dataToPlot), 
+				    Constrain(*nuisanceParameters), 
+				    Extended(pdf->canBeExtended()),
 				    PrintLevel(0), Save(true));
-  // Track whether all fits converge:
+  // Track whether all fits converge, save results:
   if (resMu1->status() != 0) allGoodFits = false;
   double nllMu1 = resMu1->minNll();
   combinedWS->saveSnapshot("paramsProfileMu1",*poiAndNuis);
@@ -312,20 +315,22 @@ void DMWorkspace::createNewWS() {
   // Profile and save snapshot for mu=0 fixed:
   std::cout << "\nDMWorkspace: Profile mu_DM = 0:" << std::endl;
   combinedWS->loadSnapshot("paramsOrigin");
-  //statistics::constSet(poiAndNuis, false);
-  //statistics::constSet(globs, true);
+  statistics::constSet(poiAndNuis, false);
+  statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(true);
   combinedWS->var("mu_SM")->setVal(muNominalSM);
   combinedWS->var("mu_SM")->setConstant(true);
-  RooFitResult* resMu0 = pdf->fitTo(*combinedWS->data(dataToPlot),
+  // Perform the fit:
+  RooFitResult* resMu0 = pdf->fitTo(*combinedWS->data(dataToPlot), 
+				    Constrain(*nuisanceParameters), 
+				    Extended(pdf->canBeExtended()),
 				    PrintLevel(0), Save(true));
-  
-  // Track whether all fits converge:
+  // Track whether all fits converge, save results:
   if (resMu0->status() != 0) allGoodFits = false;
   double nllMu0 = resMu0->minNll();
   combinedWS->saveSnapshot("paramsProfileMu0",*poiAndNuis);
-     
+  
   // Plots of invariant mass and nuisance parameters:
   if (!options.Contains("noplot")) {
     plotFinalFits(combinedWS, dmToPlot, "mu0");
@@ -338,20 +343,20 @@ void DMWorkspace::createNewWS() {
   // Profile and save snapshot for mu floating:
   std::cout << "\nDMWorkspace: Profile mu floating:" << std::endl;
   combinedWS->loadSnapshot("paramsOrigin");
-  //statistics::constSet(poiAndNuis, false);
-  //statistics::constSet(globs, true);
+  statistics::constSet(poiAndNuis, false);
+  statistics::constSet(globs, true);
   poi->setVal(0.0);
   poi->setConstant(false);
   combinedWS->var("mu_SM")->setVal(muNominalSM);
   combinedWS->var("mu_SM")->setConstant(true);
-  
-  RooFitResult* resMuFree = pdf->fitTo(*combinedWS->data(dataToPlot),
+  // Perform the fit:
+  RooFitResult* resMuFree = pdf->fitTo(*combinedWS->data(dataToPlot), 
+				       Constrain(*nuisanceParameters), 
+				       Extended(pdf->canBeExtended()),
 				       PrintLevel(0), Save(true));
- 
-  // Track whether all fits converge:
+  // Track whether all fits converge, save results:
   if (resMuFree->status() != 0) allGoodFits = false;
   double nllMuFree = resMuFree->minNll();
- 
   double profiledMuValue = poi->getVal();
   combinedWS->saveSnapshot("paramsProfile_muFree",*poiAndNuis);
   
@@ -410,13 +415,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   bool m_mig = !options.Contains("nomig");
   bool m_nosys = options.Contains("nosys");
   if (m_nosys) {
-    std::cout << "\tALL systematics = OFF" << endl;
-    m_norm = false;
-    m_pes = false;
-    m_per = false;
-    m_ss  = false;
-    m_bgm = false;
-    m_mig = false;
+    std::cout << "\tDMWorkspace: ALL systematics OFF" << endl;
+    m_norm = false;   m_pes = false;   m_per = false;
+    m_ss = false;     m_bgm = false;   m_mig = false;
   }
   std::cout << "\tNormalization systematics = " << m_norm << std::endl;
   std::cout << "\tEnergy scale systematics  = " << m_pes  << std::endl;
@@ -427,7 +428,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // Create the individual channel workspace:
-  RooWorkspace *tempWS = new RooWorkspace(currCateName);
+  RooWorkspace *tempWS = new RooWorkspace(Form("tmpWS_%s",currCateName.Data()));
   
   // nuispara:
   RooArgSet *nuisParams = new RooArgSet();
@@ -440,11 +441,11 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooArgSet *globalObs = new RooArgSet();
   RooArgSet *globalObsProc = new RooArgSet();
   // expected:
+  RooArgSet *expectedShape = new RooArgSet();
+  RooArgSet *expectedBias = new RooArgSet();
   RooArgSet *expected = new RooArgSet();
   RooArgSet *expectedSM = new RooArgSet();
   RooArgSet *expectedDM = new RooArgSet();
-  RooArgSet *expectedShape = new RooArgSet();
-  RooArgSet *expectedBias = new RooArgSet();
   /*
   RooArgSet *expectedProc_ggH = new RooArgSet();
   RooArgSet *expectedProc_VBF = new RooArgSet();
@@ -616,9 +617,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 				 */
   
   // Spurious signal term will assume the shape of "inclusive" pdf.
+  tempWS->import(expectationCommon);
   tempWS->import(expectationSM);
   tempWS->import(expectationDM);
-  tempWS->import(expectationCommon);
   /*
   tempWS->import(expectationProc_ggH);
   tempWS->import(expectationProc_VBF);
@@ -723,7 +724,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     suffix to all nodes and variables of w. the correlated nuisance parameters
     and their respective global observables will not be renamed.
   */
-  RooWorkspace* categoryWS = new RooWorkspace("workspace"+currCateName);
+  RooWorkspace* categoryWS = new RooWorkspace("workspace_"+currCateName);
   categoryWS->import((*tempWS->pdf("model")), RenameAllNodes(currCateName),
 		     RenameAllVariablesExcept(currCateName,corrNPNames),
 		     Silence());

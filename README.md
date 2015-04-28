@@ -127,3 +127,7 @@ categories, just run,
      ./bin/DMMaster WSJob Workspace splitETMiss
 
 Make sure that you are running in a directory from which EOS is accesssible. 
+
+At the moment, the bash scripts for grid or lxbatch submission in scripts/ have
+lots of hard-coded user-specific information. These will be udpated in the 
+future. In any case, they do not influence local jobs in any way.

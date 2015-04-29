@@ -1,6 +1,4 @@
-# HggDM 
-
-## A search for dark matter associated with a Higgs boson (H->diphoton)
+# A search for dark matter produced in association with a Higgs boson
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look

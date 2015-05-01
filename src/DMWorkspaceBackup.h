@@ -52,10 +52,9 @@ class DMWorkspace
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
   void plotSingleCateFit(RooWorkspace *cateWS, TString dataset);
-  void plotFinalFits(RooWorkspace *combWS, TString fitType);
-  void plotNuisParams(RooArgSet nuisParams, TString type);
-  void profileAndSnapshot(TString muDMValue, double &nllValue,
-			  double &profiledMu);
+  void plotFinalFits(RooWorkspace *combWS, map<string,RooDataSet*> dataMap,
+		     TString fitType);
+  void PlotNuisParams(RooArgSet nuisParams, TString type);
 
   // Member variables:
   TString jobName;

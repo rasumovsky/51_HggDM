@@ -182,7 +182,7 @@ void SubmitMuLimitViaBsub(TString exeJobName, TString exeOption,
 int main (int argc, char **argv) {
   // Check arguments:
   if (argc < 4) {
-    printf("\nUsage: %s <MasterJobName> <MasterOption>\n\n",argv[0]);
+    printf("\nUsage: %s <MasterJobName> <MasterOption>\n\n", argv[0]);
     exit(0);
   }
   
@@ -262,14 +262,6 @@ int main (int argc, char **argv) {
     int jobCounterWS = 0;
     for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
       TString currDMSignal = sigDMModes[i_DM];
-      
-      // Temporary, for testing workspaces:
-      if (i_DM > 0) {
-	std::cout << "DMMaster: Exiting prematurely for test reasons." 
-		  << std::endl;
-	exit(0);
-      }
-      
       if (runInParallel) {
 	submitWSViaBsub(masterJobName, workspaceOptions, currDMSignal,
 			masterCateScheme);

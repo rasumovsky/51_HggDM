@@ -41,10 +41,8 @@ class DMWorkspace
   void loadWSFromFile();
   void createNewWS();
   RooWorkspace* createNewCategoryWS();
-  void createAsimovData(RooWorkspace *cateWS, RooDataSet *obsData, 
-			RooRealVar wt, int valueMuDM, int valueMuSM);
-  // eliminate this as soon as possible:
-  double spuriousSignal();
+  void createAsimovData(RooWorkspace *cateWS, int valueMuDM, int valueMuSM);
+  double spuriousSignal();//// eliminate this as soon as possible
   void makeNP(TString varName, double setup[4], RooArgSet *&nuisParams,
 	      RooArgSet *&constraints, RooArgSet *&globalObs,
 	      RooArgSet *&expected);

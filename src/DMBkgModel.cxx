@@ -112,7 +112,7 @@ RooAbsPdf* DMBkgModel::getBkgPDFByName(TString fitName, TString fitFunc) {
   RooArgList *bkgArgs = new RooArgList();
   RooRealVar *pVar[10];
   RooRealVar *cVar[10];
-  TString expFitFormat = "TMath::Exp(";
+  TString expFitFormat = "exp(";
   
   // Pointers to the background PDFs:
   RooAbsPdf *background;

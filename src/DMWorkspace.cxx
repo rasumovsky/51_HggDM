@@ -8,6 +8,9 @@
 //                                                                            //
 //  This class builds the workspace for the dark matter analysis fits.        //
 //                                                                            //
+//  Is the problem with asimov data generation? When I use the                //
+//  AsymptoticCalculator function with the combined PDF, everything works...  //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMWorkspace.h"
@@ -167,6 +170,8 @@ void DMWorkspace::createNewWS() {
   // maps for datasets:
   map<string,RooDataSet*> dm;
   map<string,RooDataSet*> dmBinned;
+  //map<string,RooDataSet*> dmAsimovMu0;
+  //map<string,RooDataSet*> dmAsimovMu1;
   map<string,RooDataSet*> dmAsimovMu0;
   map<string,RooDataSet*> dmAsimovMu1;
   
@@ -206,13 +211,14 @@ void DMWorkspace::createNewWS() {
     combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameODB));
     combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameAD0));
     combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameAD1));
+    
     dm[cateNamesS[i_c]] = (RooDataSet*)combinedWS->data(nameOD);
     dmBinned[cateNamesS[i_c]] =(RooDataSet*)combinedWS->data(nameODB);
     dmAsimovMu0[cateNamesS[i_c]] = (RooDataSet*)combinedWS->data(nameAD0);
     dmAsimovMu1[cateNamesS[i_c]] = (RooDataSet*)combinedWS->data(nameAD1);
   }
   std::cout << "DMWorkspace: Beginning to combine all categories." << std::endl;
-  
+    
   // Define the combined datasets:
   RooRealVar wt("wt","wt",1);
   RooArgSet *args = new RooArgSet();
@@ -224,12 +230,13 @@ void DMWorkspace::createNewWS() {
   RooDataSet* obsDataBinned = new RooDataSet("obsDataBinned", "obsDataBinned",
 					     *args, Index(*categories),
 					     Import(dmBinned), WeightVar(wt));
+  
   RooDataSet* asimovDataMu0 = new RooDataSet("asimovDataMu0", "asimovDataMu0",
-					     *args, Index(*categories), 
-					     Import(dmAsimovMu0),WeightVar(wt));
+  					     *args, Index(*categories), 
+  					     Import(dmAsimovMu0),WeightVar(wt));
   RooDataSet* asimovDataMu1 = new RooDataSet("asimovDataMu1", "asimovDataMu1",
-					     *args, Index(*categories), 
-					     Import(dmAsimovMu1),WeightVar(wt));
+  					     *args, Index(*categories), 
+  					     Import(dmAsimovMu1),WeightVar(wt));
   
   // Import PDFs, parameters, and dataset into workspace:
   combinedWS->import(*combinedPdf);
@@ -532,7 +539,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // Construct the signal PDFs:
   std::cout << "DMWorkspace: Adding signal parameterizations." << std::endl;
   currSigParam->addSigToCateWS(tempWS, pesList, perList, DMSignal,
-			       currCateIndex);
+  			       currCateIndex);
   //currSigParam->addSigToCateWS(tempWS, pesList, perList, "SM", currCateIndex);
   /*
   currSigParam->addSigToCateWS(tempWS, pesList, perList, "ggH", currCateIndex);
@@ -546,7 +553,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   DMBkgModel *currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", 
   					    tempWS->var("m_yy"));
   currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateIndex);
-  
+    
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
     
@@ -746,9 +753,38 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     
   // Create Asimov mu_DM = 0,1 data:
   RooRealVar wt("wt","wt",1);
-  createAsimovData(categoryWS, obsData, wt, 0, muNominalSM);
-  createAsimovData(categoryWS, obsData, wt, 1, muNominalSM);
+  //createAsimovData(categoryWS, obsData, wt, 0, muNominalSM);
+  //createAsimovData(categoryWS, obsData, wt, 1, muNominalSM);
   
+
+
+  std::cout << "New Asimov Data Method" << std::endl;
+  RooRealVar *poi = categoryWS->var("mu_DM");
+  poi->setVal(1);
+  poi->setConstant(true);
+  RooDataSet *asimov1 = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*categoryWS->pdf(Form("model_%s",currCateName.Data())), *categoryWS->set(Form("observables_%s",currCateName.Data())));
+  asimov1->SetNameTitle(Form("asimovDataMu1_%s",currCateName.Data()),
+		       Form("asimovDataMu1_%s",currCateName.Data()));
+  categoryWS->import(*asimov1);
+  
+  poi->setVal(0);
+  poi->setConstant(true);
+  RooDataSet *asimov0 = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*categoryWS->pdf(Form("model_%s",currCateName.Data())), *categoryWS->set(Form("observables_%s",currCateName.Data())));
+  asimov0->SetNameTitle(Form("asimovDataMu0_%s",currCateName.Data()),
+			Form("asimovDataMu0_%s",currCateName.Data()));
+  categoryWS->import(*asimov0);
+  
+
+
+
+
+
+
+
+
+
+
+
   // Create a binned observed data set:
   RooArgSet* obsPlusWt = new RooArgSet();
   obsPlusWt->add(wt);
@@ -778,7 +814,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 		       weightVal);
   }
   categoryWS->import(*obsDataBinned);
-    
+  
   // Plot the single-channel fit:
   plotSingleCateFit(categoryWS, Form("obsData_%s",currCateName.Data()));
   plotSingleCateFit(categoryWS, Form("asimovDataMu1_%s",currCateName.Data()));
@@ -1046,7 +1082,8 @@ void DMWorkspace::plotSingleCateFit(RooWorkspace *cateWS, TString dataset) {
   std::cout << "DMWorkspace: Plot single category fit for "
 	    << currCateName << std::endl;
   TCanvas *can = new TCanvas("can", "can", 800, 800);
-  RooPlot* frame =  (*cateWS->var("m_yy_"+currCateName)).frame(55);
+  //RooPlot* frame =  (*cateWS->var("m_yy_"+currCateName)).frame(55);
+  RooPlot* frame =  (*cateWS->var("m_yy_"+currCateName)).frame(100);
   cateWS->data(dataset)->plotOn(frame);
   (*cateWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
   (*cateWS->pdf("model_"+currCateName)).plotOn(frame, Components((*cateWS->pdf("bkgPdf_"+currCateName))), LineColor(4));
@@ -1097,7 +1134,8 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS, TString fitType) {
   for (int i_c = 0; i_c < nCategories; i_c++) {
     currCateName = Form("%s_%d", cateScheme.Data(), i_c);
     currCateIndex = i_c;
-    RooPlot* frame =  (*combWS->var("m_yy_"+currCateName)).frame(55);
+    //RooPlot* frame =  (*combWS->var("m_yy_"+currCateName)).frame(55);
+    RooPlot* frame =  (*combWS->var("m_yy_"+currCateName)).frame(100);
     //dataMap[(string)currCateName]->plotOn(frame);
     combWS->data(Form("%s_%s", dataToPlot.Data(), currCateName.Data()))->plotOn(frame);
     (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfDM_"+currCateName))), LineColor(3));
@@ -1167,12 +1205,24 @@ void DMWorkspace::profileAndSnapshot(TString muDMValue, double &nllValue,
   statistics::constSet(globs, true);
   
   // Choose the constant mu_DM value:
-  if (muDMValue.EqualTo("1")) poi->setVal(1.0);
-  else poi->setVal(0.0);
+  if (muDMValue.EqualTo("0")) {
+    std::cout << "DMWorkspace: Setting mu_DM to 0" << std::endl;
+    poi->setVal(0.0);
+  }
+  else {
+    std::cout << "DMWorkspace: Setting mu_DM to 1" << std::endl;
+    poi->setVal(1.0);
+  }
   
   // Choose free or fixed:
-  if (muDMValue.EqualTo("Free")) poi->setConstant(false);
-  else poi->setConstant(true);
+  if (muDMValue.EqualTo("Free")) {
+    std::cout << "DMWorkspace: Setting mu free in fit." << std::endl;
+    poi->setConstant(false);
+  }
+  else {
+    std::cout << "DMWorkspace: Setting mu fixed in fit." << std::endl;
+    poi->setConstant(true);
+  }
   
   // Set the mu_SM fixed and to the nominal value.
   //combinedWS->var("mu_SM")->setVal(muNominalSM);
@@ -1187,7 +1237,7 @@ void DMWorkspace::profileAndSnapshot(TString muDMValue, double &nllValue,
   if (resMu->status() != 0) allGoodFits = false;
   nllValue = resMu->minNll();
   profiledMu = poi->getVal();
-  
+    
   combinedWS->saveSnapshot(Form("paramsProfileMu%s",muDMValue.Data()),
 			   *poiAndNuis);
   

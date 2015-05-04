@@ -23,7 +23,10 @@
 DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
 		       TString newCateScheme, TString newOptions,
 		       RooWorkspace *newWorkspace) {
-
+  std::cout << "DMTestStat: Initializing...\n\t" << newJobName << "\n\t"
+	    << newDMSignal << "\n\t" << newCateScheme << "\n\t" 
+	    << newOptions << "\n\t" << std::endl;
+  
   // Assign input variables: 
   jobName = newJobName;
   DMSignal = newDMSignal;
@@ -33,11 +36,14 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   // Load the workspace from the nominal location.
   if (newWorkspace == NULL) {
     dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme, "FromFile");
-    workspace = (dmw->getCombinedWorkspace());
+    workspace = dmw->getCombinedWorkspace();
   }
+  // Use the workspace passed to the class constructor:
   else {
     workspace = newWorkspace;
   }
+  // Get the model config from either:
+  mc = (ModelConfig*)workspace->obj("modelConfig");
   
   // Map storing all calculations:
   calculatedValues.clear();
@@ -56,6 +62,8 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
     calculateNewCL();
     calculateNewP0();
   }
+  
+  std::cout << "DMTestStat: Initialized Successfully!" << std::endl;
   return;
 }
 
@@ -77,6 +85,8 @@ double DMTestStat::accessValue(TString testStat, bool observed, int N) {
    Calculate the CL and CLs values using model fits.
 */
 void DMTestStat::calculateNewCL() {
+  std::cout << "DMTestStat: Calculating CLs" << std::endl;
+  
   // Calculate observed qmu: 
   double muHatObs = 0.0;
   double nllMu1Obs = getFitNLL("obsData", 1.0, true, muHatObs);
@@ -138,6 +148,8 @@ void DMTestStat::calculateNewCL() {
    Calculate the p0 value using model fits.
 */
 void DMTestStat::calculateNewP0() {
+  std::cout << "DMTestStat: calculating p0." << std::endl;
+  
   // Calculate observed q0: 
   double muHatObs = 0.0;
   double nllMu0Obs = getFitNLL("obsData", 0.0, true, muHatObs);
@@ -313,24 +325,31 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   std::cout << "DMTestStat: getFitNLL( " << datasetName << ", " << muVal
 	    << ", " << fixMu << " )" << std::endl;
   
-  // Load the relevant quantities from the ModelConfig:
-  ModelConfig* mc = (ModelConfig*)workspace->obj("modelConfig");
+  std::cout << "Test Point" << std::endl;
+  workspace->Print("v");
+  
+  std::cout << "Check 1..." << std::endl;
+  
   RooAbsPdf* combPdf = mc->GetPdf();
+   std::cout << "Check 2..." << std::endl;
   RooArgSet* nuisanceParameters = (RooArgSet*)mc->GetNuisanceParameters();
   RooArgSet* globalObservables = (RooArgSet*)mc->GetGlobalObservables();
   RooArgSet* Observables = (RooArgSet*)mc->GetObservables();
+  std::cout << "Check 3..." << std::endl;
   workspace->loadSnapshot("paramsOrigin");
-  RooArgSet* origValNP = (RooArgSet*)mc->GetNuisanceParameters()->snapshot();
+  std::cout << "Check 4..." << std::endl;
+  //RooArgSet* origValNP = (RooArgSet*)mc->GetNuisanceParameters()->snapshot();
+  RooArgSet* origValNP = (RooArgSet*)workspace->getSnapshot("paramsOrigin");
   RooArgSet* poi = (RooArgSet*)mc->GetParametersOfInterest();
+  std::cout << "Check 5..." << std::endl;
   RooRealVar* firstpoi = (RooRealVar*)poi->first();
   RooAbsData *data = workspace->data(datasetName);
-  
-  // WARNING! IT IS VERY IMPORTANT THAT NUIS AND GLOBOBS ARE SET PROPERLY HERE!
+  std::cout << "Check 6..." << std::endl;
   
   // release nuisance parameters after fit and recovery the default values
-  statistics::constSet( nuisanceParameters, false, origValNP );
+  statistics::constSet(nuisanceParameters, false, origValNP);
   // the global observables should be fixed to the nominal values...
-  statistics::constSet( globalObservables, true );
+  statistics::constSet(globalObservables, true);
   
   firstpoi->setVal(muVal);
   firstpoi->setConstant(fixMu);

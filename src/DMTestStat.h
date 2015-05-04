@@ -66,7 +66,8 @@ class DMTestStat {
   
   // The workspace for the fits:
   RooWorkspace *workspace;
-  
+  ModelConfig *mc;
+
   // Store the calculated values:
   std::map<TString,double> calculatedValues;
   

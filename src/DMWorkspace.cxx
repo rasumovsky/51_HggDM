@@ -102,9 +102,9 @@ ModelConfig* DMWorkspace::getModelConfig() {
 void DMWorkspace::loadWSFromFile() {
   //Check to see if the workspace has actually been made.
   TFile inputFile(Form("%s/rootfiles/workspaceDM_%s.root", outputDir.Data(),
-		       DMSignal.Data()),"read");
+		       DMSignal.Data()), "read");
   if (inputFile.IsOpen()) {
-    std::cout << "Loading workspace from file"<< std::endl;
+    std::cout << "DMWorkspace: Loading workspace from file..."<< std::endl;
     combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
     mConfig = (ModelConfig*)combinedWS->obj("modelConfig");
   }

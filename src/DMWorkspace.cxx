@@ -8,8 +8,10 @@
 //                                                                            //
 //  This class builds the workspace for the dark matter analysis fits.        //
 //                                                                            //
-//  Is the problem with asimov data generation? When I use the                //
-//  AsymptoticCalculator function with the combined PDF, everything works...  //
+//  Job options: "New", "FromFile" determine whether to create a new workspace//
+//  or load a previously generated one. "ProdModes" will split the SM signal  //
+//  into 6 production modes. The systematics are controlled by the "nonorm",  //
+//  "nopes", "noper", "noss", "nobgm", "nomig", and "nosys" options.          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -342,14 +344,12 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooArgSet *expected = new RooArgSet();
   RooArgSet *expectedSM = new RooArgSet();
   RooArgSet *expectedDM = new RooArgSet();
-  /*
   RooArgSet *expectedProc_ggH = new RooArgSet();
   RooArgSet *expectedProc_VBF = new RooArgSet();
   RooArgSet *expectedProc_WH = new RooArgSet();
   RooArgSet *expectedProc_ZH = new RooArgSet();
   RooArgSet *expectedProc_bbH = new RooArgSet();
   RooArgSet *expectedProc_ttH = new RooArgSet();
-  */
   
   // array setup[5] is used to configure a nuisance parameter
   // [0]    [1]       [2]   [3]     
@@ -437,20 +437,21 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 		  *&globalObs, *&expectedShape);
       makeShapeNP(currPERName, "SM", setupPER, *&nuisParams, *&constraints,
 		  *&globalObs, *&expectedShape);
-      /*
-      makeShapeNP(currPERName, "ggH", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-      makeShapeNP(currPERName, "VBF", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-      makeShapeNP(currPERName, "WH", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-      makeShapeNP(currPERName, "ZH", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-      makeShapeNP(currPERName, "bbH", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-      makeShapeNP(currPERName, "ttH", setupPER, *&nuisParams, *&constraints,
-		  *&globalObs, *&expectedShape);
-		  */   
+      
+      if (options.Contains("ProdModes")) {
+	makeShapeNP(currPERName, "ggH", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+	makeShapeNP(currPERName, "VBF", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+	makeShapeNP(currPERName, "WH", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+	makeShapeNP(currPERName, "ZH", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+	makeShapeNP(currPERName, "bbH", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+	makeShapeNP(currPERName, "ttH", setupPER, *&nuisParams, *&constraints,
+		    *&globalObs, *&expectedShape);
+      }
     }
   }
   
@@ -476,31 +477,26 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   double muMin = 0; double muMax = 100;
   RooRealVar *mu_DM = new RooRealVar("mu_DM", "mu_DM", 1, muMin, muMax);
   RooRealVar *mu_SM = new RooRealVar("mu_SM", "mu_SM", 1, muMin, muMax);
-  /*
   RooRealVar *mu_ggH = new RooRealVar("mu_ggH", "mu_ggH", 1, muMin, muMax);
   RooRealVar *mu_VBF = new RooRealVar("mu_VBF", "mu_VBF", 1, muMin, muMax);
   RooRealVar *mu_WH = new RooRealVar("mu_WH", "mu_WH", 1, muMin, muMax);
   RooRealVar *mu_ZH = new RooRealVar("mu_ZH", "mu_ZH", 1, muMin, muMax);
   RooRealVar *mu_bbH = new RooRealVar("mu_bbH", "mu_bbH", 1, muMin, muMax);
   RooRealVar *mu_ttH = new RooRealVar("mu_ttH", "mu_ttH", 1, muMin, muMin);
-  */
   expectedDM->add(RooArgSet(*mu_DM));
   expectedSM->add(RooArgSet(*mu_SM));
-  /*
   expectedProc_ggH->add(RooArgSet(*mu_ggH));
   expectedProc_VBF->add(RooArgSet(*mu_VBF));
   expectedProc_WH->add(RooArgSet(*mu_WH));
   expectedProc_ZH->add(RooArgSet(*mu_ZH));
   expectedProc_bbH->add(RooArgSet(*mu_bbH));
   expectedProc_ttH->add(RooArgSet(*mu_ttH));
-  */
   
   // Expectation values:
   RooProduct expectationDM("expectationDM","expectationDM", *expectedDM);
   RooProduct expectationSM("expectationSM","expectationSM", *expectedSM);
   RooProduct expectationCommon("expectationCommon","expectationCommon",
   			       *expected);
-  /*
   RooProduct expectationProc_ggH("expectationProc_ggH","expectationProc_ggH",
 				 *expectedProc_ggH);
   RooProduct expectationProc_VBF("expectationProc_VBF","expectationProc_VBF",
@@ -513,20 +509,19 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 				 *expectedProc_bbH);
   RooProduct expectationProc_ttH("expectationProc_ttH","expectationProc_ttH",
 				 *expectedProc_ttH);
-				 */
   
   // Spurious signal term will assume the shape of "inclusive" pdf.
   tempWS->import(expectationCommon);
   tempWS->import(expectationSM);
   tempWS->import(expectationDM);
-  /*
-  tempWS->import(expectationProc_ggH);
-  tempWS->import(expectationProc_VBF);
-  tempWS->import(expectationProc_WH);
-  tempWS->import(expectationProc_ZH);
-  tempWS->import(expectationProc_bbH);
-  tempWS->import(expectationProc_ttH);
-  */
+  if (options.Contains("ProdModes")) {
+    tempWS->import(expectationProc_ggH);
+    tempWS->import(expectationProc_VBF);
+    tempWS->import(expectationProc_WH);
+    tempWS->import(expectationProc_ZH);
+    tempWS->import(expectationProc_bbH);
+    tempWS->import(expectationProc_ttH);
+  }
   tempWS->import(*expectedShape);
   tempWS->import(*expectedBias);
   
@@ -536,17 +531,16 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Construct the signal PDFs:
   std::cout << "DMWorkspace: Adding signal parameterizations." << std::endl;
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, DMSignal,
-  			       currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "SM", currCateIndex);
-  /*
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ggH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "VBF", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "WH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ZH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "bbH", currCateIndex);
-  currSigParam->addSigToCateWS(tempWS, pesList, perList, "ttH", currCateIndex);
-  */
+  currSigParam->addSigToCateWS(tempWS,pesList,perList,DMSignal,currCateIndex);
+  currSigParam->addSigToCateWS(tempWS,pesList,perList,"SM",currCateIndex);
+  if (options.Contains("ProdModes")) {
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"ggH",currCateIndex);
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"VBF",currCateIndex);
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"WH",currCateIndex);
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"ZH",currCateIndex);
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"bbH",currCateIndex);
+    currSigParam->addSigToCateWS(tempWS,pesList,perList,"ttH",currCateIndex);
+  }
   // Construct the background PDF:
   DMBkgModel *currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", 
   					    tempWS->var("m_yy"));
@@ -558,24 +552,25 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // Normalization for each process follows such pattern:
   // Definition of expectationCommon = mu*isEM*lumi*migr
   tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
-  		       currSigParam->getCateSigYield(currCateIndex,"SM")));
-  
+  		       currSigParam->getCateSigYield(currCateIndex,"SM")));  
   tempWS->factory(Form("prod::nSigDM(nDM[%f],expectationCommon,expectationDM)",
   		       currSigParam->getCateSigYield(currCateIndex,DMSignal)));
-  /*
-  tempWS->factory(Form("prod::nSigggH(nggH[%f],expectationCommon,expectationProc_ggH)", currSigParam->getCateSigYield(currCateIndex,"ggH")));
-  tempWS->factory(Form("prod::nSigVBF(nVBF[%f],expectationCommon,expectationProc_VBF)", currSigParam->getCateSigYield(currCateIndex,"VBF")));
-  tempWS->factory(Form("prod::nSigWH(nWH[%f],expectationCommon,expectationProc_WH)", currSigParam->getCateSigYield(currCateIndex,"WH")));
-  tempWS->factory(Form("prod::nSigZH(nZH[%f],expectationCommon,expectationProc_ZH)", currSigParam->getCateSigYield(currCateIndex,"ZH")));
-  tempWS->factory(Form("prod::nSigbbH(nbbH[%f],expectationCommon,expectationProc_bbH)", currSigParam->getCateSigYield(currCateIndex,"bbH")));
-  tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
-  */
+  if (options.Contains("ProdModes")) {
+    tempWS->factory(Form("prod::nSigggH(nggH[%f],expectationCommon,expectationSM,expectationProc_ggH)", currSigParam->getCateSigYield(currCateIndex,"ggH")));
+    tempWS->factory(Form("prod::nSigVBF(nVBF[%f],expectationCommon,expectationSM,expectationProc_VBF)", currSigParam->getCateSigYield(currCateIndex,"VBF")));
+    tempWS->factory(Form("prod::nSigWH(nWH[%f],expectationCommon,expectationSM,expectationProc_WH)", currSigParam->getCateSigYield(currCateIndex,"WH")));
+    tempWS->factory(Form("prod::nSigZH(nZH[%f],expectationCommon,expectationSM,expectationProc_ZH)", currSigParam->getCateSigYield(currCateIndex,"ZH")));
+    tempWS->factory(Form("prod::nSigbbH(nbbH[%f],expectationCommon,expectationSM,expectationProc_bbH)", currSigParam->getCateSigYield(currCateIndex,"bbH")));
+    tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationSM,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
+  }
   
   // Model with combined SM production modes:
   tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,sigBias*sigPdfDM,nBkg*bkgPdf)");
   // Model with separated SM production modes:
-  //tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfDM,nBkg*bkgPdf)");
-  
+  if (options.Contains("ProdModes")) {
+    tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfDM,nBkg*bkgPdf)");
+  }
+
   // Only attach constraint term to first category. If constraint terms were
   // attached to each category, constraints would effectively be multiplied.
   if (currCateIndex == 0) {
@@ -583,7 +578,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     RooProdPdf constraint("constraint", "constraint", *constraints);
     tempWS->import(constraint);
     tempWS->factory("PROD::model(modelSB,constraint)");
-    //tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
+     if (options.Contains("ProdModes")) {
+       tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
+     }
   }
   // Except in the case where the constraints are uncorrelated between
   // categories, as with the spurious signal:
@@ -591,7 +588,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     RooProdPdf constraint("constraint", "constraint", *constraintsBias);
     tempWS->import(constraint);
     tempWS->factory("PROD::model(modelSB,constraint)");
-    //tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
+    if (options.Contains("ProdModes")) {
+      tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
+    }
   }
   
   /*
@@ -602,9 +601,14 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     parameters. All uncorrelated nuisance parameters should be included in
     nuisParamsUncorrelated.
   */
-  //TString corrNPNames = "mu_DM,mu_SM,mu_ggH,mu_VBF,mu_WH,mu_ZH,mu_bbH,mu_ttH";
-  TString corrNPNames = "mu_DM,mu_SM";
-    
+  TString corrNPNames;
+  if (options.Contains("ProdModes")) {
+    corrNPNames = "mu_DM,mu_SM,mu_ggH,mu_VBF,mu_WH,mu_ZH,mu_bbH,mu_ttH";
+  }
+  else {
+    corrNPNames = "mu_DM,mu_SM";
+  }
+  
   // Iterate over nuisance parameters:
   TIterator *iterNuis = nuisParams->createIterator();
   RooRealVar* currNuis;
@@ -696,14 +700,14 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   std::cout << "DMWorkspace: Setting SM signals constant." << std::endl;
   RooArgSet* muConstCateWS = new RooArgSet();
   muConstCateWS->add(*categoryWS->var("mu_SM"));
-  /*
-  muConstCateWS->add(*categoryWS->var("mu_ggH"));
-  muConstCateWS->add(*categoryWS->var("mu_VBF"));
-  muConstCateWS->add(*categoryWS->var("mu_WH"));
-  muConstCateWS->add(*categoryWS->var("mu_ZH"));
-  muConstCateWS->add(*categoryWS->var("mu_bbH"));
-  muConstCateWS->add(*categoryWS->var("mu_ttH"));
-  */ 
+  if (options.Contains("ProdModes")) {
+    muConstCateWS->add(*categoryWS->var("mu_ggH"));
+    muConstCateWS->add(*categoryWS->var("mu_VBF"));
+    muConstCateWS->add(*categoryWS->var("mu_WH"));
+    muConstCateWS->add(*categoryWS->var("mu_ZH"));
+    muConstCateWS->add(*categoryWS->var("mu_bbH"));
+    muConstCateWS->add(*categoryWS->var("mu_ttH"));
+  }
   TIterator *iterMuConst = muConstCateWS->createIterator();
   RooRealVar *currMuConst;
   while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
@@ -744,30 +748,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   categoryWS->import(*obsData);
     
   // Create Asimov mu_DM = 0,1 data:
- 
-  //createAsimovData(categoryWS, 0, muNominalSM);
-  //createAsimovData(categoryWS, 1, muNominalSM);
+  createAsimovData(categoryWS, 0, muNominalSM);
+  createAsimovData(categoryWS, 1, muNominalSM);
   
-
-
-  std::cout << "New Asimov Data Method" << std::endl;
-  RooRealVar *poi = categoryWS->var("mu_DM");
-  poi->setVal(1);
-  poi->setConstant(true);
-  RooDataSet *asimov1 = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*categoryWS->pdf(Form("model_%s",currCateName.Data())), *categoryWS->set(Form("observables_%s",currCateName.Data())));
-  asimov1->SetNameTitle(Form("asimovDataMu1_%s",currCateName.Data()),
-		       Form("asimovDataMu1_%s",currCateName.Data()));
-  categoryWS->import(*asimov1);
-  
-  poi->setVal(0);
-  poi->setConstant(true);
-  RooDataSet *asimov0 = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*categoryWS->pdf(Form("model_%s",currCateName.Data())), *categoryWS->set(Form("observables_%s",currCateName.Data())));
-  asimov0->SetNameTitle(Form("asimovDataMu0_%s",currCateName.Data()),
-			Form("asimovDataMu0_%s",currCateName.Data()));
-  categoryWS->import(*asimov0);
-  
-
-
   // Create a binned observed data set:
   RooArgSet* obsPlusWt = new RooArgSet();
   RooRealVar wt("wt","wt",1);

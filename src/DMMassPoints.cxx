@@ -186,13 +186,14 @@ void DMMassPoints::createNewMassPoints() {
       // Dark matter XSBR includes cross-section and branching ratio.
       // WARNING!!! GETTING RID OF XSBR
       else if (isDMSample(sampleName)) {
-	evtWeight *= 0.001;// * ((brxs->getDMXSBR(getMediatorMass(sampleName),
-	//		     getDarkMatterMass(sampleName),
-	//		     getMediatorName(sampleName),
-	//		     "XS")));
+	evtWeight *= 100 * ((brxs->getDMXSBR(getMediatorMass(sampleName),
+					     getDarkMatterMass(sampleName),
+					     getMediatorName(sampleName),
+					     "XS")));
       }
       else if (sampleName.EqualTo("gg_gjet")) {
 	evtWeight *= 57.24;//xsection*filter-eff for Sherpa gg+gj
+	evtWeight *= 0.2729;// To scale to the expected bkg per fb-1
       }
     }
     

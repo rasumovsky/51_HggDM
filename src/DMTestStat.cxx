@@ -33,17 +33,31 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   options = newOptions;
   allGoodFits = true;
   
-  // Load the workspace from the nominal location.
+  // Use Asimov data if the analysis is blind.
+  dataForObs = (DMAnalysis::doBlind) ? "asimovDataMu0" : "obsData";
+  dataForExp = "asimovDataMu0";
+  
+  TFile inputFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", masterOutput.Data(), jobName.Data(), DMSignal.Data()), "read");
+  
   if (newWorkspace == NULL) {
-    dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme, "FromFile");
-    workspace = dmw->getCombinedWorkspace();
+    if (inputFile.IsOpen()) {
+      std::cout << "DMTestStat: Loading workspace." << std::endl;
+      workspace = (RooWorkspace*)inputFile.Get("combinedWS");
+      mc = (ModelConfig*)workspace->obj("modelConfig");
+    }
+    else {
+      std::cout << "DMTestStat: Error loading workspace." << std::endl;
+      
+      // Load the workspace from the nominal location.
+      dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme, "FromFile");
+      workspace = dmw->getCombinedWorkspace();
+    }
+    mc = (ModelConfig*)workspace->obj("modelConfig");
   }
   // Use the workspace passed to the class constructor:
   else {
     workspace = newWorkspace;
   }
-  // Get the model config from either:
-  mc = (ModelConfig*)workspace->obj("modelConfig");
   
   // Map storing all calculations:
   calculatedValues.clear();
@@ -89,14 +103,14 @@ void DMTestStat::calculateNewCL() {
   
   // Calculate observed qmu: 
   double muHatObs = 0.0;
-  double nllMu1Obs = getFitNLL("obsData", 1.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL("obsData", 1.0, false, muHatObs);
+  double nllMu1Obs = getFitNLL(dataForObs, 1.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(dataForObs, 1.0, false, muHatObs);
   double obsQMu = getQMuFromNLL(nllMu1Obs, nllMuHatObs, muHatObs, 1);
   
   // Calculate expected qmu:
   double muHatExp = 0.0;
-  double nllMu1Exp = getFitNLL("asimovDataMu0", 1.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL("asimovDataMu0", 0.0, false, muHatExp);
+  double nllMu1Exp = getFitNLL(dataForExp, 1.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(dataForExp, 0.0, false, muHatExp);
   double expQMu = getQMuFromNLL(nllMu1Exp, nllMuHatExp, muHatExp, 1);
   
   // Calculate CL:
@@ -152,14 +166,14 @@ void DMTestStat::calculateNewP0() {
   
   // Calculate observed q0: 
   double muHatObs = 0.0;
-  double nllMu0Obs = getFitNLL("obsData", 0.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL("obsData", 0.0, false, muHatObs);
+  double nllMu0Obs = getFitNLL(dataForObs, 0.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(dataForObs, 0.0, false, muHatObs);
   double obsQ0 = getQ0FromNLL(nllMu0Obs, nllMuHatObs, muHatObs);
   
   // Calculate expected q0:
   double muHatExp = 0.0;
-  double nllMu0Exp = getFitNLL("asimovDataMu1", 0.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL("asimovDataMu1", 0.0, false, muHatExp);
+  double nllMu0Exp = getFitNLL(dataForExp, 0.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(dataForExp, 0.0, false, muHatExp);
   double expQ0 = getQ0FromNLL(nllMu0Exp, nllMuHatExp, muHatExp);
   
   // Calculate p0 from q0:
@@ -322,29 +336,18 @@ double DMTestStat::getPbfromN(double N) {
 */
 double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
 			     double& profiledMu) { 
-  std::cout << "DMTestStat: getFitNLL( " << datasetName << ", " << muVal
-	    << ", " << fixMu << " )" << std::endl;
-  
-  std::cout << "Test Point" << std::endl;
-  workspace->Print("v");
-  
-  std::cout << "Check 1..." << std::endl;
-  
+  std::cout << "DMTestStat: getFitNLL(" << datasetName << ", " << muVal
+	    << ", " << fixMu << ")" << std::endl;
+    
   RooAbsPdf* combPdf = mc->GetPdf();
-   std::cout << "Check 2..." << std::endl;
   RooArgSet* nuisanceParameters = (RooArgSet*)mc->GetNuisanceParameters();
   RooArgSet* globalObservables = (RooArgSet*)mc->GetGlobalObservables();
   RooArgSet* Observables = (RooArgSet*)mc->GetObservables();
-  std::cout << "Check 3..." << std::endl;
   workspace->loadSnapshot("paramsOrigin");
-  std::cout << "Check 4..." << std::endl;
-  //RooArgSet* origValNP = (RooArgSet*)mc->GetNuisanceParameters()->snapshot();
   RooArgSet* origValNP = (RooArgSet*)workspace->getSnapshot("paramsOrigin");
   RooArgSet* poi = (RooArgSet*)mc->GetParametersOfInterest();
-  std::cout << "Check 5..." << std::endl;
   RooRealVar* firstpoi = (RooRealVar*)poi->first();
   RooAbsData *data = workspace->data(datasetName);
-  std::cout << "Check 6..." << std::endl;
   
   // release nuisance parameters after fit and recovery the default values
   statistics::constSet(nuisanceParameters, false, origValNP);
@@ -354,23 +357,17 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   firstpoi->setVal(muVal);
   firstpoi->setConstant(fixMu);
   
-  /*
-  // loop over nuisance parameters, set theory to -1 sigma in accordance with ATLAS SUSY WG policy for 2D contours.
-  int number_params = nuisanceParameters->getSize();
-  TIterator *iter_nuis = nuisanceParameters->createIterator();
-  RooRealVar* parg_nuis = NULL;
-  while( (parg_nuis = (RooRealVar*)iter_nuis->Next()) )
-  {
-    TString name = parg_nuis->GetName();
-    if( name.Contains("scale_PDF") )
-    {
-      cout << "  Setting scale_PDF NP to 0" << endl;
-      parg_nuis->setVal(0.0);
-      parg_nuis->setConstant(true);
-    }
+  // Iterate over SM mu values and fix all to 1:
+  RooArgSet* muConstants = (RooArgSet*)workspace->set("muSMConstants");
+  TIterator *iterMuConst = muConstants->createIterator();
+  RooRealVar *currMuConst = NULL;
+  while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
+    std::cout << "DMTestStat: Setting " << currMuConst->GetName()
+	      << " constant." << std::endl;
+    currMuConst->setVal(1.0);
+    currMuConst->setConstant(true);
   }
-  */
-
+  
   int status = 0; 
   RooNLLVar* varNLL = (RooNLLVar*)combPdf->createNLL(*data, Constrain(*nuisanceParameters), Extended(combPdf->canBeExtended()));
   statistics::minimize(status, varNLL, "", NULL, false);

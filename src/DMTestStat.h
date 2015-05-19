@@ -61,6 +61,9 @@ class DMTestStat {
   TString outputDir;
   DMWorkspace *dmw;
   
+  TString dataForObs;
+  TString dataForExp;
+
   // Check whether all fits successful:
   bool allGoodFits;
   

@@ -274,8 +274,7 @@ int main (int argc, char **argv) {
 	  jobCounterWS++;
 	}
 	else {
-	  std::cout << "DMMaster: Fits in previous workspace job failed for "
-		    << currDMSignal << " and " << masterCateScheme << std::endl;
+	  std::cout << "DMMaster: Problem with workspace fit!" << std::endl;
 	  exit(0);
 	}
       }
@@ -310,6 +309,10 @@ int main (int argc, char **argv) {
 					   masterCateScheme, workspaceOptions);
 	if (dmw->fitsAllConverged()) {
 	  jobCounterWS++;
+	}
+	else {
+	  std::cout << "DMMaster: Problem with workspace fit!" << std::endl;
+	  exit(0);
 	}
       }
     }
@@ -347,6 +350,10 @@ int main (int argc, char **argv) {
 	if (dmts->fitsAllConverged()) {
 	  jobCounterTS++;
 	}
+	else {
+	  std::cout << "DMMaster: Problem with test-stat fit!" << std::endl;
+	  exit(0);
+	}
       }
     }
     std::cout << "Submitted/completed " << jobCounterTS << " jobs" << std::endl;
@@ -380,6 +387,10 @@ int main (int argc, char **argv) {
 					  NULL);
 	if (dmts->fitsAllConverged()) {
 	  jobCounterTS++;
+	}
+	else {
+	  std::cout << "DMMaster: Problem with test-stat fit!" << std::endl;
+	  exit(0);
 	}
       }
     }

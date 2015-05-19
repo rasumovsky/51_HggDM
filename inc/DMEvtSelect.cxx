@@ -352,8 +352,12 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Cut on the photon pseudorapidities:
   else if (cutName.EqualTo("photonEta")) {
-    passes = (evtTree->EventInfoAuxDyn_y1_eta < 2.5 && 
-	      evtTree->EventInfoAuxDyn_y2_eta < 2.5);
+    passes = (evtTree->EventInfoAuxDyn_y1_eta < 2.37 && 
+	      !(evtTree->EventInfoAuxDyn_y1_eta > 1.37 &&
+		evtTree->EventInfoAuxDyn_y1_eta < 1.56) &&
+	      evtTree->EventInfoAuxDyn_y2_eta < 2.37 && 
+	      !(evtTree->EventInfoAuxDyn_y2_eta > 1.37 &&
+		evtTree->EventInfoAuxDyn_y2_eta < 1.56));
   }
   // Cut on the calo/track isolation of the photons.
   else if (cutName.EqualTo("photonIso")) {

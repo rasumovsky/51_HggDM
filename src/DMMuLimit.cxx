@@ -1480,7 +1480,7 @@ RooDataSet* makeAsimovData(bool doConditional, RooNLLVar* conditioning_nll, doub
 ////////// main:
 
 int main(int argc, char* argv[]) {
-  if (argc < 5) {
+  if (argc < 4) {
     cout << "Usage: " << argv[0] << " <jobName> <DMSignal> <option>" << endl;
     return 0;
   }
@@ -1489,7 +1489,7 @@ int main(int argc, char* argv[]) {
   INPUTDMSignal = argv[2];
   TString option = argv[3];// can be "highCL", "nosys"
   
-  TString inputDir = Form("%s/%s", masterOutput.Dat(), jobName.Data());
+  TString inputDir = Form("%s/%s", masterOutput.Data(), jobName.Data());
   TString inputFileName = Form("%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
 				inputDir.Data(), INPUTDMSignal.Data());
   TString outputDir = Form("%s/DMMuLimit/single_files",inputDir.Data());
@@ -1502,7 +1502,7 @@ int main(int argc, char* argv[]) {
   system(Form("cp %s %s",inputFileName.Data(),localInputFileName.Data()));
   
   TString wname = "combinedWS";
-  TString mname = "mConfig";
+  TString mname = "modelConfig";
   TString aname = "";//keep blank so that program creates its own Asimov data.
   TString dname = "obsData";
   

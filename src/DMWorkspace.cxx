@@ -578,9 +578,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     RooProdPdf constraint("constraint", "constraint", *constraints);
     tempWS->import(constraint);
     tempWS->factory("PROD::model(modelSB,constraint)");
-     if (options.Contains("ProdModes")) {
-       tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
-     }
+    if (options.Contains("ProdModes")) {
+      tempWS->factory("PROD::modelProd(modelProdSB,constraint)");
+    }
   }
   // Except in the case where the constraints are uncorrelated between
   // categories, as with the spurious signal:
@@ -741,9 +741,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Set the background normalization parameter:
   std::cout << "DMWorkspace: Fitting bkg. in " << currCateName << std::endl;
-  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->numEntries());
+  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->sumEntries());
   (*categoryWS->pdf("bkgPdf_"+currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)), SumW2Error(kTRUE));//should be false?
-  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->numEntries());
+  (*categoryWS->var("nBkg_"+currCateName)).setVal(obsData->sumEntries());
   
   categoryWS->import(*obsData);
     

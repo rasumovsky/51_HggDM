@@ -204,12 +204,14 @@ int main (int argc, char **argv) {
 
   //--------------------------------------//
   // Compile any wrappers that need to run remotely:
+  // NVM, just include in compile requirements for DMMaster.
+  /*
   if (runInParallel) {
     if (masterOption.Contains("Workspace")) makeExe(exeWorkspace);
     if (masterOption.Contains("TestStat")) makeExe(exeTestStat);
     if (masterOption.Contains("MuLimit")) makeExe(exeMuLimit);
   }
-  
+  */
   //--------------------------------------//
   // Step 1: Make or load mass points:
   if (masterOption.Contains("MassPoints")) {
@@ -411,9 +413,12 @@ int main (int argc, char **argv) {
 	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
       }
       else {
-	system(Form("./bin/%s %s %s %s", exeMuLimit.Data(),
-		    masterJobName.Data(), currDMSignal.Data(),
-		    muLimitOptions.Data()));
+	TString muCommand = Form(".%s/bin/%s %s %s %s", packageLocation.Data(), 
+				 exeMuLimit.Data(), masterJobName.Data(),
+				 currDMSignal.Data(), muLimitOptions.Data());
+	std::cout << "Executing following system command: \n\t"
+		  << muCommand << std::endl;
+	system(muCommand);
       }
       jobCounterML++;
     }
@@ -421,7 +426,7 @@ int main (int argc, char **argv) {
   }
   
   //--------------------------------------//
-  // Step 8.2: Resubmit any failed test statistics jobs:
+  // Step 8.2: Resubmit any failed mu limit jobs:
   if (masterOption.Contains("ResubmitMuLimit")) {
     std::cout << "DMMaster: Step 8.2 - Resubmit failed mu limits." << std::endl;
     
@@ -441,9 +446,9 @@ int main (int argc, char **argv) {
 	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
       }
       else {
-	system(Form("./bin/%s %s %s %s", exeMuLimit.Data(),
-		    masterJobName.Data(), currDMSignal.Data(),
-		    muLimitOptions.Data()));
+	system(Form(".%s/bin/%s %s %s %s", packageLocation.Data(), 
+		    exeMuLimit.Data(), masterJobName.Data(),
+		    currDMSignal.Data(), muLimitOptions.Data()));
       }
       jobCounterML++;
     }

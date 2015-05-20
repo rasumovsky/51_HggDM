@@ -186,10 +186,10 @@ void DMMassPoints::createNewMassPoints() {
       // Dark matter XSBR includes cross-section and branching ratio.
       // WARNING!!! GETTING RID OF XSBR
       else if (isDMSample(sampleName)) {
-	evtWeight *= 100 * ((brxs->getDMXSBR(getMediatorMass(sampleName),
-					     getDarkMatterMass(sampleName),
-					     getMediatorName(sampleName),
-					     "XS")));
+	evtWeight *= 10000 * ((brxs->getDMXSBR(getMediatorMass(sampleName),
+					       getDarkMatterMass(sampleName),
+					       getMediatorName(sampleName),
+					       "XS")));
       }
       else if (sampleName.EqualTo("gg_gjet")) {
 	evtWeight *= 57.24;//xsection*filter-eff for Sherpa gg+gj
@@ -252,7 +252,9 @@ void DMMassPoints::createNewMassPoints() {
 */
 void DMMassPoints::loadMassPointsFromFile() {
   std::cout << "DMMassPoints: loading mass points from .txt file." << std::endl;
-    
+  if (isWeighted) std::cout << "\tMass points will be weighted." << std::endl;
+  else std::cout << "\tMass points will be un-weighted." << std::endl;
+
   std::map<string,RooDataSet*> dataMap; dataMap.clear();
   RooArgSet *args = new RooArgSet();
   RooRealVar wt("wt","wt",1);
@@ -304,6 +306,8 @@ void DMMassPoints::loadMassPointsFromFile() {
     }
     // Add the category dataset to the dataset map:
     dataMap[Form("%s_%d", cateScheme.Data(),i_c)] = cateData[i_c];
+    std::cout << "\tEntries[" << i_c << "] = " << cateData[i_c]->sumEntries()
+	      << std::endl;
   }
-  std::cout << "DMMassPoints: Finished loading data set: " << std::endl;
+  std::cout << "DMMassPoints: Finished loading data set. " << std::endl;
 }

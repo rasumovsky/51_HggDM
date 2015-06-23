@@ -186,10 +186,13 @@ void DMMassPoints::createNewMassPoints() {
       // Dark matter XSBR includes cross-section and branching ratio.
       // WARNING!!! GETTING RID OF XSBR
       else if (isDMSample(sampleName)) {
+	/*
 	evtWeight *= 10000 * ((brxs->getDMXSBR(getMediatorMass(sampleName),
 					       getDarkMatterMass(sampleName),
 					       getMediatorName(sampleName),
 					       "XS")));
+	*/
+	evtWeight *= 0.006566;// cross-section for mX=1GeV,mZ'=100GeV
       }
       else if (sampleName.EqualTo("gg_gjet")) {
 	evtWeight *= 57.24;//xsection*filter-eff for Sherpa gg+gj

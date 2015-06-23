@@ -28,7 +28,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMaster.h"
-
+#include "SigParam.h"
 using namespace std;
 using namespace DMAnalysis;
 

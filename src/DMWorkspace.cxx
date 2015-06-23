@@ -1061,8 +1061,8 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS, TString fitType) {
     currCateIndex = i_c;
     RooPlot* frame =  (*combWS->var("m_yy_"+currCateName)).frame(50);
     combWS->data(Form("%s_%s", dataToPlot.Data(), currCateName.Data()))->plotOn(frame);
-    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfDM_"+currCateName))), LineColor(3));
-    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfSM_"+currCateName))), LineColor(5));
+    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfDM_"+currCateName))), LineColor(6));
+    (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("sigPdfSM_"+currCateName))), LineColor(3));
     (*combWS->pdf("model_"+currCateName)).plotOn(frame, Components((*combWS->pdf("bkgPdf_"+currCateName))), LineColor(4));
     (*combWS->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
     
@@ -1072,14 +1072,14 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS, TString fitType) {
     frame->Draw();
     
     TLatex text; text.SetNDC(); text.SetTextColor(1);
-    text.DrawLatex(0.2, 0.81, Form("Category %d", currCateIndex));
-    text.DrawLatex(0.2, 0.87, Form("Signal %s", DMSignal.Data()));
+    //text.DrawLatex(0.2, 0.81, Form("Category %d", currCateIndex));
+    //text.DrawLatex(0.2, 0.87, Form("Signal %s", DMSignal.Data()));
     TH1F *histDM = new TH1F("histDM", "histDM", 1, 0, 1);
     TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
     TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
     TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
-    histDM->SetLineColor(3);
-    histSM->SetLineColor(5);
+    histDM->SetLineColor(6);
+    histSM->SetLineColor(3);
     histBkg->SetLineColor(4);
     histSig->SetLineColor(2);
     TLegend leg(0.61, 0.63, 0.89, 0.77);

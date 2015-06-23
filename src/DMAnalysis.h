@@ -29,7 +29,7 @@ namespace DMAnalysis {
   const bool doBlind = true;
   
   // Luminosity in pb-1:
-  const double analysisLuminosity = 10000;
+  const double analysisLuminosity = 5000;
   
   const double higgsMass = 125.09;// GeV
 

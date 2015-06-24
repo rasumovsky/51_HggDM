@@ -150,17 +150,13 @@ void DMWorkspace::createNewWS() {
   // Initialize classes relevant to workspace:
   // Everything for simultaneous fit:
   RooWorkspace* cateWS[nCategories];
-  RooCategory* categories = new RooCategory(Form("categories_%s",
-						 cateScheme.Data()),
-					    Form("categories_%s",
-						 cateScheme.Data()));
+  RooCategory* categories = new RooCategory("categories", "categories");
   combinedWS = new RooWorkspace("combinedWS");
   combinedWS->importClassCode();
   
   // Define the combined PDF:
-  RooSimultaneous *combinedPdf = new RooSimultaneous("combinedPdf",
-						     "combinedPdf",
-						     *categories);
+  RooSimultaneous *combinedPdf
+    = new RooSimultaneous("combinedPdf", "combinedPdf", *categories);
   
   // Parameter sets:
   RooArgSet* nuisanceParameters = new RooArgSet();
@@ -239,6 +235,7 @@ void DMWorkspace::createNewWS() {
   					     Import(dmAsimovMu1),WeightVar(wt));
   
   // Import PDFs, parameters, and dataset into workspace:
+  combinedWS->import(*categories);
   combinedWS->import(*combinedPdf);
   combinedWS->defineSet("nuisanceParameters", *nuisanceParameters);
   combinedWS->defineSet("observables", *observables);

@@ -33,25 +33,32 @@ class DMTestStat {
   void calculateNewP0();
   void clearData();
   bool fitsAllConverged();
-  double getCLsFromCL(double CL);
+  double functionQMu(double x);
+  double functionQMuTilde(double x, double asimovTestStat);
   double getCLFromCLs(double CLs);
-  double getCLsFromQMu(double qMu, bool observed, double N);
+  double getCLsFromCL(double CL);
   double getCLFromQMu(double qMu, bool observed, double N);
+  double getCLsFromQMu(double qMu, bool observed, double N);
+  double getFitNLL(TString datasetName, double muVal, bool fixMu,
+		   double &profiledMu);
+  std::vector<std::string> getGlobsNames();
+  std::vector<double> getGlobsValues();
+  std::vector<std::string> getNPNames();
+  std::vector<double> getNPValues();
+  double getP0FromQ0(double q0);
+  double getPbFromN(double N);
+  double getPbFromQMu(double qMu, double sigma, double mu);
+  double getPMuFromQMu(double qMu);
   double getQ0FromNLL(double nllMu0, double nllMuHat, double muHat);
   double getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
 		       double muTest);
-  double getP0FromQ0(double q0);
-  double getPMuFromQMu(double qMu);
-  double getPbFromQMu(double qMu, double sigma, double mu);
-  double getPbfromN(double N);
+  double getQMuTildeFromNLL(double nllMu, double nllMu0, double nllMuHat,
+			    double muHat, double muTest);
+  void loadStatsFromFile();
   
  private:
-
-  double getFitNLL(TString datasetName, double muVal, bool fixMu,
-		   double &profiledMu);
-  TString getKey(TString testStat, bool observed, int N);
   
-  void loadStatsFromFile();
+  TString getKey(TString testStat, bool observed, int N);
   bool mapValueExists(TString mapKey);
   
   // From the initialization:
@@ -59,7 +66,6 @@ class DMTestStat {
   TString DMSignal;
   TString options;
   TString outputDir;
-  DMWorkspace *dmw;
   
   TString dataForObs;
   TString dataForExp;
@@ -68,11 +74,18 @@ class DMTestStat {
   bool allGoodFits;
   
   // The workspace for the fits:
+  DMWorkspace *dmw;
   RooWorkspace *workspace;
   ModelConfig *mc;
 
   // Store the calculated values:
   std::map<TString,double> calculatedValues;
+  
+  // Store fit parameters from NLL calculation:
+  std::vector<std::string> namesGlobs;
+  std::vector<std::string> namesNP;
+  std::vector<double> valuesGlobs;
+  std::vector<double> valuesNP;
   
 };
 

@@ -34,11 +34,13 @@ int main(int argc, char **argv) {
   system(Form("cp %s %s",originFile.Data(),copiedFile.Data()));
     
   // Load the RooWorkspace and ModelConfig:
-  TFile inputFile(copiedFile,"read");
+  TFile inputFile(copiedFile, "read");
   RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");
   
   DMTestStat *ts = new DMTestStat(jobName, DMSignal, cateScheme, "new",
 				  workspace);
+  ts->calculateNewCL();
+  ts->calculateNewP0();
   if (ts->fitsAllConverged()) {
     std::cout << "DMTestStatWrapper: All OK!" << std::endl;
   }

@@ -14,6 +14,9 @@
 #include "DMMassPoints.h"
 #include "DMSigParam.h"
 #include "DMTestStat.h"
+#include "DMToyAnalysis.h"
+
+bool isFirstJob;
 
 void makeExe(TString exeName);
 
@@ -22,4 +25,7 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 
 void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal);
 
-void submitMLViaBsub(TString exeJobName, TString exeOptions, TString exeSignal);
+void submitMLViaBsub(TString exeJobName, TString exeOption, TString exeSignal);
+
+void submitPEViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
+		     int exeSeed, int exeToysPerJob);

@@ -29,7 +29,7 @@ namespace DMAnalysis {
   const bool doBlind = true;
   
   // Luminosity in pb-1:
-  const double analysisLuminosity = 5000;
+  const double analysisLuminosity = 10000;
   
   const double higgsMass = 125.09;// GeV
 
@@ -82,6 +82,9 @@ namespace DMAnalysis {
   
   const TString exeMuLimit = "DMMuLimit";
   const TString jobScriptMuLimit = "scripts/jobFileMuLimit.sh";
+  
+  const TString exePseudoExp = "DMPseudoExp";
+  const TString jobScriptPseudoExp = "scripts/jobFilePseudoExp.sh";
   
   ////////////////////////////////////////
   //           MEMBER FUNCTIONS         //

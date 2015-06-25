@@ -53,12 +53,15 @@ namespace DMAnalysis {
   ////////////////////////////////////////
   
   // Location of global input files:
-  const TString masterInput = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs";
+  const TString masterInput
+    = "/afs/cern.ch/work/a/ahard/files_HggDM/GlobalInputs";
   // Location of output directory:
-  const TString masterOutput = "/afs/cern.ch/work/a/ahard/files_HggDM/FullAnalysis";
+  const TString masterOutput
+    = "/afs/cern.ch/work/a/ahard/files_HggDM/FullAnalysis";
   
   // Location of this software package:
-  const TString packageLocation = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
+  const TString packageLocation
+    = "/afs/cern.ch/user/a/ahard/analysis/51_HggDM";
   
   // Holding location of cluster job files:
   const TString clusterFileLocation = "/afs/cern.ch/work/a/ahard/jobfiles";
@@ -93,7 +96,7 @@ namespace DMAnalysis {
   int getNumCategories(TString cateScheme);
   TString nameToFileList(TString name);
   TString nameToxAODCutFile(TString name);
-  TString cateToBkgFunc(TString category);
+  TString cateToBkgFunc(TString cateScheme, int cateIndex);
   TString getMediatorName(TString modeName);
   int getMediatorMass(TString modeName);
   int getDarkMatterMass(TString modeName);

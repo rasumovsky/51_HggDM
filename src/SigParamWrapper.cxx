@@ -20,13 +20,15 @@ using namespace DMAnalysis;// a header specific to the mono-H analysis.
 
 /**
    This is the main method:
+   @param function - the name of the resonance function "CBGA" or "DoubleCB".
 */
 int main (int argc, char **argv) {
   // Check arguments:
-  if (argc < 1) {
-    printf("\nUsage: %s\n\n", argv[0]);
+  if (argc < 2) {
+    printf("\nUsage: %s <function>\n\n", argv[0]);
     exit(0);
   }
+  TString function = argv[1];
   
   // Just a function to set the ATLAS style
   CommonFunc::SetAtlasStyle();
@@ -56,8 +58,9 @@ int main (int argc, char **argv) {
   }
   
   // Step 3: Fit the resonance:
-  bool converged_inclusive = sp_inclusive->makeSingleResonance(resonanceMass, categoryIndex, "DoubleCB");
-  //bool converged_inclusive = sp_inclusive->makeSingleResonance(resonanceMass, categoryIndex, "CBGA");
+  bool converged_inclusive = sp_inclusive->makeSingleResonance(resonanceMass,
+							       categoryIndex,
+							       function);
   
   if (converged_inclusive) {
     std::cout << "SigParamWrapper: fit converged!" << std::endl;
@@ -108,7 +111,7 @@ int main (int argc, char **argv) {
   // Step 3: Fit the resonance:
   bool converged_DM = sp_DM->makeSingleResonance(resonanceMass,
 						 categoryIndex,
-						 "CBGA");
+						 function);
   if (converged_DM) {
     std::cout << "SigParamWrapper: fit converged!" << std::endl;
   }

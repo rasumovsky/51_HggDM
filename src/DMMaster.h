@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMAnalysis.h"
-#include "DMBkgModel.h"
+#include "BkgModel.h"
 #include "DMCheckJobs.h"
 #include "DMMassPoints.h"
 #include "DMSigParam.h"

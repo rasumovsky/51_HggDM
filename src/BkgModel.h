@@ -1,16 +1,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Name: DMBkgModel.h                                                        //
-//  Class: DMBkgModel.cxx                                                     //
+//  Name: BkgModel.h                                                          //
+//  Class: BkgModel.cxx                                                       //
 //                                                                            //
 //  Author: Andrew Hard                                                       //
 //  Email: ahard@cern.ch                                                      //
-//  Date: 20/03/2015                                                          //
+//  Date: 25/06/2015                                                          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef DMBkgModel_h
-#define DMBkgModel_h
+#ifndef BkgModel_h
+#define BkgModel_h
 
 // C++ includes:
 #include <stdlib.h>
@@ -29,46 +29,35 @@
 // Package includes:
 #include "CommonHead.h"
 #include "RooFitHead.h"
-#include "DMAnalysis.h"
 #include "RooBernsteinM.h"
+#include "RooLandau.h"
 
-using namespace DMAnalysis;
-
-class DMBkgModel 
-{
+class BkgModel {
   
  public:
   
-  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions);
-  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions,
-	     RooRealVar *newObservable);
-  DMBkgModel(TString newJobName, TString newCateScheme, TString newOptions,
-	     RooRealVar *newObservable, RooCategory *newCategories);
-  
-  virtual ~DMBkgModel() {};
+  BkgModel(RooRealVar *newObs);
+  virtual ~BkgModel() {};
   
   // Accessors:
   void addBkgToCateWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
-		      int cateIndex);
-  RooAbsPdf* getCateBkgPDF(int cateIndex);
-  RooAbsPdf* getBkgPDFByName(TString name, TString fitFunc);
+		      TString function);
+  RooAbsPdf* getBkgPDF(TString function);
   RooRealVar* getMassObservable();
   
   // Mutators:
-  void setMassObservable(RooRealVar *newObservable);
-      
+  void setObservable(RooRealVar *newObs);
+  
  private:
   
   // Member methods:
-  int getOrderFromFunc(TString fitFunc);
+  int getOrderFromFunc(TString function);
   
   // Member variables:
-  TString jobName;
-  TString cateScheme;
-  TString options;
-  
-  RooRealVar *m_yy;
-  
+  RooRealVar *m_obs;
+  TString m_obsName;
+  double m_obsMin;
+  double m_obsMax;
 };
 
 #endif

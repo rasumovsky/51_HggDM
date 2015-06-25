@@ -11,6 +11,7 @@
 #ifndef DMWorkspace_h
 #define DMWorkspace_h
 
+#include "BkgModel.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "RooStatsHead.h"
@@ -21,10 +22,8 @@
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
 #include "DMSigParam.h"
-#include "DMBkgModel.h"
 
-class DMWorkspace
-{
+class DMWorkspace {
 
  public:
   

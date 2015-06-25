@@ -24,6 +24,7 @@ using namespace CommonFunc;
 using namespace DMAnalysis;
 
 /**
+   -----------------------------------------------------------------------------
    Instantiate the class.
    @param newJobName - The name of the job
    @param newDMSignal - The Dark Matter signal to incorporate in the model.
@@ -75,6 +76,7 @@ DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
 }
 
 /**
+   -----------------------------------------------------------------------------
    Checks whether all of the fits converged.
    @returns - true iff the fits all converged.
 */
@@ -83,6 +85,7 @@ bool DMWorkspace::fitsAllConverged() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Retrieves the workspace created by this program.
 */
 RooWorkspace* DMWorkspace::getCombinedWorkspace() {
@@ -90,6 +93,7 @@ RooWorkspace* DMWorkspace::getCombinedWorkspace() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Retrieves a pointer to the model config.
 */
 ModelConfig* DMWorkspace::getModelConfig() {
@@ -97,6 +101,7 @@ ModelConfig* DMWorkspace::getModelConfig() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Load a previously created workspace.
 */
 void DMWorkspace::loadWSFromFile() {
@@ -115,6 +120,7 @@ void DMWorkspace::loadWSFromFile() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Create a workspace from scratch. 
 */
 void DMWorkspace::createNewWS() {
@@ -294,6 +300,7 @@ void DMWorkspace::createNewWS() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Create the workspace for a single analysis category.
    @param currCategory
 */
@@ -538,11 +545,13 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     currSigParam->addSigToCateWS(tempWS,pesList,perList,"bbH",currCateIndex);
     currSigParam->addSigToCateWS(tempWS,pesList,perList,"ttH",currCateIndex);
   }
+
   // Construct the background PDF:
-  DMBkgModel *currBkgModel = new DMBkgModel(jobName, cateScheme, "FromFile", 
-  					    tempWS->var("m_yy"));
-  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, currCateIndex);
-    
+  BkgModel *currBkgModel = new BkgModel(tempWS->var("m_yy"));
+  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg,
+			       DMAnalysis::cateToBkgFunc(cateScheme,
+							 currCateIndex));
+  
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
     
@@ -801,6 +810,7 @@ double DMWorkspace::spuriousSignal() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    A private method for constructing a normalization systematic uncertainty.
    @param varName - the name of the systematic uncertainty.
    @param setup - the systematic uncertainty configuration parameters.
@@ -889,6 +899,7 @@ void DMWorkspace::makeNP(TString varName, double setup[4],
 }
 
 /**
+   -----------------------------------------------------------------------------
    A private method for constructing a shape systematic uncertainty. The shape
    NP maker will give variables used in parameterization process dependent name,
    but keep the same name for nuisance parameter, and global observables.
@@ -963,12 +974,12 @@ void DMWorkspace::makeShapeNP(TString varNameNP, TString process,
 }
 
 /**
+   -----------------------------------------------------------------------------
    Create Asimov data for the statistical model, using a fit to observed data
    for the shape and normalizaiton of the background.
    @param cateWS - the current category workspace.
    @param valMuDM - the value of the dark matter signal strength to use.
    @param valMuSM - the value of the Standard Model signal strength to use.
-   @returns - void. Adds Asimov data to the passed workspace. 
 */
 void DMWorkspace::createAsimovData(RooWorkspace* cateWS, int valMuDM,
 				   int valMuSM) {
@@ -997,9 +1008,10 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, int valMuDM,
 }
 
 /**
+   -----------------------------------------------------------------------------
    Plot the fits produced by the specified model.
-   @param plotOptions - options for what fits to plot etc.
-   @returns void
+   @param cateWS - a single category workspace.
+   @param dataset - the name of the dataset to plot.
 */
 void DMWorkspace::plotSingleCateFit(RooWorkspace *cateWS, TString dataset) {
   std::cout << "DMWorkspace: Plot single category fit for "
@@ -1043,9 +1055,10 @@ void DMWorkspace::plotSingleCateFit(RooWorkspace *cateWS, TString dataset) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Plot the fits produced by the specified model.
-   @param plotOptions - options for what fits to plot etc.
-   @returns void
+   @param combWS - the combined workspace.
+   @param fitType - the type of fit.
 */
 void DMWorkspace::plotFinalFits(RooWorkspace *combWS, TString fitType) {
   std::cout << "DMWorkspace: Plot final fits for " << fitType << std::endl;
@@ -1095,6 +1108,7 @@ void DMWorkspace::plotFinalFits(RooWorkspace *combWS, TString fitType) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Plot the pulls of the nuisance parameters related to systematic uncertainties
    in each of the fits.
    @param nuisParams - the set of nuisance parameters
@@ -1104,7 +1118,13 @@ void DMWorkspace::plotNuisParams(RooArgSet nuisParams, TString type) {
   // TBD
 }
 
-// "1", "0", "Free"
+/**
+   -----------------------------------------------------------------------------
+   Profile the data using a given mu hypothesis, and save a parameter snapshot.
+   @param muDMValue - the mu value to use: "0", "1", "Free".
+   @param nllValue - nll value passed by reference.
+   @param profiledMu - the mu value passed by reference.
+*/
 void DMWorkspace::profileAndSnapshot(TString muDMValue, double &nllValue,
 				     double &profiledMu) {
   std::cout << "\nDMWorkspace: Profile mu_DM = " << muDMValue << std::endl;

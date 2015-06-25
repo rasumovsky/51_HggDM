@@ -3,27 +3,20 @@
 //  Name: SigParam.cxx                                                        //
 //                                                                            //
 //  Created: Andrew Hard                                                      //
-//  Email: ahard@cern.ch                                                      //
-//  Date: 10/06/2015                                                          //
+//  Email: ahard@cern.ch  <-- Please use for reporting issues!                //
+//  Date: 25/06/2015                                                          //
 //                                                                            //
 //  This class implements the resonance modeling for the ATLAS Hgamma group.  //
-//
-//  - "DoubleCB" or "CBGA" for the shape. Defaults to CBGA.                   //
+//                                                                            //
+//  Development notes:                                                        //
+//  Modeling of individual resonances with a Crystal Ball + Gaussian or       //
+//  double-Crystal Ball function has been implemented. Parameterization over  //
+//  multiple mH values has also been implemented for the double-Crystal Ball  //
+//  function. However, the parameterization currently fails for the Crystal   //
+//  Ball + Gaussian function for unknown reasons. Open issues include the     //
+//  parameterization of signal yields.                                        //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////
-// DEV NOTES
-//
-// 
-// METHODS:
-//   getFileName()
-//   loadFromFile()
-//   printParameterValues()
-//   printTable()
-//   saveParameterValues()
-//
-/////////////////////
 
 #include "SigParam.h"
 
@@ -706,7 +699,7 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
       else if (function.EqualTo("DoubleCB")) {
 	RooFormulaVar *alphaCBLo = new RooFormulaVar(Form("alphaCBLo_%s",currKey.Data()), Form("@0+@1/(%f+@2)",regularizedMass(currMassPoints[i_m])), RooArgList(*m_ws->var(Form("a_alphaCBLo_c%d",cateIndex)), *m_ws->var(Form("b_alphaCBLo_c%d",cateIndex)), *m_ws->var(Form("c_alphaCBLo_c%d",cateIndex))));
 	RooFormulaVar *alphaCBHi = new RooFormulaVar(Form("alphaCBHi_%s",currKey.Data()), Form("@0+@1*%f",regularizedMass(currMassPoints[i_m])), RooArgList(*m_ws->var(Form("a_alphaCBHi_c%d",cateIndex)), *m_ws->var(Form("b_alphaCBHi_c%d",cateIndex))));
-		
+	
 	// Import the RooFormulaVar into the workspace:
 	m_ws->import(*muCBNom);
 	m_ws->import(*sigmaCBNom);
@@ -721,11 +714,9 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
     }
 
     // Import simultaneous PDF into workspace:
-    std::cout << "SigParam: Importing simultaneous PDF" << std::endl;
     m_ws->import(*currSim);
     
     // Get the RooDataSets:
-    std::cout << "SigParam: Beginning dataset combination." << std::endl;
     std::map<std::string,RooDataSet*> currDataMap; currDataMap.clear();
     for (int i_m = 0; i_m < (int)currMassPoints.size(); i_m++) {
       // maybe add if statement here...
@@ -733,12 +724,10 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
       currDataMap[((std::string)currKey)]
 	= (RooDataSet*)m_ws->data(Form("data_%s",currKey.Data()));
     }
-    std::cout << "SigParam: Continuing dataset combination 1." << std::endl;
+    
     RooArgSet *args = new RooArgSet();
     args->add(*(m_ws->var("m_yy")));
     args->add(*(m_ws->var("wt")));
-    
-    std::cout << "SigParam: Continuing dataset combination 2." << std::endl;
     RooDataSet *obsData = new RooDataSet(Form("data_c%d",cateIndex),
 					 Form("data_c%d",cateIndex), *args,
 					 RooFit::Index(*m_cat),

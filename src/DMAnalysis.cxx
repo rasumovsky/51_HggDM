@@ -42,10 +42,7 @@ TString DMAnalysis::nameToFileList(TString name) {
   TString result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_%s.txt",
 			masterInput.Data(), fileListDir.Data(), name.Data());
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
-  if (name.EqualTo("bbH")) {
-    result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_ggH.txt",
-		  masterInput.Data(), fileListDir.Data());
-  }
+  if (name.EqualTo("bbH")) result = nameToFileList("ggH");
   return result;
 }
 
@@ -58,24 +55,21 @@ TString DMAnalysis::nameToxAODCutFile(TString name) {
   TString result = Form("%s/xAODCutFlows/%s/hist_H2yyMETAnalysis_%s.root",
 			masterInput.Data(), fileListDir.Data(), name.Data());
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
-  if (name.EqualTo("bbH")) {
-    result = Form("%s/xAODCutFlows/%s/hist_H2yyMETAnalysis_ggH.root",
-		  masterInput.Data(), fileListDir.Data());
-  }
+  if (name.EqualTo("bbH")) result = nameToxAODCutFile("ggH");
   return result;
 }
 
 /** 
     Determine the background PDF based on the category.
-    @param category - the category name. 
+    @param cateScheme - the name of the event categorization scheme.
+    @param cateIndex - the category index.
     @returns - the name of the background PDF.
 */
-TString DMAnalysis::cateToBkgFunc(TString category) {
+TString DMAnalysis::cateToBkgFunc(TString cateScheme, int cateIndex) {
   TString result = "";
-  // WARNING!! THERE IS CURRENTLY A PROBLEM WITH EXPONENTIALS IN DMBKGMODEL.
-  // ALSO, MAKE SURE THIS IS 'O' AND NOT '0'
-  result = "ExppolO1";//"ExppolO1";
+  // MAKE SURE THIS IS 'O' AND NOT '0'
   //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
+  result = "ExppolO1";
   return result;
 }
 
@@ -85,12 +79,8 @@ TString DMAnalysis::cateToBkgFunc(TString category) {
    @param processName - the name of the process.
 */
 TString DMAnalysis::getMediatorName(TString modeName) {
-  if (modeName.Contains("shxx_gg")) {
-    return "shxx_gg";
-  }
-  else if (modeName.Contains("zphxx_gg")) {
-    return "zphxx_gg";
-  }
+  if (modeName.Contains("shxx_gg")) return "shxx_gg";
+  else if (modeName.Contains("zphxx_gg")) return "zphxx_gg";
   else {
     std::cout << "Analysis Error: no matching mediator name: " 
 	      << modeName << std::endl;
@@ -122,9 +112,7 @@ int DMAnalysis::getMediatorMass(TString modeName) {
 */
 int DMAnalysis::getDarkMatterMass(TString modeName) {
   for (int currMass = 100; currMass < 1000; currMass += 100) {
-    if (modeName.Contains(Form("mx%d",currMass))) {
-      return currMass;
-    }
+    if (modeName.Contains(Form("mx%d",currMass))) return currMass;
   }
   std::cout << "Analysis Error: no matching DM mass" 
 	    << modeName << std::endl;
@@ -138,29 +126,20 @@ int DMAnalysis::getDarkMatterMass(TString modeName) {
 */
 bool DMAnalysis::isSMSample(TString sampleName) {
   for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
-    if (sampleName.EqualTo(sigSMModes[i_SM])) {
-      return true;
-    }
+    if (sampleName.EqualTo(sigSMModes[i_SM])) return true;
   }
   return false;
 }
 
 bool DMAnalysis::isDMSample(TString sampleName) {
   for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-    if (sampleName.EqualTo(sigDMModes[i_DM])) {
-      return true;
-    }
+    if (sampleName.EqualTo(sigDMModes[i_DM])) return true;
   }
   return false;
 }
 
 bool DMAnalysis::isSignalSample(TString sampleName) {
-  if (isSMSample(sampleName) || isDMSample(sampleName)) {
-    return true;
-  }
-  else {
-    return false;
-  }
+  return (isSMSample(sampleName) || isDMSample(sampleName));
 }
 
 /** 
@@ -170,14 +149,11 @@ bool DMAnalysis::isSignalSample(TString sampleName) {
 */
 bool DMAnalysis::isWeightedSample(TString sampleName) {
   // First check if it is a SM or DM signal process:
-  if (isSignalSample(sampleName)) {
-    return true;
-  }
+  if (isSignalSample(sampleName)) return true;
+  
   // Finally, check if it is one of the other MC processes:
   for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
-    if (sampleName.EqualTo(MCProcesses[i_MC])) {
-      return true;
-    }
+    if (sampleName.EqualTo(MCProcesses[i_MC])) return true;
   }
   return false;
 }

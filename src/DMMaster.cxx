@@ -304,7 +304,7 @@ int main (int argc, char **argv) {
   /*
     if (masterOption.Contains("BkgModel")) {
     cout << "DMMaster: Step 4 - Making the background model." << endl;
-    DMBkgModel *dmb = new DMBkgModel(masterJobName, masterCateScheme,
+    BkgModel *dmb = new BkgModel(masterJobName, masterCateScheme,
     bkgModelOptions);
     }
   */

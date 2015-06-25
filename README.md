@@ -49,10 +49,10 @@ the option "FromScratch".
  fit is performed on masspoints generated with DMMassPoints. Signal cross-
  sections are provided by the BRXSReader tool.
 
-##### DMBkgModel
+##### BkgModel
  This program implements all of the possible background models, and can return 
  either a RooAbsPdf object, a CombinedPdf, or add a PDF directly to the analysis
- workspace.
+ workspace. It is designed to be generic enough for use in all H->yy analyses. 
 
 ##### DMWorkspace
  This program produces the statistical model for the DM analysis. It includes SM
@@ -64,9 +64,15 @@ the option "FromScratch".
  individually. 
 
 ##### DMTestStat
- This program calculates the 95% CL, CLs, and p0 values for a given DM signal. 
+ This program calculates the 95% CL, CLs, and p0 values for a given DM signal.
+ It is the default fitting program. 
 
-##### DMPseudoexperiments (TBA)
+##### DMPseudoExp
+ This program implements the pseudo-dataset generation and fitting. It is 
+ designed to either run locally or on a cluster, and outputs a TTree file.
+
+##### DMToyAnalysis
+ This program has tools for analyzing toy MC data. 
 
 ### Supporting Classes:
 

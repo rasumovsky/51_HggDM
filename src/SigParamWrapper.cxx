@@ -70,8 +70,7 @@ int main (int argc, char **argv) {
   }
   
   // Step 4: Plot the result:
-  sp_inclusive->plotSingleResonance(resonanceMass, categoryIndex,
-				    "plot_inclusive.eps");
+  sp_inclusive->plotSingleResonance(resonanceMass, categoryIndex, "PT");
   // Step 5: save the parameterization:
   sp_inclusive->saveParameterization("sigParamFile_inclusive.root");
   
@@ -105,13 +104,12 @@ int main (int argc, char **argv) {
     weightValue = currDataSet->weight();
     
     // Step 2: Add the mass and weight values to the dataset:
-    sp_DM->addMassPoint(resonanceMass, categoryIndex, massValue, weightValue);
+    sp_DM->addMassPoint((800.0/125.0)*resonanceMass, categoryIndex, (800.0/125.0)*massValue, weightValue);
   }
   
   // Step 3: Fit the resonance:
-  bool converged_DM = sp_DM->makeSingleResonance(resonanceMass,
-						 categoryIndex,
-						 function);
+  bool converged_DM = sp_DM->makeSingleResonance((800.0/125.0)*resonanceMass,
+						 categoryIndex, function);
   if (converged_DM) {
     std::cout << "SigParamWrapper: fit converged!" << std::endl;
   }
@@ -120,7 +118,7 @@ int main (int argc, char **argv) {
   }
   
   // Step 4: Plot the result:
-  sp_DM->plotSingleResonance(resonanceMass, categoryIndex, "plot_DM.eps");
+  sp_DM->plotSingleResonance((800.0/125.0)*resonanceMass, categoryIndex, "PT");
   
   // Step 5: save the parameterization:
   sp_DM->saveParameterization("sigParamFile_DM.root");

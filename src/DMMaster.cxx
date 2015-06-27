@@ -30,10 +30,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMaster.h"
-#include "SigParam.h"
 
-using namespace std;
-using namespace DMAnalysis;
+//using namespace std;
+//using namespace DMAnalysis;
 
 /**
    -----------------------------------------------------------------------------
@@ -47,7 +46,7 @@ void submitWSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("%s/%s_DMWorkspace", clusterFileLocation.Data(),
+  TString dir = Form("%s/%s_DMWorkspace",DMAnalysis::clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -96,7 +95,7 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 		     TString exeCateScheme) {
   
   // Make directories for job info:
-  TString dir = Form("%s/%s_DMTestStat", clusterFileLocation.Data(),
+  TString dir = Form("%s/%s_DMTestStat", DMAnalysis::clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -134,7 +133,6 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 	      nameErrFile.Data(), nameJobScript.Data()));
 }
 
-
 /**
    -----------------------------------------------------------------------------
    Submits the mu limit jobs to the lxbatch server. 
@@ -146,7 +144,7 @@ void SubmitMuLimitViaBsub(TString exeJobName, TString exeOption,
 			  TString exeSignal) {
   
   // Make directories for job info:
-  TString dir = Form("%s/%s_DMMuLimit", clusterFileLocation.Data(),
+  TString dir = Form("%s/%s_DMMuLimit", DMAnalysis::clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -197,7 +195,7 @@ void submitPEViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 		     TString exeCateScheme, int exeSeed, int exeToysPerJob) {
   
   // Make directories for job info:
-  TString dir = Form("%s/%s_PseudoExp", clusterFileLocation.Data(),
+  TString dir = Form("%s/%s_PseudoExp", DMAnalysis::clusterFileLocation.Data(),
 		     exeJobName.Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
@@ -236,7 +234,6 @@ void submitPEViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
 	      nameErrFile.Data(), nameJScript.Data()));
 }
 
-
 /**
    -----------------------------------------------------------------------------
    This is the main DMMaster method:
@@ -273,23 +270,27 @@ int main (int argc, char **argv) {
     cout << "DMMaster: Step 1 - Make mass points." << endl;
     
     // Loop over SM, DM, MC samples:
-    for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
-      DMMassPoints *mp = new DMMassPoints(masterJobName, sigSMModes[i_SM],
+    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
+      DMMassPoints *mp = new DMMassPoints(masterJobName, 
+					  DMAnalysis::sigSMModes[i_SM],
 					  masterCateScheme, massPointOptions,
 					  NULL);
     }
-    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      DMMassPoints *mp = new DMMassPoints(masterJobName, sigDMModes[i_DM],
+    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
+      DMMassPoints *mp = new DMMassPoints(masterJobName, 
+					  DMAnalysis::sigDMModes[i_DM],
 					  masterCateScheme, massPointOptions,
 					  NULL);
     }
-    for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
-      DMMassPoints *mp = new DMMassPoints(masterJobName, MCProcesses[i_MC],
+    for (int i_MC = 0; i_MC < DMAnalysis::nMCProcesses; i_MC++) {
+      DMMassPoints *mp = new DMMassPoints(masterJobName,
+					  DMAnalysis::MCProcesses[i_MC],
 					  masterCateScheme, massPointOptions,
 					  NULL);
     }
   }
   
+  /*
   //--------------------------------------//
   // Step 2: Make or load the signal parameterization:
   if (masterOption.Contains("SigParam")) {
@@ -297,7 +298,87 @@ int main (int argc, char **argv) {
     DMSigParam *sp = new DMSigParam(masterJobName, masterCateScheme,
 				    sigParamOptions, NULL);
   }
-  
+  */
+  //--------------------------------------//
+  // Step 2: Make or load the signal parameterization:
+  if (masterOption.Contains("SigParam")) {
+    cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
+    int cateIndex = 0;
+    double resMass =125.0;
+    bool signalConverged = true;
+    TString function = "DoubleCB";
+    TString signalDir = Form("%s/%s/DMSigParam",
+			     DMAnalysis::masterOutput.Data(),
+			     masterJobName.Data());
+    SigParam *sp_SM_all = new SigParam("");
+    SigParam *sp_SM[DMAnalysis::nSMModes];
+    SigParam *sp_DM[DMAnalysis::nSMModes];
+    
+    TString failedSigParam = "";
+    // Construct SM signals:
+    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
+      sp_SM[i_SM] = new SigParam("");
+      DMMassPoints *mp = new DMMassPoints(masterJobName,
+					  DMAnalysis::sigSMModes[i_SM],
+					  masterCateScheme, "FromFile", NULL);
+      RooDataSet *currDataSet = mp->getCateDataSet(cateIndex);
+      sp_SM[i_SM]->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
+      sp_SM_all->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
+      if (sp_SM[i_SM]->makeSingleResonance(resMass, cateIndex, function)) {
+	sp_SM[i_SM]->saveAll(Form("%s/%s", signalDir.Data(),
+				  (DMAnalysis::sigSMModes[i_SM]).Data()));
+	sp_SM[i_SM]->plotSingleResonance(resMass, cateIndex, 
+					Form("%s/%s", signalDir.Data(), 
+					(DMAnalysis::sigSMModes[i_SM]).Data()));
+      }
+      else {
+	signalConverged = false;
+	failedSigParam += DMAnalysis::sigSMModes[i_SM] + ", ";
+      }
+      
+    }
+    // Construct the total SM signal:
+    if (sp_SM_all->makeSingleResonance(resMass, cateIndex, function)) {
+      sp_SM_all->saveAll(Form("%s/SM", signalDir.Data()));
+      sp_SM_all->plotSingleResonance(resMass, cateIndex, 
+				     Form("%s/SM", signalDir.Data()));
+    }
+    else {
+      signalConverged = false;
+      failedSigParam += "SM, ";
+    }
+    
+    // Construct DM signals:
+    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
+      sp_DM[i_DM] = new SigParam("");
+      DMMassPoints *mp = new DMMassPoints(masterJobName,
+					  DMAnalysis::sigDMModes[i_DM],
+					  masterCateScheme, "FromFile", NULL);
+      RooDataSet *currDataSet = mp->getCateDataSet(cateIndex);
+      sp_DM[i_DM]->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
+      if (sp_DM[i_DM]->makeSingleResonance(resMass, cateIndex, function)) {
+	sp_DM[i_DM]->saveAll(Form("%s/%s", signalDir.Data(),
+				  (DMAnalysis::sigDMModes[i_DM]).Data()));
+	sp_DM[i_DM]->plotSingleResonance(resMass, cateIndex, 
+					Form("%s/%s", signalDir.Data(),
+					(DMAnalysis::sigDMModes[i_DM]).Data()));
+      }
+      else {
+	signalConverged = false;
+	failedSigParam += DMAnalysis::sigDMModes[i_DM] + ", ";
+      }
+    }
+    
+    // Check if all fits converged:
+    if (signalConverged) {
+      std::cout << "DMMaster: signal fits converged!" << std::endl;
+    }
+    else {
+      std::cout << "DMMaster: signal fits did not converge :(" << std::endl;
+      std::cout << "\t" << failedSigParam << std::endl;
+    }
+  }
+
   //--------------------------------------//
   // Step 3: Create the background model (spurious signal calculation):
   // REPLACE WITH SPURIOUS SIGNAL CODE.
@@ -316,16 +397,16 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 4.1 - Making the workspaces." << std::endl;
     
     int jobCounterWS = 0;
-    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      TString currDMSignal = sigDMModes[i_DM];
+    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
+      TString currSignal = DMAnalysis::sigDMModes[i_DM];
       if (runInParallel) {
-	submitWSViaBsub(masterJobName, workspaceOptions, currDMSignal,
+	submitWSViaBsub(masterJobName, workspaceOptions, currSignal,
 			masterCateScheme);
 	jobCounterWS++;
 	isFirstJob = false;
       }
       else {
-	DMWorkspace *dmw = new DMWorkspace(masterJobName, currDMSignal,
+	DMWorkspace *dmw = new DMWorkspace(masterJobName, currSignal,
 					   masterCateScheme, workspaceOptions);
 	if (dmw->fitsAllConverged()) {
 	  jobCounterWS++;
@@ -347,23 +428,23 @@ int main (int argc, char **argv) {
     int jobCounterWS = 0;
     // Get the points to resubmit:
     DMCheckJobs *dmc = new DMCheckJobs(masterJobName);
-    vector<TString> resubmitDMSignals = dmc->getResubmitList("DMWorkspace");
+    vector<TString> resubmitSignals = dmc->getResubmitList("DMWorkspace");
     dmc->printResubmitList("DMWorkspace");
     
     // Then resubmit as necessary:
-    std::cout << "Resubmitting " << (int)resubmitDMSignals.size()
+    std::cout << "Resubmitting " << (int)resubmitSignals.size()
 	      << " workspace jobs." << std::endl;
-    for (int i_DM = 0; i_DM < (int)resubmitDMSignals.size(); i_DM++) {
-      TString currDMSignal = resubmitDMSignals[i_DM];
+    for (int i_DM = 0; i_DM < (int)resubmitSignals.size(); i_DM++) {
+      TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
 	submitWSViaBsub(exeWorkspace, masterJobName, workspaceOptions, 
-			currDMSignal);
+			currSignal);
 	jobCounterWS++;
 	isFirstJob = false;
       }
       else {
-	DMWorkspace *dmw = new DMWorkspace(masterJobName, currDMSignal,
+	DMWorkspace *dmw = new DMWorkspace(masterJobName, currSignal,
 					   masterCateScheme, workspaceOptions);
 	if (dmw->fitsAllConverged()) {
 	  jobCounterWS++;
@@ -379,10 +460,10 @@ int main (int argc, char **argv) {
   
   //--------------------------------------//
   // Step 5.1: Create pseudoexperiment ensemble:
-  TString currDMSignal = sigDMModes[2];
+  TString currSignal = DMAnalysis::sigDMModes[2];
   if (masterOption.Contains("TossPseudoExp")) {
     cout << "DMMaster: Step 5.1 - Creating pseudoexperiments for signal "
-	 << currDMSignal << std::endl;
+	 << currSignal << std::endl;
     
     int toySeed = 1987;
     int nToysTotal = 10000;
@@ -391,7 +472,7 @@ int main (int argc, char **argv) {
     int highestSeed = toySeed + nToysTotal;
     
     for (int i_s = toySeed; i_s < highestSeed; i_s += increment) {
-      submitPEViaBsub(masterJobName, pseudoExpOptions, currDMSignal,
+      submitPEViaBsub(masterJobName, pseudoExpOptions, currSignal,
 		      masterCateScheme, i_s, nToysPerJob);
       isFirstJob = false;
     }
@@ -403,8 +484,8 @@ int main (int argc, char **argv) {
   // Step 5.2: Plot pseudo-experiment ensemble results:
   if (masterOption.Contains("PlotPseudoExp")) {
     std::cout << "DMMaster: Step 5.2 - Plot pseudoexperiment results for "
-	      << currDMSignal << std::endl;    
-    DMToyAnalysis *dmta = new DMToyAnalysis(masterJobName, currDMSignal,
+	      << currSignal << std::endl;    
+    DMToyAnalysis *dmta = new DMToyAnalysis(masterJobName, currSignal,
 					    masterCateScheme, toyPlotOptions);
   }
   
@@ -415,17 +496,17 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 6.1 - Calculating CL and p0." << std::endl;
 
     int jobCounterTS = 0;
-    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      TString currDMSignal = sigDMModes[i_DM];
+    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
+      TString currSignal = DMAnalysis::sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitTSViaBsub(masterJobName, testStatOptions, currDMSignal,
+	submitTSViaBsub(masterJobName, testStatOptions, currSignal,
 			masterCateScheme);
 	jobCounterTS++;
 	isFirstJob = false;
       }
       else {
-	DMTestStat *dmts = new DMTestStat(masterJobName, currDMSignal, 
+	DMTestStat *dmts = new DMTestStat(masterJobName, currSignal, 
 					  masterCateScheme, testStatOptions,
 					  NULL);
 	dmts->calculateNewCL();
@@ -448,23 +529,23 @@ int main (int argc, char **argv) {
     int jobCounterTS = 0;
     // Get the points to resubmit:
     DMCheckJobs *dmc = new DMCheckJobs(masterJobName);
-    vector<TString> resubmitDMSignals = dmc->getResubmitList("DMTestStat");
+    vector<TString> resubmitSignals = dmc->getResubmitList("DMTestStat");
     dmc->printResubmitList("DMTestStat");
     
     // Then resubmit as necessary:
-    std::cout << "Resubmitting " << (int)resubmitDMSignals.size()
+    std::cout << "Resubmitting " << (int)resubmitSignals.size()
 	      << " workspace jobs." << std::endl;
-    for (int i_DM = 0; i_DM < (int)resubmitDMSignals.size(); i_DM++) {
-      TString currDMSignal = resubmitDMSignals[i_DM];
+    for (int i_DM = 0; i_DM < (int)resubmitSignals.size(); i_DM++) {
+      TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitTSViaBsub(masterJobName, testStatOptions, currDMSignal, 
+	submitTSViaBsub(masterJobName, testStatOptions, currSignal, 
 			masterCateScheme);
       	jobCounterTS++;
 	isFirstJob = false;
       }
       else {
-	DMTestStat *dmts = new DMTestStat(masterJobName, currDMSignal,
+	DMTestStat *dmts = new DMTestStat(masterJobName, currSignal,
 					  masterCateScheme, testStatOptions,
 					  NULL);
 	dmts->calculateNewCL();
@@ -486,17 +567,18 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 7.1 - Calculate 95%CL mu value." << std::endl;
 
     int jobCounterML = 0;
-    for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-      TString currDMSignal = sigDMModes[i_DM];
+    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
+      TString currSignal = DMAnalysis::sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
+	submitMLViaBsub(masterJobName, muLimitOptions, currSignal);
 	isFirstJob = false;
       }
       else {
-	TString muCommand = Form(".%s/bin/%s %s %s %s", packageLocation.Data(), 
+	TString muCommand = Form(".%s/bin/%s %s %s %s", 
+				 DMAnalysis::packageLocation.Data(), 
 				 exeMuLimit.Data(), masterJobName.Data(),
-				 currDMSignal.Data(), muLimitOptions.Data());
+				 currSignal.Data(), muLimitOptions.Data());
 	std::cout << "Executing following system command: \n\t"
 		  << muCommand << std::endl;
 	system(muCommand);
@@ -514,23 +596,23 @@ int main (int argc, char **argv) {
     int jobCounterML = 0;
     // Get the points to resubmit:
     DMCheckJobs *dmc = new DMCheckJobs(masterJobName);
-    vector<TString> resubmitDMSignals = dmc->getResubmitList("DMMuLimit");
+    vector<TString> resubmitSignals = dmc->getResubmitList("DMMuLimit");
     dmc->printResubmitList("DMMuLimit");
     
     // Then resubmit as necessary:
-    std::cout << "Resubmitting " << (int)resubmitDMSignals.size()
+    std::cout << "Resubmitting " << (int)resubmitSignals.size()
 	      << " workspace jobs." << std::endl;
-    for (int i_DM = 0; i_DM < (int)resubmitDMSignals.size(); i_DM++) {
-      TString currDMSignal = resubmitDMSignals[i_DM];
+    for (int i_DM = 0; i_DM < (int)resubmitSignals.size(); i_DM++) {
+      TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(masterJobName, muLimitOptions, currDMSignal);
+	submitMLViaBsub(masterJobName, muLimitOptions, currSignal);
 	isFirstJob = false;
       }
       else {
-	system(Form(".%s/bin/%s %s %s %s", packageLocation.Data(), 
+	system(Form(".%s/bin/%s %s %s %s", DMAnalysis::packageLocation.Data(), 
 		    exeMuLimit.Data(), masterJobName.Data(),
-		    currDMSignal.Data(), muLimitOptions.Data()));
+		    currSignal.Data(), muLimitOptions.Data()));
       }
       jobCounterML++;
     }

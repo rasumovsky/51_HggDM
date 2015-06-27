@@ -26,6 +26,7 @@
 
 // ROOT includes:
 #include "TCanvas.h"
+#include "TF1.h"
 #include "TFile.h"
 #include "TLatex.h"
 #include "TROOT.h"
@@ -85,6 +86,7 @@ class SigParam {
   double getParameterValue(TString paramName, double resonanceMass, 
 			   int cateIndex);
   double getParameterValue(TString paramName, int cateIndex);
+  RooAbsPdf* getResonance(int cateIndex);
   RooAbsPdf* getSingleResonance(double resonanceMass, int cateIndex);
   RooWorkspace* getWorkspace();
   double getYieldInCategory(double resonanceMass, int cateIndex);
@@ -108,17 +110,23 @@ class SigParam {
   bool makeCategoryParameterization(int cateIndex, TString function);
   bool makeSingleResonance(double resonanceMass, int cateIndex,
 			   TString function);
-  //void mergeParameterizations(SigParam *otherParam);/// !
-  void plotCategoryResonances(int cateIndex, TString fileName);
-  void plotSingleResonance(double resonanceMass, int cateIndex,
-			   TString fileName);
+  void makeYieldParameterization(int cateIndex);
+  void plotCategoryResonances(int cateIndex, TString fileDir);
+  void plotSingleResonance(double resonanceMass, int cateIndex, 
+			   TString fileDir);
+  void plotYields(int cateIndex, TString fileDir);
+  void saveAll(TString fileDir);
   void saveParameterization(TString fileName);
+  void saveParameterList(TString fileName);
+  void saveYieldList(TString fileName);
+  void setSignalType(TString newSignalType);
   void setVarParameterization(TString varName, TString function);
   
  private:
   
   // Private Accessors:
   std::vector<int> categoriesForMass(double resonanceMass);
+  //TString getFileName();
   bool dataExists(double resonanceMass, int cateIndex);
   bool equalMasses(double massValue1, double massValue2);
   TString getKey(double resonanceMass, int cateIndex);
@@ -135,22 +143,28 @@ class SigParam {
   void resonanceCreator(double resonanceMass, int cateIndex, TString function);
   void setParamsConstant(RooAbsPdf* pdf, bool isConstant);
   
+  
   // Member variables:
   std::vector<std::pair<double,int> > m_massCatePairs;
   std::map<TString,TString> m_funcList;
   
   int m_nCategories;
   TString m_options;
+  TString m_signalType;
   
   // Objects for fitting:
   RooRealVar *m_yy;
   RooRealVar *m_wt;
+  RooRealVar *m_mResonance;
   RooWorkspace *m_ws;
   RooCategory *m_cat;
   
-  // Shape information:
+  // Systematic: 
   TString m_listMRS;
   TString m_listMSS;
+  
+  std::map<int,TF1*> yieldFunc;
+  std::map<int,TGraph*> yieldGraph;
   
 };
 

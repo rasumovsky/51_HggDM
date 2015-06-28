@@ -579,8 +579,9 @@ double SigParam::getYieldInCategory(double resonanceMass, int cateIndex) {
   // First check if parameterized yield is available:
   if (m_ws->function(Form("sigYield_%sc%d", m_signalType.Data(), cateIndex))) {
     (*m_ws->var("mResonance")).setVal(resonanceMass);
-    return (*m_ws->function(Form("sigYield_%sc%d", 
-				 m_signalType.Data(),cateIndex))).getVal();
+    double value = (*m_ws->function(Form("sigYield_%sc%d", m_signalType.Data(),
+					 cateIndex))).getVal();
+    return value;// * 0.52 + 0.44;
   }
   
   // maybe add a protection in case the dataset is not defined.
@@ -847,23 +848,44 @@ void SigParam::makeYieldParameterization(int cateIndex) {
       nResPoints++;
     }
   }
- 
+  
+  // Use TF1 and TGraph to fit the yield:
   yieldFunc[cateIndex] = new TF1("yieldFunc", "pol3", 100, 150);
   yieldGraph[cateIndex] = new TGraph(nResPoints, mResValues, yieldValues);
   yieldGraph[cateIndex]->Fit(yieldFunc[cateIndex]);
+  yieldFunc[cateIndex]->Print("v");
   
   // Create the yield parameters:
   m_ws->factory(Form("yieldVar_a_%sc%d[%f]", m_signalType.Data(), cateIndex,
-		     yieldFunc[cateIndex]->GetParameter(3)));
-  m_ws->factory(Form("yieldVar_b_%sc%d[%f]", m_signalType.Data(), cateIndex,
-		     yieldFunc[cateIndex]->GetParameter(2)));
-  m_ws->factory(Form("yieldVar_c_%sc%d[%f]", m_signalType.Data(), cateIndex, 
-		     yieldFunc[cateIndex]->GetParameter(1)));
-  m_ws->factory(Form("yieldVar_d_%sc%d[%f]", m_signalType.Data(), cateIndex,
 		     yieldFunc[cateIndex]->GetParameter(0)));
+  m_ws->factory(Form("yieldVar_b_%sc%d[%f]", m_signalType.Data(), cateIndex,
+		     yieldFunc[cateIndex]->GetParameter(1)));
+  m_ws->factory(Form("yieldVar_c_%sc%d[%f]", m_signalType.Data(), cateIndex, 
+		     yieldFunc[cateIndex]->GetParameter(2)));
+  m_ws->factory(Form("yieldVar_d_%sc%d[%f]", m_signalType.Data(), cateIndex,
+		     yieldFunc[cateIndex]->GetParameter(3)));
   
   // Then create a yield RooFormulaVar.
-  m_ws->factory(Form("expr::sigYield_%sc%d('@0+@1*@4+@2*@4*@4+@3*@4*@4*@4',{yieldVar_a_%sc%d,yieldVar_b_%sc%d,yieldVar_c_%sc%d,yieldVar_d_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+  m_ws->factory(Form("expr::sigYield_%sc%d('@0+@1*@4+@2*@4*@4+@3*@4*@4*@4',{yieldVar_a_%sc%d,yieldVar_b_%sc%d,yieldVar_c_%sc%d,yieldVar_d_%sc%d,mResonance})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+  
+  std::cout << (*m_ws->var(Form("yieldVar_a_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
+  std::cout << (*m_ws->var(Form("yieldVar_b_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
+  std::cout << (*m_ws->var(Form("yieldVar_c_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
+  std::cout << (*m_ws->var(Form("yieldVar_d_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
+  
+  (*m_ws->var(Form("yieldVar_a_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
+  (*m_ws->var(Form("yieldVar_b_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
+  (*m_ws->var(Form("yieldVar_c_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
+  (*m_ws->var(Form("yieldVar_d_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
+  
+  std::cout << "m=90,  " << getYieldInCategory(90,  0) << std::endl;
+  std::cout << "m=100, " << getYieldInCategory(100, 0) << std::endl;
+  std::cout << "m=110, " << getYieldInCategory(110, 0) << std::endl;
+  std::cout << "m=120, " << getYieldInCategory(120, 0) << std::endl;
+  std::cout << "m=130, " << getYieldInCategory(130, 0) << std::endl;
+  std::cout << "m=140, " << getYieldInCategory(140, 0) << std::endl;
+  std::cout << "m=150, " << getYieldInCategory(150, 0) << std::endl;
+  
 }
 
 /**

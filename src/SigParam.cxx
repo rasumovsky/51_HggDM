@@ -18,27 +18,22 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-/*
-  For Friday:
-  1) Implement the generic resonance shape with parameter mH.
-  
-  2) implement yield parameterization as RooFormulaVar.
- */
-
-
 #include "SigParam.h"
 
 /**
    -----------------------------------------------------------------------------
    Constructor for the SigParam class.
-   @param options - the parameterization options (see documentation).
+   @param signalType - The type of signal (ggH, VBF, WH, ZH, ttH, bbH, etc).
+   @param directory - The directory for input and output files.
 */
-SigParam::SigParam(TString options) {
-  std::cout << "\nSigParam::Initializing..."
-    	    << "\n\toptions = " << options << std::endl;
+SigParam::SigParam(TString signalType, TString directory) {
+  std::cout << "\nSigParam::Initializing..." << "\n\tsignalType = "
+	    << signalType << "\n\toutputDirectory = " << directory
+	    << std::endl;
   
-  // Assign member variables:
-  m_options = options;
+  // Assign output directory:
+  setSignalType(signalType);
+  setDirectory(directory);
   
   // Create RooWorkspace and RooCategory to store all signal models:
   m_ws = new RooWorkspace("signalWS");
@@ -51,31 +46,15 @@ SigParam::SigParam(TString options) {
   m_yy = m_ws->var("m_yy");
   m_wt = m_ws->var("wt");
   m_mResonance = m_ws->var("mResonance");
-  //m_ws->factory(Form("RooFormulaVar::mRegularized((@0-100.)/100.,mResonance)"));
   m_ws->factory(Form("expr::mRegularized('(@0-100.0)/100.0',{mResonance})"));
   
   // Define the data sets at each mass in each category for resonance fit:
   m_massCatePairs.clear();
 
-  // Set the default functions for each variable's parameterization
-  m_funcList.clear();
-  setVarParameterization("muCBNom", "pol2");
-  setVarParameterization("sigmaCBNom", "pol1");
-  setVarParameterization("alphaCB", "pol1");
-  setVarParameterization("nCB", "pol0");
-  setVarParameterization("sigmaGANom", "pol1");
-  setVarParameterization("fracCB", "pol1");
-  setVarParameterization("alphaCBLo", "pol2");
-  setVarParameterization("nCBLo", "pol0");
-  setVarParameterization("alphaCBHi", "pol1");
-  setVarParameterization("nCBHi", "pol0");
-  
   // Lists of mass resolution and mass scale systematics:
   m_listMRS = "";
   m_listMSS = "";
-  
-  m_signalType = "";
-
+    
   std::cout << "SigParam: Successfully initialized!" << std::endl;
 }
 
@@ -258,28 +237,31 @@ void SigParam::addMScaleSystematics(std::vector<TString> namesMScaleSys) {
    -----------------------------------------------------------------------------
    Adds a signal PDF from this class to a pre-existing workspace. 
    @param workspace - the pre-existing workspace.
-   @param nuisParams - a RooArgSet containing fit parameters (set NULL if none).
    @param cateIndex - the index of the category of the desired PDF.
+   @returns - True iff the PDF and yield parameter were imported.
 */
-void SigParam::addSigToWS(RooWorkspace *&workspace, RooArgSet *&nuisParams, 
-			  int cateIndex) {
-  std::cout << "SigParam: Adding parameterized signal in category "
-	    << cateIndex << " to pre-existing workspace." << std::endl;
+bool SigParam::addSigToWS(RooWorkspace *&workspace, int cateIndex) {
+  std::cout << "SigParam: Adding parameterized " << m_signalType 
+	    << " signal in category " << cateIndex
+	    << " to pre-existing workspace." << std::endl;
+  bool goodStatus = true;
   
   // Add the signal model to the workspace:
   RooAbsPdf* currSignal
     = m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex));
-  workspace->import(*currSignal);
-  
+  if (currSignal && !workspace->pdf(currSignal->GetName())) {
+    workspace->import(*currSignal);
+  }
+  else { 
+    std::cout << "SigParam: Signal doesn't exist or is duplicate!" << std::endl;
+    return false;
+  }
   // Then explicitly add the parameters to the workspace:
   RooArgSet *currSet = currSignal->getVariables();
   TIterator *iterParam = currSet->createIterator();
   RooRealVar* currParam = NULL;
   while ((currParam = (RooRealVar*)iterParam->Next())) {
     workspace->import(*currParam);
-    if (nuisParams) {
-      nuisParams->add(*currParam);
-    }
   }
   
   // Import the yield formula and associated parameters:
@@ -291,43 +273,85 @@ void SigParam::addSigToWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
 				    m_signalType.Data(), cateIndex)));
   workspace->import(*m_ws->var(Form("yieldVar_d_%sc%d",
 				    m_signalType.Data(), cateIndex)));
-  workspace->import((*m_ws->function(Form("sigYield_%sc%d",
-					  m_signalType.Data(), cateIndex))));
+  TString yieldName = Form("sigYield_%sc%d", m_signalType.Data(), cateIndex);
+  if (m_ws->function(yieldName)) {
+    if (!workspace->function(yieldName)) {
+      workspace->import((*m_ws->function(yieldName)));
+    }
+    else {
+      std::cout << "SigParam: yield parameter " << yieldName 
+		<< " already found in workspace." << std::endl;
+    }
+  }
+  else {
+    std::cout << "SigParam: Error! Yield param was not created by this program."
+	      << std::endl;
+    goodStatus = false;
+  }
   
   std::cout << "SigParam:: Finished adding parameterized signal." << std::endl;
+  return goodStatus;
 }
 
 /**
    -----------------------------------------------------------------------------
    Adds a signal PDF from this class to a pre-existing workspace. 
    @param workspace - the pre-existing workspace.
-   @param nuisParams - a RooArgSet containing fit parameters (set NULL if none).
    @param resonanceMass - the mass of the resonance.
    @param cateIndex - the index of the category of the desired PDF.
+   @returns - True iff the PDF and yield parameter were imported.
 */
-void SigParam::addSigToWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
-			  double resonanceMass, int cateIndex) {
-  std::cout << "SigParam: Adding parameterized signal in category "
-	    << cateIndex << " with mass " << resonanceMass 
-	    << " to pre-existing workspace." << std::endl;
-  
-  // Add the signal model to the workspace:
+bool SigParam::addSigToWS(RooWorkspace *&workspace, double resonanceMass,
+			  int cateIndex) {
+  std::cout << "SigParam: Adding individual " << m_signalType
+	    << " signal in category " << cateIndex << " with mass " 
+	    << resonanceMass << " to pre-existing workspace." << std::endl;
+  bool goodStatus = true;
+
+  TString currKey = getKey(resonanceMass, cateIndex);
+  // Add the signal model to the workspace, if not already contained:
   RooAbsPdf* currSignal
-    = m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),
-		     (getKey(resonanceMass, cateIndex)).Data()));
-  workspace->import(*currSignal);
+    = m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(), currKey.Data()));
+  if (currSignal && !workspace->pdf(currSignal->GetName())) {
+    workspace->import(*currSignal);
+  }
+  else { 
+    std::cout << "SigParam: Signal doesn't exist or is duplicate!" << std::endl;
+    return false;
+  }
   
   // Then explicitly add the parameters to the workspace:
   RooArgSet *currSet = currSignal->getVariables();
   TIterator *iterParam = currSet->createIterator();
   RooRealVar* currParam = NULL;
   while ((currParam = (RooRealVar*)iterParam->Next())) {
-    workspace->import(*currParam);
-    if (nuisParams) {
-      nuisParams->add(*currParam);
+    if (!workspace->var(currParam->GetName())) {
+      workspace->import(*currParam);
+    }
+    else {
+      std::cout << "SigParam: parameter " << currParam->GetName()
+		<< " already found in workspace." << std::endl;
     }
   }
-  std::cout << "SigParam:: Finished adding parameterized signal." << std::endl;
+  
+  // add yield factor to workspace:
+  TString yieldName = Form("sigYield_%s%s",m_signalType.Data(), currKey.Data());
+  if (m_ws->var(yieldName)) {
+    if (!workspace->var(yieldName)) {
+      workspace->import((*m_ws->var(yieldName)));
+    }
+    else {
+      std::cout << "SigParam: yield parameter " << yieldName 
+		<< " already found in workspace." << std::endl;
+    }
+  }
+  else {
+    std::cout << "SigParam: Error! Yield param was not created by this program."
+	      << std::endl;
+    goodStatus = false;
+  }
+  std::cout << "SigParam:: Finished adding individual signal." << std::endl;
+  return goodStatus;
 }
 
 /**
@@ -461,7 +485,8 @@ double SigParam::getParameterError(TString paramName, double resonanceMass,
     return SigParam::getParameterError(paramName, cateIndex);
   }
   else {
-    RooRealVar *var = m_ws->var(Form("%s_%s",paramName.Data(),
+    RooRealVar *var = m_ws->var(Form("%s_%s%s", paramName.Data(),
+				     m_signalType.Data(), 
 				     (getKey(resonanceMass,cateIndex)).Data()));
     if (!var) {
       std::cout << "SigParam: requested parameter not found: " 
@@ -482,7 +507,8 @@ double SigParam::getParameterError(TString paramName, double resonanceMass,
    @returns - the value of the specified signal parameter. 
 */
 double SigParam::getParameterError(TString paramName, int cateIndex) {
-  RooRealVar *var = m_ws->var(Form("%s_c%d",paramName.Data(),cateIndex));
+  RooRealVar *var = m_ws->var(Form("%s_%sc%d", paramName.Data(),
+				   m_signalType.Data(), cateIndex));
   if (!var) {
     std::cout << "SigParam: requested parameter not found: "
 	      << paramName << std::endl;
@@ -507,7 +533,8 @@ double SigParam::getParameterValue(TString paramName, double resonanceMass,
     return SigParam::getParameterValue(paramName, cateIndex);
   }
   else {
-    RooRealVar *var = m_ws->var(Form("%s_%s",paramName.Data(),
+    RooRealVar *var = m_ws->var(Form("%s_%s%s", paramName.Data(), 
+				     m_signalType.Data(),
 				     (getKey(resonanceMass,cateIndex)).Data()));
     if (!var) {
       std::cout << "SigParam: requested parameter not found: "
@@ -528,7 +555,8 @@ double SigParam::getParameterValue(TString paramName, double resonanceMass,
    @returns - the value of the specified signal parameter. 
 */
 double SigParam::getParameterValue(TString paramName, int cateIndex) {
-  RooRealVar *var = m_ws->var(Form("%s_c%d",paramName.Data(),cateIndex));
+  RooRealVar *var = m_ws->var(Form("%s_%sc%d", paramName.Data(),
+				   m_signalType.Data(), cateIndex));
   if (!var) {
     std::cout << "SigParam: requested parameter not found: "
 	      << paramName << std::endl;
@@ -546,6 +574,8 @@ double SigParam::getParameterValue(TString paramName, int cateIndex) {
    @returns - A pointer to the signal PDF.
 */
 RooAbsPdf* SigParam::getResonance(int cateIndex) {
+  std::cout << "SigParam: Get parameterized shape in category = " 
+	    << cateIndex << std::endl;
   TString pdfName = Form("sigPdf_%sc%d",m_signalType.Data(), cateIndex);
   RooAbsPdf* pdf = m_ws->pdf(pdfName);
   std::cout << "SigParam: Returning parameterized pdf " << pdfName << std::endl;
@@ -560,6 +590,8 @@ RooAbsPdf* SigParam::getResonance(int cateIndex) {
    @returns - A pointer to the signal PDF.
 */
 RooAbsPdf* SigParam::getSingleResonance(double resonanceMass, int cateIndex) {
+  std::cout << "SigParam: Get parameterized shape in category = " 
+	    << cateIndex << " and mass = " << resonanceMass << std::endl;
   TString pdfName = Form("sigPdf_%s%s",m_signalType.Data(),
 			 (getKey(resonanceMass,cateIndex)).Data());
   RooAbsPdf* pdf = m_ws->pdf(pdfName);
@@ -575,19 +607,22 @@ RooAbsPdf* SigParam::getSingleResonance(double resonanceMass, int cateIndex) {
    @returns - The signal yield for the specified mass in the given category.
 */
 double SigParam::getYieldInCategory(double resonanceMass, int cateIndex) {
-  //m_ws->Print("v");
+  std::cout << "SigParam: Get yield in category = " 
+	    << cateIndex << " at mass = " << resonanceMass << std::endl;
+  
+  TString currKey = getKey(resonanceMass,cateIndex);
   // First check if parameterized yield is available:
   if (m_ws->function(Form("sigYield_%sc%d", m_signalType.Data(), cateIndex))) {
     (*m_ws->var("mResonance")).setVal(resonanceMass);
-    double value = (*m_ws->function(Form("sigYield_%sc%d", m_signalType.Data(),
-					 cateIndex))).getVal();
-    return value;// * 0.52 + 0.44;
+    return (*m_ws->function(Form("sigYield_%sc%d", m_signalType.Data(),
+				 cateIndex))).getVal();
   }
-  
-  // maybe add a protection in case the dataset is not defined.
-  else if (dataExists(resonanceMass, cateIndex)) {
-    return (*m_ws->data(Form("data_%s",(getKey(resonanceMass,cateIndex)).Data()))).sumEntries();
+  // Then try to get individual yield:
+  else if(m_ws->var(Form("sigYield_%s%s",m_signalType.Data(),currKey.Data()))) {
+    return (*m_ws->var(Form("sigYield_%s%s",m_signalType.Data(),
+			    currKey.Data()))).getVal();
   }
+  // Or return error message:
   else {
     std::cout << "SigParam: requested yield not found." << std::endl;
     return 0.0;
@@ -597,10 +632,13 @@ double SigParam::getYieldInCategory(double resonanceMass, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Get the signal yield for a particular resonance mass in all categories.
-   @param resonanceMass - the truth mass of the resonance.
+   @param resonanceMass - The truth mass of the resonance.
    @returns - The signal yield in all categories for the specified mass.
 */
 double SigParam::getYieldTotal(double resonanceMass) {
+  std::cout << "SigParam: Get total yield at mass = " 
+	    << resonanceMass << std::endl;
+  
   // Create a list of categories for this mass point:
   std::vector<int> currCategories = SigParam::categoriesForMass(resonanceMass);
   // Loop through names of datasets, add components:
@@ -614,18 +652,22 @@ double SigParam::getYieldTotal(double resonanceMass) {
 /**
    -----------------------------------------------------------------------------
    Load the signal parameterization from file.
-   @param fileName - the name of the .root file containing input workspace.
-   @returns - true iff the file is successfully loaded.
+   @param directory - Name of the directory housing the input workspace.
+   @returns - True iff the file is successfully loaded.
 */
-bool SigParam::loadParameterization(TString fileName) {
-  std::cout << "SigParam: Load parameterization file " << fileName << std::endl;
+bool SigParam::loadParameterization(TString directory, TString signalType){
+  std::cout << "SigParam: Load parameterization from" << directory
+	    << std::endl;
+  setDirectory(directory);
   bool parameterizationExists = false;
-  TFile inputFile(fileName);
+  TFile inputFile(Form("%s/res_%sworkspace.root", m_directory.Data(),m_signalType.Data()));
   if (inputFile.IsOpen()) {
     m_ws = (RooWorkspace*)inputFile.Get("signalWS");
     if (m_ws) parameterizationExists = true;
     m_yy = m_ws->var("m_yy");
     m_wt = m_ws->var("wt");
+    m_mResonance = m_ws->var("mResonance");
+    setSignalType(signalType);
     std::cout << "SigParam: Successfully loaded from file!" << std::endl;
   }
   return parameterizationExists;
@@ -646,7 +688,7 @@ bool SigParam::makeAllParameterizations(TString function) {
     if (!makeCategoryParameterization(i_c, function)) result = false;
   }
   
-  std::cout << "SigParam: Complete full signal parameterization!" << std::endl;
+  std::cout << "SigParam: Completed full signal parameterization" << std::endl;
   return result;
 }
 
@@ -681,28 +723,28 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
   }
   // If more than 1 mass points, parameterize variables:
   else {
-    m_ws->factory(Form("a_muCBNom_c%d[-0.38,-1.0,1.0]",cateIndex));
-    m_ws->factory(Form("b_muCBNom_c%d[-0.06,-0.1,0.1]",cateIndex));
-    m_ws->factory(Form("c_muCBNom_c%d[-0.02,-0.1,0.1]",cateIndex));
-    m_ws->factory(Form("a_sigmaCBNom_c%d[1.54,0.5,4.0]",cateIndex));
-    m_ws->factory(Form("b_sigmaCBNom_c%d[0.90,0.1,2.0]",cateIndex));
+    m_ws->factory(Form("a_muCBNom_%sc%d[-0.38,-1.0,1.0]",m_signalType.Data(),cateIndex));
+    m_ws->factory(Form("b_muCBNom_%sc%d[-0.06,-0.1,0.1]",m_signalType.Data(),cateIndex));
+    m_ws->factory(Form("c_muCBNom_%sc%d[-0.02,-0.1,0.1]",m_signalType.Data(),cateIndex));
+    m_ws->factory(Form("a_sigmaCBNom_%sc%d[1.54,0.5,4.0]",m_signalType.Data(),cateIndex));
+    m_ws->factory(Form("b_sigmaCBNom_%sc%d[0.90,0.1,2.0]",m_signalType.Data(),cateIndex));
 
     if (function.EqualTo("CBGA")) {
-      m_ws->factory(Form("a_alphaCB_c%d[2.2,0.0,4.0]",cateIndex));
-      m_ws->factory(Form("b_alphaCB_c%d[0.0,-0.1,0.1]",cateIndex));
-      m_ws->factory(Form("nCB_c%d[5.0,0.1,10.0]",cateIndex));
-      m_ws->factory(Form("a_sigmaGANom_c%d[5.0,0.1,20.0]",cateIndex));
-      m_ws->factory(Form("b_sigmaGANom_c%d[1.0,0.1,2.0]",cateIndex));
-      m_ws->factory(Form("fracCB_c%d[0.9,0.0,1.0]",cateIndex));
+      m_ws->factory(Form("a_alphaCB_%sc%d[2.2,0.0,4.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("b_alphaCB_%sc%d[0.0,-0.1,0.1]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("nCB_%sc%d[5.0,0.1,10.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("a_sigmaGANom_%sc%d[5.0,0.1,20.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("b_sigmaGANom_%sc%d[1.0,0.1,2.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("fracCB_%sc%d[0.9,0.0,1.0]",m_signalType.Data(),cateIndex));
     }
     else if (function.EqualTo("DoubleCB")) {
-      m_ws->factory(Form("a_alphaCBLo_c%d[2.42,1.0,4.0]",cateIndex));
-      m_ws->factory(Form("b_alphaCBLo_c%d[-483,-1000,0]",cateIndex));
-      m_ws->factory(Form("c_alphaCBLo_c%d[380,100,500]",cateIndex));
-      m_ws->factory(Form("nCBLo_c%d[9.0,0.1,20.0]", cateIndex));
-      m_ws->factory(Form("a_alphaCBHi_c%d[2.2,0.0,4.0]",cateIndex));
-      m_ws->factory(Form("b_alphaCBHi_c%d[0.0,-0.1,0.1]",cateIndex));
-      m_ws->factory(Form("nCBHi_c%d[5.0,0.1,10.0]",cateIndex));
+      m_ws->factory(Form("a_alphaCBLo_%sc%d[2.42,1.0,4.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("b_alphaCBLo_%sc%d[-483,-1000,0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("c_alphaCBLo_%sc%d[380,100,500]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("nCBLo_%sc%d[9.0,0.1,20.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("a_alphaCBHi_%sc%d[2.2,0.0,4.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("b_alphaCBHi_%sc%d[0.0,-0.1,0.1]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("nCBHi_%sc%d[5.0,0.1,10.0]",m_signalType.Data(),cateIndex));
     }
     
     // Loop over mass points, define resonance model in each:
@@ -711,26 +753,25 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
       double mRegVal = regularizedMass(currMassPoints[i_m]);
       double mResVal = currMassPoints[i_m];
       // Define the RooFormulaVars which control mH parameterization:
-      m_ws->factory(Form("expr::muCBNom_%s('@0+@1*%f+@2*%f*%f+%f',{a_muCBNom_c%d,b_muCBNom_c%d,c_muCBNom_c%d})", currKey.Data(), mRegVal, mRegVal, mRegVal, mResVal, cateIndex, cateIndex, cateIndex));
-      m_ws->factory(Form("expr::sigmaCBNom_%s('@0+@1*%f',{a_sigmaCBNom_c%d,b_sigmaCBNom_c%d})", currKey.Data(), mRegVal, cateIndex, cateIndex));
+      m_ws->factory(Form("expr::muCBNom_%s%s('@0+@1*%f+@2*%f*%f+%f',{a_muCBNom_%sc%d,b_muCBNom_%sc%d,c_muCBNom_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, mRegVal, mRegVal, mResVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("expr::sigmaCBNom_%s%s('@0+@1*%f',{a_sigmaCBNom_%sc%d,b_sigmaCBNom_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
       // Crystal Ball + Gaussian-specific parameters:
       if (function.EqualTo("CBGA")) {
-	m_ws->factory(Form("expr::alphaCB_%s('@0+@1*%f',{a_alphaCB_c%d,b_alphaCB_c%d})", currKey.Data(), mRegVal, cateIndex, cateIndex));
-	m_ws->factory(Form("expr::sigmaGANom_%s('@0+@1*%f',{a_sigmaGANom_c%d,b_sigmaGANom_c%d})", currKey.Data(), mRegVal, cateIndex, cateIndex));
+	m_ws->factory(Form("expr::alphaCB_%s%s('@0+@1*%f',{a_alphaCB_%sc%d,b_alphaCB_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+	m_ws->factory(Form("expr::sigmaGANom_%s%s('@0+@1*%f',{a_sigmaGANom_%sc%d,b_sigmaGANom_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
       }
       // Double Crystal Ball-specific parameters:
       else if (function.EqualTo("DoubleCB")) {
-	m_ws->factory(Form("expr::alphaCBLo_%s('@0+@1/(%f+@2)',{a_alphaCBLo_c%d,b_alphaCBLo_c%d,c_alphaCBLo_c%d})", currKey.Data(), mRegVal, cateIndex, cateIndex, cateIndex));
-	m_ws->factory(Form("expr::alphaCBHi_%s('@0+@1*%f',{a_alphaCBHi_c%d,b_alphaCBHi_c%d})", currKey.Data(), mRegVal, cateIndex, cateIndex));
+	m_ws->factory(Form("expr::alphaCBLo_%s%s('@0+@1/(%f+@2)',{a_alphaCBLo_%sc%d,b_alphaCBLo_%sc%d,c_alphaCBLo_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+	m_ws->factory(Form("expr::alphaCBHi_%s%s('@0+@1*%f',{a_alphaCBHi_%sc%d,b_alphaCBHi_%sc%d})", m_signalType.Data(), currKey.Data(), mRegVal, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
       }
             
-      // Create the individual resonance shapes for simultaneous fitting:
+      // Create, individual resonance shapes, add to simultaneous PDF:
       resonanceCreator(currMassPoints[i_m], cateIndex, function);
-      // Add single resonance from workspace to simultaneous PDF:
       currSim->addPdf(*m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),
 				      currKey.Data())), currKey);
     }
-
+    
     // Import simultaneous PDF into workspace:
     m_ws->import(*currSim);
     
@@ -757,18 +798,19 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
     RooFitResult *result = fitResult(cateIndex);
     
     // Then construct parametric resonance (function of mResonance):
-    m_ws->factory(Form("expr::muCBNom_c%d('@0+@1*@3+@2*@3*@3+@4',{a_muCBNom_c%d,b_muCBNom_c%d,c_muCBNom_c%d,mRegularized,mResonance})", cateIndex, cateIndex, cateIndex, cateIndex));
-    m_ws->factory(Form("expr::sigmaCBNom_c%d('@0+@1*@2',{a_sigmaCBNom_c%d,b_sigmaCBNom_c%d,mRegularized})", cateIndex, cateIndex, cateIndex));
+    m_ws->factory(Form("expr::muCBNom_%sc%d('@0+@1*@3+@2*@3*@3+@4',{a_muCBNom_%sc%d,b_muCBNom_%sc%d,c_muCBNom_%sc%d,mRegularized,mResonance})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+    m_ws->factory(Form("expr::sigmaCBNom_%sc%d('@0+@1*@2',{a_sigmaCBNom_%sc%d,b_sigmaCBNom_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
     // Crystal Ball + Gaussian-specific parameters:
     if (function.EqualTo("CBGA")) {
-      m_ws->factory(Form("expr::alphaCB_c%d('@0+@1*@2',{a_alphaCB_c%d,b_alphaCB_c%d,mRegularized})", cateIndex, cateIndex, cateIndex));
-      m_ws->factory(Form("expr::sigmaGANom_c%d('@0+@1*@2',{a_sigmaGANom_c%d,b_sigmaGANom_c%d,mRegularized})", cateIndex, cateIndex, cateIndex));
+      m_ws->factory(Form("expr::alphaCB_%sc%d('@0+@1*@2',{a_alphaCB_%sc%d,b_alphaCB_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("expr::sigmaGANom_%sc%d('@0+@1*@2',{a_sigmaGANom_%sc%d,b_sigmaGANom_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
     }
     // Double Crystal Ball-specific parameters:
     else if (function.EqualTo("DoubleCB")) {
-      m_ws->factory(Form("expr::alphaCBLo_c%d('@0+@1/(@3+@2)',{a_alphaCBLo_c%d,b_alphaCBLo_c%d,c_alphaCBLo_c%d,mRegularized})", cateIndex, cateIndex, cateIndex, cateIndex));
-      m_ws->factory(Form("expr::alphaCBHi_c%d('@0+@1*@2',{a_alphaCBHi_c%d,b_alphaCBHi_c%d,mRegularized})", cateIndex, cateIndex, cateIndex));
+      m_ws->factory(Form("expr::alphaCBLo_%sc%d('@0+@1/(@3+@2)',{a_alphaCBLo_%sc%d,b_alphaCBLo_%sc%d,c_alphaCBLo_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("expr::alphaCBHi_%sc%d('@0+@1*@2',{a_alphaCBHi_%sc%d,b_alphaCBHi_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
     }
+    // Create the parameterized resonance shape (function of mResonance):
     resonanceCreator(-999, cateIndex, Form("%s_Parameterized",function.Data()));
     
     // Get the yield parameterization:
@@ -792,30 +834,43 @@ bool SigParam::makeSingleResonance(double resonanceMass, int cateIndex,
   // Before calling resonanceCreator, need to define dependent variables.
   TString currKey = getKey(resonanceMass, cateIndex);
   if (function.EqualTo("CBGA")) {
-    m_ws->factory(Form("muCBNom_%s[%f,%f,%f]",currKey.Data(),
-		       resonanceMass, 0.9*resonanceMass, 1.1*resonanceMass));
-    m_ws->factory(Form("sigmaCBNom_%s[%f,%f,%f]",currKey.Data(),2.0,0.01,40.0));
-    m_ws->factory(Form("alphaCB_%s[%f,%f,%f]",currKey.Data(),1.5,1.0,2.5));
-    if (!m_ws->var(Form("nCB_c%d",cateIndex))) {
-      m_ws->factory(Form("nCB_c%d[%f,%f,%f]",cateIndex,9.0,0.01,20.0));
+    m_ws->factory(Form("muCBNom_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), resonanceMass, 0.9*resonanceMass, 
+		       1.1*resonanceMass));
+    m_ws->factory(Form("sigmaCBNom_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), 2.0, 0.01, 40.0));
+    m_ws->factory(Form("alphaCB_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), 1.5, 1.0, 2.5));
+    if (!m_ws->var(Form("nCB_%sc%d",m_signalType.Data(), cateIndex))) {
+      m_ws->factory(Form("nCB_%sc%d[%f,%f,%f]", m_signalType.Data(), 
+			 cateIndex, 9.0, 0.01, 20.0));
     }
-    m_ws->factory(Form("sigmaGANom_%s[%f,%f,%f]",currKey.Data(),2.0,0.01,40.0));
-    m_ws->factory(Form("fracCB_c%d[%f,%f,%f]",cateIndex,0.9,0.01,1.0));
+    m_ws->factory(Form("sigmaGANom_%s%s[%f,%f,%f]", m_signalType.Data(),
+		       currKey.Data(), 2.0, 0.01, 40.0));
+    m_ws->factory(Form("fracCB_%sc%d[%f,%f,%f]", m_signalType.Data(), 
+		       cateIndex, 0.9, 0.01, 1.0));
   }
   else if (function.EqualTo("DoubleCB")) {
-    m_ws->factory(Form("muCBNom_%s[%f,%f,%f]",currKey.Data(),
-		       resonanceMass, 0.9*resonanceMass, 1.1*resonanceMass));
-    m_ws->factory(Form("sigmaCBNom_%s[%f,%f,%f]",currKey.Data(),2.0,0.01,40.0));
-    m_ws->factory(Form("alphaCBLo_%s[%f,%f,%f]",currKey.Data(),1.5,1.0,2.5));
-    if (!m_ws->var(Form("nCBLo_c%d",cateIndex))) {
-      m_ws->factory(Form("nCBLo_c%d[%f,%f,%f]",cateIndex,17.0,0.01,30.0));
+    m_ws->factory(Form("muCBNom_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), resonanceMass, 0.9*resonanceMass,
+		       1.1*resonanceMass));
+    m_ws->factory(Form("sigmaCBNom_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), 2.0, 0.01, 40.0));
+    m_ws->factory(Form("alphaCBLo_%s%s[%f,%f,%f]", m_signalType.Data(), 
+		       currKey.Data(), 1.5, 1.0, 2.5));
+    if (!m_ws->var(Form("nCBLo_%sc%d", m_signalType.Data(), cateIndex))) {
+      m_ws->factory(Form("nCBLo_%sc%d[%f,%f,%f]", m_signalType.Data(), 
+			 cateIndex, 17.0, 0.01, 30.0));
     }
-    m_ws->factory(Form("alphaCBHi_%s[%f,%f,%f]",currKey.Data(),2.2,1.00,3.0));
-    if (!m_ws->var(Form("nCBHi_c%d",cateIndex))) {
-      m_ws->factory(Form("nCBHi_c%d[%f,%f,%f]",cateIndex,5.2,0.01,10.0));
+    m_ws->factory(Form("alphaCBHi_%s%s[%f,%f,%f]", m_signalType.Data(),
+		       currKey.Data(), 2.2, 1.00, 3.0));
+    if (!m_ws->var(Form("nCBHi_%sc%d", m_signalType.Data(), cateIndex))) {
+      m_ws->factory(Form("nCBHi_%sc%d[%f,%f,%f]", m_signalType.Data(), 
+			 cateIndex, 5.2, 0.01, 10.0));
     }
   }
 
+  // Create the single resonance PDF:
   resonanceCreator(resonanceMass, cateIndex, function);
   
   // Then fit single PDF to single dataset:
@@ -837,23 +892,22 @@ void SigParam::makeYieldParameterization(int cateIndex) {
   double mResValues[100] = {0.0};
   double yieldValues[100] = {0.0};
   
-  // 
+  // Retrieve dataset yield for each mass point that was imported:
   std::vector<double> currMassPoints = massPointsForCategory(cateIndex);
-  for (int i_m = 0; i_m < currMassPoints.size(); i_m++) {
+  for (int i_m = 0; i_m < (int)currMassPoints.size(); i_m++) {
     TString dataName
       = Form("data_%s",(getKey(currMassPoints[i_m],cateIndex)).Data());
     if ((m_ws->data(dataName))) {
-      mResValues[nResPoints] = currMassPoints[i_m];
+      mResValues[nResPoints] = regularizedMass(currMassPoints[i_m]);
       yieldValues[nResPoints] = (*m_ws->data(dataName)).sumEntries();
       nResPoints++;
     }
   }
   
   // Use TF1 and TGraph to fit the yield:
-  yieldFunc[cateIndex] = new TF1("yieldFunc", "pol3", 100, 150);
+  yieldFunc[cateIndex] = new TF1("yieldFunc", "pol3", 0.0, 0.5);
   yieldGraph[cateIndex] = new TGraph(nResPoints, mResValues, yieldValues);
   yieldGraph[cateIndex]->Fit(yieldFunc[cateIndex]);
-  yieldFunc[cateIndex]->Print("v");
   
   // Create the yield parameters:
   m_ws->factory(Form("yieldVar_a_%sc%d[%f]", m_signalType.Data(), cateIndex,
@@ -866,26 +920,7 @@ void SigParam::makeYieldParameterization(int cateIndex) {
 		     yieldFunc[cateIndex]->GetParameter(3)));
   
   // Then create a yield RooFormulaVar.
-  m_ws->factory(Form("expr::sigYield_%sc%d('@0+@1*@4+@2*@4*@4+@3*@4*@4*@4',{yieldVar_a_%sc%d,yieldVar_b_%sc%d,yieldVar_c_%sc%d,yieldVar_d_%sc%d,mResonance})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
-  
-  std::cout << (*m_ws->var(Form("yieldVar_a_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
-  std::cout << (*m_ws->var(Form("yieldVar_b_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
-  std::cout << (*m_ws->var(Form("yieldVar_c_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
-  std::cout << (*m_ws->var(Form("yieldVar_d_%sc%d", m_signalType.Data(), cateIndex))).getVal() << std::endl;
-  
-  (*m_ws->var(Form("yieldVar_a_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
-  (*m_ws->var(Form("yieldVar_b_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
-  (*m_ws->var(Form("yieldVar_c_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
-  (*m_ws->var(Form("yieldVar_d_%sc%d",m_signalType.Data(),cateIndex))).setConstant(true);
-  
-  std::cout << "m=90,  " << getYieldInCategory(90,  0) << std::endl;
-  std::cout << "m=100, " << getYieldInCategory(100, 0) << std::endl;
-  std::cout << "m=110, " << getYieldInCategory(110, 0) << std::endl;
-  std::cout << "m=120, " << getYieldInCategory(120, 0) << std::endl;
-  std::cout << "m=130, " << getYieldInCategory(130, 0) << std::endl;
-  std::cout << "m=140, " << getYieldInCategory(140, 0) << std::endl;
-  std::cout << "m=150, " << getYieldInCategory(150, 0) << std::endl;
-  
+  m_ws->factory(Form("expr::sigYield_%sc%d('@0+@1*@4+@2*@4*@4+@3*@4*@4*@4',{yieldVar_a_%sc%d,yieldVar_b_%sc%d,yieldVar_c_%sc%d,yieldVar_d_%sc%d,mRegularized})", m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex, m_signalType.Data(), cateIndex));
 }
 
 /**
@@ -930,13 +965,10 @@ std::vector<double> SigParam::massPointsForCategory(int cateIndex) {
    -----------------------------------------------------------------------------
    Plot a resonance PDF for all masses defined for one category.
    @param cateIndex - the index of the category.
-   @param fileName - the location of the plot file (include format, .pdf etc.)
 */
-void SigParam::plotCategoryResonances(int cateIndex, TString fileDir) {
-  std::cout << "SigParam: Plotting resonances in category " << cateIndex
-	    << std::endl;
-  system(Form("mkdir -vp %s", fileDir.Data()));
-
+void SigParam::plotCategoryResonances(int cateIndex) {
+  std::cout << "SigParam: Plot resonances in cate. " << cateIndex << std::endl;
+  
   // Get a list of the resonance masses:
   std::vector<double> currMassPoints = massPointsForCategory(cateIndex);
   int xMin = currMassPoints[0] - 10;
@@ -981,7 +1013,8 @@ void SigParam::plotCategoryResonances(int cateIndex, TString fileDir) {
   
   TLatex text; text.SetNDC(); text.SetTextColor(1);
   text.DrawLatex(0.75, 0.88, Form("category %d", cateIndex));
-  can->Print(Form("%s/plot_paramResonance_c%d.eps",fileDir.Data(),cateIndex));
+  can->Print(Form("%s/plot_paramResonance_c%d.eps", 
+		  m_directory.Data(), cateIndex));
 }
 
 /**
@@ -989,13 +1022,10 @@ void SigParam::plotCategoryResonances(int cateIndex, TString fileDir) {
    Plot a resonance PDF for one value of the resonance mass in one category.
    @param resonanceMass - the mass value in GeV.
    @param cateIndex - the index of the category.
-   @param fileName - the location of the plot file (include format, .pdf etc.)
 */
-void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
-				   TString fileDir) {
+void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   std::cout << "SigParam: Plotting resonance at mass " << resonanceMass 
 	    << " in category " << cateIndex << std::endl;
-  system(Form("mkdir -vp %s", fileDir.Data()));
   
   TCanvas *can = new TCanvas("can","can",800,600);
   can->cd();
@@ -1032,17 +1062,16 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
   TLatex text; text.SetNDC(); text.SetTextColor(1);
   text.DrawLatex(0.18, 0.88, Form("category %d", cateIndex));
   can->Print(Form("%s/plot_singleRes_m%2.2f_c%d.eps", 
-		  fileDir.Data(), resonanceMass, cateIndex));
+		  m_directory.Data(), resonanceMass, cateIndex));
 }
 
 /**
    -----------------------------------------------------------------------------
 */
-void SigParam::plotYields(int cateIndex, TString fileDir) {
+void SigParam::plotYields(int cateIndex) {
   std::cout << "SigParam: Plotting yields in category " << cateIndex
 	    << std::endl;
-  system(Form("mkdir -vp %s", fileDir.Data()));
-
+  
   // Get a list of the mass points in the category:
   TCanvas *can = new TCanvas("can", "can", 800, 600);
   can->cd();
@@ -1052,7 +1081,7 @@ void SigParam::plotYields(int cateIndex, TString fileDir) {
   TLatex text; text.SetNDC(); text.SetTextColor(1);
   text.DrawLatex(0.4, 0.88, Form("%s signal, category %d",
 				  m_signalType.Data(), cateIndex));
-  can->Print(Form("%s/plot_paramYield_%sc%d.eps", fileDir.Data(),
+  can->Print(Form("%s/plot_paramYield_%sc%d.eps", m_directory.Data(),
 		  m_signalType.Data(), cateIndex));
 }
 
@@ -1088,26 +1117,29 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
   }
   
   TString currKey = getKey(resonanceMass, cateIndex);
-  TString sigSuffix = Form("%s%s",m_signalType.Data(),currKey.Data());
-  TString varSuffix = Form("%s", currKey.Data());
+  TString suffix = Form("%s%s", m_signalType.Data(), currKey.Data());
   if (function.Contains("Parameterized")) {
-    sigSuffix = Form("%sc%d", m_signalType.Data(), cateIndex);
-    varSuffix = Form("c%d", cateIndex);
+    suffix = Form("%sc%d", m_signalType.Data(), cateIndex);
   }
   
   // Define the Crystal Ball + Gaussian shape:
   if (function.Contains("CBGA")) {
     // Cystal Ball component:
-    m_ws->factory(Form("RooCBShape::pdfCB_%s(m_yy, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCB_%s, nCB_c%d)", sigSuffix.Data(), varSuffix.Data(), varSuffix.Data(), m_listMSS.Data(), varSuffix.Data(), varSuffix.Data(), m_listMRS.Data(), varSuffix.Data(), cateIndex));
+    m_ws->factory(Form("RooCBShape::pdfCB_%s(m_yy, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCB_%s, nCB_%sc%d)", suffix.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex));
     // Gaussian component:
-    m_ws->factory(Form("RooGaussian::pdfGA_%s(m_yy, prod::muGA_%s(muCBNom_%s%s), prod::sigmaGA_%s(sigmaGANom_%s%s))", sigSuffix.Data(), varSuffix.Data(), varSuffix.Data(), m_listMSS.Data(), varSuffix.Data(), varSuffix.Data(), m_listMRS.Data()));
+    m_ws->factory(Form("RooGaussian::pdfGA_%s(m_yy, prod::muGA_%s(muCBNom_%s%s), prod::sigmaGA_%s(sigmaGANom_%s%s))", suffix.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
     // Crystal Ball + Gaussian:
-    m_ws->factory(Form("SUM::sigPdf_%s(fracCB_c%d*pdfCB_%s,pdfGA_%s)", sigSuffix.Data(), cateIndex, sigSuffix.Data(), sigSuffix.Data()));
+    m_ws->factory(Form("SUM::sigPdf_%s(fracCB_%sc%d*pdfCB_%s,pdfGA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
   }
   
   // Define double-sided Crystal Ball shape:
   else if (function.Contains("DoubleCB")) {
-    m_ws->factory(Form("HggTwoSidedCBPdf::sigPdf_%s(m_yy, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCBLo_%s, nCBLo_c%d, alphaCBHi_%s, nCBHi_c%d)", sigSuffix.Data(), varSuffix.Data(), varSuffix.Data(), m_listMSS.Data(), varSuffix.Data(), varSuffix.Data(), m_listMRS.Data(), varSuffix.Data(), cateIndex, varSuffix.Data(), cateIndex));
+    m_ws->factory(Form("HggTwoSidedCBPdf::sigPdf_%s(m_yy, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCBLo_%s, nCBLo_%sc%d, alphaCBHi_%s, nCBHi_%sc%d)", suffix.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), m_signalType.Data(), cateIndex));
+  }
+  
+  // Define the yield:
+  if (!function.Contains("Parameterized")) {
+    m_ws->factory(Form("sigYield_%s%s[%f]",m_signalType.Data(),currKey.Data(),(*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries()));
   }
   
   std::cout << "SigParam: Resonance succesfully added." << std::endl;
@@ -1116,34 +1148,29 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
 /**
    -----------------------------------------------------------------------------
    Save parameterization workspace, list of parameter values, and signal yields.
-   @param fileDir - the output directory for the files. 
 */
-void SigParam::saveAll(TString fileDir) {
-  system(Form("mkdir -vp %s", fileDir.Data()));
-  saveParameterization(Form("%s/paramWorkspace_%s.root", fileDir.Data(),
-			    m_signalType.Data()));
-  saveParameterList(Form("%s/paramList_%s.txt", fileDir.Data(),
-			 m_signalType.Data()));
-  saveYieldList(Form("%s/yieldList_%s.txt", fileDir.Data(),
-		     m_signalType.Data()));
+void SigParam::saveAll() {
+  saveParameterization();
+  saveParameterList();
+  saveYieldList();
 }
 
 /**
    -----------------------------------------------------------------------------
    Save the workspace containing the parameterization data to file.
-   @param fileName - name of the file (full path, ending with .root)
 */
-void SigParam::saveParameterization(TString fileName) {
-  m_ws->writeToFile(fileName);
+void SigParam::saveParameterization() {
+  m_ws->writeToFile(Form("%s/res_%sworkspace.root", m_directory.Data(),
+			 m_signalType.Data()));
 }
 
 /**
    -----------------------------------------------------------------------------
    Save a list of parameter names and values.
-   @param fileName - name of the file (full path length, ending with .txt)
 */
-void SigParam::saveParameterList(TString fileName) {
-  ofstream outFile(fileName);
+void SigParam::saveParameterList() {
+  ofstream outFile(Form("%s/resonance paramList.txt", 
+			m_directory.Data()));
   RooArgSet args = m_ws->allVars();
   TIterator *iterArgs = args.createIterator();
   RooRealVar *currIter = NULL;
@@ -1156,11 +1183,10 @@ void SigParam::saveParameterList(TString fileName) {
 /**
    -----------------------------------------------------------------------------
    Save a list of signal yields in all categories and at all mass points. 
-   @param fileName - name of the file (full path length, ending with .txt)
 */
-void SigParam::saveYieldList(TString fileName) {
-  ofstream outFile(fileName);
-  // loop over datasets:
+void SigParam::saveYieldList() {
+  ofstream outFile(Form("%s/resonance_yieldList.txt", m_directory.Data()));
+  // Loop over datasets:
   for (int i_d = 0; i_d < (int)m_massCatePairs.size(); i_d++) {
     double currMass = (m_massCatePairs[i_d]).first;
     int currCate = (m_massCatePairs[i_d]).second;
@@ -1172,12 +1198,32 @@ void SigParam::saveYieldList(TString fileName) {
 
 /**
    -----------------------------------------------------------------------------
+   Set the output directory for files.
+   @param directory - the new input/output directory for files.
+*/
+void SigParam::setDirectory(TString directory) {
+  TString simpSigName = m_signalType;
+  simpSigName.Remove(simpSigName.Length()-1);
+  if (directory.EqualTo("")) {
+    if (simpSigName.EqualTo("")) m_directory = "";
+    else m_directory = simpSigName;
+  }
+  else {
+    if (simpSigName.EqualTo("")) m_directory = directory;
+    else m_directory = Form("%s/%s", directory.Data(), simpSigName.Data());
+  }
+  
+  // Create the output directory if it doesn't exist:
+  system(Form("mkdir -vp %s", m_directory.Data()));
+}
+
+/**
+   -----------------------------------------------------------------------------
    Make the parameters of a PDF free or fixed.
    @param pdf - the PDF containing the parameters to be freed/fixed.
    @param isConstant - true iff setting the parameters constant.
 */
 void SigParam::setParamsConstant(RooAbsPdf* pdf, bool isConstant) {
-  
   RooArgSet *currArgs = pdf->getVariables();
   TIterator *iterArgs = currArgs->createIterator();
   RooRealVar* currIter = NULL;
@@ -1189,21 +1235,13 @@ void SigParam::setParamsConstant(RooAbsPdf* pdf, bool isConstant) {
 /**
    -----------------------------------------------------------------------------
    Set the signal type to avoid collisions when using many production modes.
-   @param newSigType - the type of signal. 
+   @param signalType - the type of signal. 
 */
-void SigParam::setSignalType(TString newSignalType) {
-  m_signalType = Form("%s_", newSignalType.Data());
-}
-
-/**
-   -----------------------------------------------------------------------------
-   Set the function to use for parameterization of a variable as a function of
-   the resonance mass.
-   @param varName - the variable name.
-   @param function - the name of the function for parameterizing the variable.
-*/
-void SigParam::setVarParameterization(TString varName, TString function) {
-  std::cout << "SigParam: Using " << function << " to parameterize " << varName
-	    << std::endl;
-  m_funcList[varName] = function;
+void SigParam::setSignalType(TString signalType) {
+  if (signalType == "") {
+    m_signalType = "";
+  }
+  else {
+    m_signalType = Form("%s_", signalType.Data());
+  }
 }

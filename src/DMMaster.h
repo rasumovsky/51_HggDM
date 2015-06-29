@@ -16,7 +16,7 @@
 #include "DMToyAnalysis.h"
 
 //#include "DMSigParam.h"
-#include "SigParam.h"
+#include "SigParamInterface.h"
 
 bool isFirstJob;
 

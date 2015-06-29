@@ -72,14 +72,14 @@ class SigParam {
  public:
   
   // Constructor and destructor:
-  SigParam(TString options);
+  SigParam(TString signalType, TString directory);
   virtual ~SigParam() {};
   
-  // Public Accessors:
-  void addSigToWS(RooWorkspace *&workspace, RooArgSet *&nuisParams, 
+  //----------Public Accessors----------//
+  bool addSigToWS(RooWorkspace *&workspace, int cateIndex);
+  bool addSigToWS(RooWorkspace *&workspace, double resonanceMass,
 		  int cateIndex);
-  void addSigToWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
-		  double resonanceMass, int cateIndex);
+  TString getKey(double resonanceMass, int cateIndex);
   double getParameterError(TString paramName, double resonanceMass,
 			   int cateIndex);
   double getParameterError(TString paramName, int cateIndex);
@@ -92,65 +92,55 @@ class SigParam {
   double getYieldInCategory(double resonanceMass, int cateIndex);
   double getYieldTotal(double resonanceMass);
   
-  // Public Mutators:
+  //----------Public Mutators----------//
   void addMResSystematic(TString nameMResSys);
   void addMResSystematics(std::vector<TString> nameMResSys);
   void addMScaleSystematic(TString nameMScaleSys);
   void addMScaleSystematics(std::vector<TString> nameMScaleSys);
-  //void addCombData(RooDataSet* dataSet, TString observableName,/// !
-  //		   TString weightName, TString cateName, TString resMassName);
   void addDataSet(double resonanceMass, int cateIndex, RooDataSet* dataSet,
 		  TString observableName);
   void addDataTree(double resonanceMass, int cateIndex, TTree *dataTree,
 		   TString massBranchName, TString weightBranchName);
   void addMassPoint(double resonanceMass, int cateIndex, double diphotonMass,
 		    double eventWeight);
-  bool loadParameterization(TString fileName);
+  bool loadParameterization(TString directory, TString signalType);
   bool makeAllParameterizations(TString function);
   bool makeCategoryParameterization(int cateIndex, TString function);
   bool makeSingleResonance(double resonanceMass, int cateIndex,
 			   TString function);
   void makeYieldParameterization(int cateIndex);
-  void plotCategoryResonances(int cateIndex, TString fileDir);
-  void plotSingleResonance(double resonanceMass, int cateIndex, 
-			   TString fileDir);
-  void plotYields(int cateIndex, TString fileDir);
-  void saveAll(TString fileDir);
-  void saveParameterization(TString fileName);
-  void saveParameterList(TString fileName);
-  void saveYieldList(TString fileName);
-  void setSignalType(TString newSignalType);
-  void setVarParameterization(TString varName, TString function);
+  void plotCategoryResonances(int cateIndex);
+  void plotSingleResonance(double resonanceMass, int cateIndex);
+  void plotYields(int cateIndex);
+  void saveAll();
+  void saveParameterization();
+  void saveParameterList();
+  void saveYieldList();
+  void setDirectory(TString directory);
+  void setSignalType(TString signalType);
   
  private:
   
-  // Private Accessors:
+  //----------Private Accessors----------//
   std::vector<int> categoriesForMass(double resonanceMass);
-  //TString getFileName();
   bool dataExists(double resonanceMass, int cateIndex);
   bool equalMasses(double massValue1, double massValue2);
-  TString getKey(double resonanceMass, int cateIndex);
   double massIntToDouble(int massInteger);
   int massDoubleToInt(double resonanceMass);
   std::vector<double> massPointsForCategory(int cateIndex);
-  
-  // Private Mutators:
-  //RooFormulaVar* constructFormulaVar(TString varName, int polyOrder);
+
+  //----------Private Mutators----------//
   RooFitResult* fitResult(int cateIndex);
   RooFitResult* fitResult(double resonanceMass, int cateIndex);
   int getNCategories();
   double regularizedMass(double resonanceMass);
   void resonanceCreator(double resonanceMass, int cateIndex, TString function);
   void setParamsConstant(RooAbsPdf* pdf, bool isConstant);
-  
-  
+    
   // Member variables:
-  std::vector<std::pair<double,int> > m_massCatePairs;
-  std::map<TString,TString> m_funcList;
-  
   int m_nCategories;
-  TString m_options;
   TString m_signalType;
+  TString m_directory;
   
   // Objects for fitting:
   RooRealVar *m_yy;
@@ -163,8 +153,12 @@ class SigParam {
   TString m_listMRS;
   TString m_listMSS;
   
+  // Yield data for plotting:
   std::map<int,TF1*> yieldFunc;
   std::map<int,TGraph*> yieldGraph;
+  
+  // List to track imported datasets:
+  std::vector<std::pair<double,int> > m_massCatePairs;
   
 };
 

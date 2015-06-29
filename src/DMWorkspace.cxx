@@ -150,7 +150,9 @@ void DMWorkspace::createNewWS() {
   per = new PERReader(fileNamePERValues, nCategories);
   
   // Instantiate the signal parameterization class using the observable:
-  currSigParam = new DMSigParam(jobName, cateScheme, "FromFile", NULL);
+  //currSigParam = new DMSigParam(jobName, cateScheme, "FromFile", NULL);
+  spi = new SigParamInterface(jobName, cateScheme, "FromFile");
+  
   
   //--------------------------------------//
   // Initialize classes relevant to workspace:
@@ -535,6 +537,69 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Construct the signal PDFs:
   std::cout << "DMWorkspace: Adding signal parameterizations." << std::endl;
+  
+  // Loop to load SM signal modes from file and add to workspace:
+  if (options.Contains("ProdModes")) {
+    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
+      SigParam *sp = spi->getSigParam(DMAnalysis::sigSMModes[i_SM]);
+      TString currKey = sp->getKey(DMAnalysis::higgsMass, currCateIndex);
+      TString currSig = DMAnalysis::sigSMModes[i_SM];
+      
+      // Add the signal to the workspace:
+      if (sp->addSigToWS(tempWS, DMAnalysis::higgsMass, currCateIndex)) {
+	// Rename the signal yield variable:
+	(tempWS->var(Form("sigYield_%s_%s",currSig.Data(),currKey.Data())))->SetNameTitle(Form("n%s",currSig.Data()), Form("n%s",currSig.Data()));
+	// Rename the signal PDF:
+	(tempWS->pdf(Form("sigPdf_%s_%s",currSig.Data(),currKey.Data())))->SetNameTitle(Form("sigPdf%s",currSig.Data()), Form("sigPdf%s",currSig.Data()));
+	// Define the signal normalization:
+	tempWS->factory(Form("prod::nSig%s(n%s,expectationCommon,expectationSM,expectationProc_%s)", currSig.Data(), currSig.Data(), currSig.Data()));
+      }
+      else {
+	std::cout << "DMWorkspace: Error importing " << currSig << " signal." 
+		  << std::endl;
+      }
+    }
+  }
+  
+  // Load total SM signal from file, then add to workspace:
+  SigParam *spSM = spi->getSigParam("SM");
+  if (spSM->addSigToWS(tempWS, DMAnalysis::higgsMass, currCateIndex)) {
+    std::cout << "Check1" << std::endl;
+    TString currKeySM = spSM->getKey(DMAnalysis::higgsMass, currCateIndex);
+    std::cout << "Check2" << std::endl;
+    (tempWS->var(Form("sigYield_SM_%s", currKeySM.Data())))
+      ->SetNameTitle("nSM","nSM");
+    std::cout << "Check3" << std::endl;
+    (tempWS->pdf(Form("sigPdf_SM_%s", currKeySM.Data())))
+      ->SetNameTitle("sigPdfSM","sigPdfSM");
+    std::cout << "Check4" << std::endl;
+    tempWS->factory("prod::nSigSM(nSM,expectationCommon,expectationSM)");
+  }
+  else std::cout << "DMWorkspace: Error importing SM signal." << std::endl;
+  
+  // Load DM signal from file, then add to workspace:
+  std::cout << "Check0" << std::endl;
+  SigParam *spDM = spi->getSigParam(DMSignal);
+  if (spDM->addSigToWS(tempWS, DMAnalysis::higgsMass, currCateIndex)) {
+    tempWS->Print("v");
+
+    std::cout << "Check1" << std::endl;
+    TString currKeyDM = spDM->getKey(DMAnalysis::higgsMass, currCateIndex);
+    std::cout << "Check2" << std::endl;
+    (tempWS->var(Form("sigYield_%s_%s", DMSignal.Data(), currKeyDM.Data())))
+      ->SetNameTitle("nDM","nDM");
+    std::cout << "Check3" << std::endl;
+    (tempWS->pdf(Form("sigPdf_%s_%s", DMSignal.Data(), currKeyDM.Data())))
+      ->SetNameTitle("sigPdfDM","sigPdfDM");
+    std::cout << "Check4" << std::endl;
+    tempWS->factory("prod::nSigDM(nDM,expectationCommon,expectationDM)");
+    std::cout << "Check5" << std::endl;
+  }
+  else std::cout << "DMWorkspace: Error importing DM signal." << std::endl;
+  
+  std::cout << "DMWorkspace: Finished importing signal PDFs." << std::endl;
+  
+  /*
   currSigParam->addSigToCateWS(tempWS,pesList,perList,DMSignal,currCateIndex);
   currSigParam->addSigToCateWS(tempWS,pesList,perList,"SM",currCateIndex);
   if (options.Contains("ProdModes")) {
@@ -545,7 +610,14 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     currSigParam->addSigToCateWS(tempWS,pesList,perList,"bbH",currCateIndex);
     currSigParam->addSigToCateWS(tempWS,pesList,perList,"ttH",currCateIndex);
   }
-
+  */
+  
+  // FOR MONDAY:
+  //  1) replace the getCateSigYield expressions below with the yield params
+  //     that were provided by SigParam.
+  //  2) Fix the nuisance parameter implementation above.
+  //  3) WARNING! SHould create a sigparam class that can be called, just so
+  //     it is possible to go back to redo if necessary. 
   // Construct the background PDF:
   BkgModel *currBkgModel = new BkgModel(tempWS->var("m_yy"));
   currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg,
@@ -554,7 +626,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
-    
+  
+  /*
   // Normalization for each process follows such pattern:
   // Definition of expectationCommon = mu*isEM*lumi*migr
   tempWS->factory(Form("prod::nSigSM(nSM[%f],expectationCommon,expectationSM)",
@@ -569,6 +642,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     tempWS->factory(Form("prod::nSigbbH(nbbH[%f],expectationCommon,expectationSM,expectationProc_bbH)", currSigParam->getCateSigYield(currCateIndex,"bbH")));
     tempWS->factory(Form("prod::nSigttH(nttH[%f],expectationCommon,expectationSM,expectationProc_ttH)", currSigParam->getCateSigYield(currCateIndex,"ttH")));
   }
+  */
   
   // Model with combined SM production modes:
   tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,sigBias*sigPdfDM,nBkg*bkgPdf)");

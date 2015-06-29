@@ -452,7 +452,7 @@ Color_t CommonFunc::ColorWheel(int idx){
 
 bool CommonFunc::descending(double i, double j){ return i>j;}
 
-TTree* CommonFunc::GetTree(RooDataSet* data){
+//TTree* CommonFunc::GetTree(RooDataSet* data){
 //   assert((data) && "The data pointer is NULL...");
 //   // std::cout << "Name" << data->GetName() << std::endl;
 //   if ( RooAbsData::defaultStorageType != RooAbsData::Vector ) {
@@ -485,7 +485,7 @@ TTree* CommonFunc::GetTree(RooDataSet* data){
 
 //     return tree;
 //   }
-}
+//}
 
 void CommonFunc::CopyFileContent(TFile *input, TFile* target){
   TList* keys=input->GetListOfKeys();

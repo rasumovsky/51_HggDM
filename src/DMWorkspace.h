@@ -21,7 +21,9 @@
 #include "PERReader.h"
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
-#include "DMSigParam.h"
+//#include "DMSigParam.h"
+#include "SigParam.h"
+#include "SigParamInterface.h"
 
 class DMWorkspace {
 
@@ -68,8 +70,9 @@ class DMWorkspace {
   // Helper classes:
   PESReader *pes;
   PERReader* per;
-  DMSigParam *currSigParam;
-  
+  //DMSigParam *currSigParam;
+  SigParamInterface *spi;
+
   // Updated for each call to createNewCategoryWS():
   int currCateIndex;
   TString currCateName;

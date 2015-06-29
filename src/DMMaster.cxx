@@ -31,9 +31,6 @@
 
 #include "DMMaster.h"
 
-//using namespace std;
-//using namespace DMAnalysis;
-
 /**
    -----------------------------------------------------------------------------
    Submits the workspace jobs to the lxbatch server. 
@@ -110,7 +107,8 @@ void submitTSViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
     system(Form("chmod +x %s/%s", DMAnalysis::packageLocation.Data(), 
 		DMAnalysis::jobScriptTestStat.Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		masterOutput.Data(), exeJobName.Data(), exeSignal.Data()));
+		DMAnalysis::masterOutput.Data(), exeJobName.Data(), 
+		exeSignal.Data()));
     system(Form("cp -f %s/%s %s/jobFileTestStat.sh",
 		DMAnalysis::packageLocation.Data(), 
 		DMAnalysis::jobScriptTestStat.Data(), exe.Data()));
@@ -158,8 +156,10 @@ void SubmitMuLimitViaBsub(TString exeJobName, TString exeOption,
     system(Form("tar zcf Cocoon.tar bin/%s", DMAnalysis::exeMuLimit.Data()));
     system(Form("chmod +x %s", DMAnalysis::jobScriptMuLimit.Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
-		masterOutput.Data(), exeJobName.Data(), exeSignal.Data()));
-    system(Form("cp -f %s/%s %s/jobFileMuLimit.sh", packageLocation.Data(), 
+		DMAnalysis::masterOutput.Data(), exeJobName.Data(),
+		exeSignal.Data()));
+    system(Form("cp -f %s/%s %s/jobFileMuLimit.sh", 
+		DMAnalysis::packageLocation.Data(), 
 		DMAnalysis::jobScriptMuLimit.Data(), exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
   }
@@ -209,8 +209,10 @@ void submitPEViaBsub(TString exeJobName, TString exeOption, TString exeSignal,
     system(Form("tar zcf Cocoon.tar bin/%s", DMAnalysis::exePseudoExp.Data()));
     system(Form("chmod +x %s", DMAnalysis::jobScriptPseudoExp.Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
-		masterOutput.Data(), exeJobName.Data(), exeSignal.Data()));
-    system(Form("cp -f %s/%s %s/jobFilePseudoExp.sh", packageLocation.Data(), 
+		DMAnalysis::masterOutput.Data(), exeJobName.Data(),
+		exeSignal.Data()));
+    system(Form("cp -f %s/%s %s/jobFilePseudoExp.sh", 
+		DMAnalysis::packageLocation.Data(), 
 		DMAnalysis::jobScriptPseudoExp.Data(), exe.Data()));
     system(Form("chmod +x %s/jobFilePseudoExp.sh", exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
@@ -299,86 +301,16 @@ int main (int argc, char **argv) {
 				    sigParamOptions, NULL);
   }
   */
+
   //--------------------------------------//
   // Step 2: Make or load the signal parameterization:
   if (masterOption.Contains("SigParam")) {
     cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
-    int cateIndex = 0;
-    double resMass =125.0;
-    bool signalConverged = true;
-    TString function = "DoubleCB";
-    TString signalDir = Form("%s/%s/DMSigParam",
-			     DMAnalysis::masterOutput.Data(),
-			     masterJobName.Data());
-    SigParam *sp_SM_all = new SigParam("");
-    SigParam *sp_SM[DMAnalysis::nSMModes];
-    SigParam *sp_DM[DMAnalysis::nSMModes];
-    
-    TString failedSigParam = "";
-    // Construct SM signals:
-    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
-      sp_SM[i_SM] = new SigParam("");
-      DMMassPoints *mp = new DMMassPoints(masterJobName,
-					  DMAnalysis::sigSMModes[i_SM],
-					  masterCateScheme, "FromFile", NULL);
-      RooDataSet *currDataSet = mp->getCateDataSet(cateIndex);
-      sp_SM[i_SM]->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
-      sp_SM_all->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
-      if (sp_SM[i_SM]->makeSingleResonance(resMass, cateIndex, function)) {
-	sp_SM[i_SM]->saveAll(Form("%s/%s", signalDir.Data(),
-				  (DMAnalysis::sigSMModes[i_SM]).Data()));
-	sp_SM[i_SM]->plotSingleResonance(resMass, cateIndex, 
-					Form("%s/%s", signalDir.Data(), 
-					(DMAnalysis::sigSMModes[i_SM]).Data()));
-      }
-      else {
-	signalConverged = false;
-	failedSigParam += DMAnalysis::sigSMModes[i_SM] + ", ";
-      }
-      
-    }
-    // Construct the total SM signal:
-    if (sp_SM_all->makeSingleResonance(resMass, cateIndex, function)) {
-      sp_SM_all->saveAll(Form("%s/SM", signalDir.Data()));
-      sp_SM_all->plotSingleResonance(resMass, cateIndex, 
-				     Form("%s/SM", signalDir.Data()));
-    }
-    else {
-      signalConverged = false;
-      failedSigParam += "SM, ";
-    }
-    
-    // Construct DM signals:
-    for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
-      sp_DM[i_DM] = new SigParam("");
-      DMMassPoints *mp = new DMMassPoints(masterJobName,
-					  DMAnalysis::sigDMModes[i_DM],
-					  masterCateScheme, "FromFile", NULL);
-      RooDataSet *currDataSet = mp->getCateDataSet(cateIndex);
-      sp_DM[i_DM]->addDataSet(resMass, cateIndex, currDataSet, "m_yy");
-      if (sp_DM[i_DM]->makeSingleResonance(resMass, cateIndex, function)) {
-	sp_DM[i_DM]->saveAll(Form("%s/%s", signalDir.Data(),
-				  (DMAnalysis::sigDMModes[i_DM]).Data()));
-	sp_DM[i_DM]->plotSingleResonance(resMass, cateIndex, 
-					Form("%s/%s", signalDir.Data(),
-					(DMAnalysis::sigDMModes[i_DM]).Data()));
-      }
-      else {
-	signalConverged = false;
-	failedSigParam += DMAnalysis::sigDMModes[i_DM] + ", ";
-      }
-    }
-    
-    // Check if all fits converged:
-    if (signalConverged) {
-      std::cout << "DMMaster: signal fits converged!" << std::endl;
-    }
-    else {
-      std::cout << "DMMaster: signal fits did not converge :(" << std::endl;
-      std::cout << "\t" << failedSigParam << std::endl;
-    }
+    SigParamInterface *spi = new SigParamInterface(masterJobName,
+						   masterCateScheme,
+						   sigParamOptions);
   }
-
+  
   //--------------------------------------//
   // Step 3: Create the background model (spurious signal calculation):
   // REPLACE WITH SPURIOUS SIGNAL CODE.
@@ -438,8 +370,8 @@ int main (int argc, char **argv) {
       TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitWSViaBsub(exeWorkspace, masterJobName, workspaceOptions, 
-			currSignal);
+	submitWSViaBsub(masterJobName, workspaceOptions, currSignal,
+			masterCateScheme);
 	jobCounterWS++;
 	isFirstJob = false;
       }
@@ -577,8 +509,9 @@ int main (int argc, char **argv) {
       else {
 	TString muCommand = Form(".%s/bin/%s %s %s %s", 
 				 DMAnalysis::packageLocation.Data(), 
-				 exeMuLimit.Data(), masterJobName.Data(),
-				 currSignal.Data(), muLimitOptions.Data());
+				 DMAnalysis::exeMuLimit.Data(),
+				 masterJobName.Data(), currSignal.Data(), 
+				 muLimitOptions.Data());
 	std::cout << "Executing following system command: \n\t"
 		  << muCommand << std::endl;
 	system(muCommand);
@@ -611,7 +544,7 @@ int main (int argc, char **argv) {
       }
       else {
 	system(Form(".%s/bin/%s %s %s %s", DMAnalysis::packageLocation.Data(), 
-		    exeMuLimit.Data(), masterJobName.Data(),
+		    DMAnalysis::exeMuLimit.Data(), masterJobName.Data(),
 		    currSignal.Data(), muLimitOptions.Data()));
       }
       jobCounterML++;

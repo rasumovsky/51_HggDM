@@ -31,11 +31,13 @@ namespace DMAnalysis {
   // Luminosity in pb-1:
   const double analysisLuminosity = 10000;
   
-  const double higgsMass = 125.09;// GeV
+  const double higgsMass = 125.0;// GeV THIS WILL NEED TO BE 125.09 FOR PARAM
 
   const double DMMyyRangeLo = 105.0;// GeV
   const double DMMyyRangeHi = 160.0;// GeV
-
+  
+  const TString resonancePDF = "DoubleCB";
+  
   const int nSMModes = 6;
   const TString sigSMModes[nSMModes] = {"ggH","VBF","WH","ZH","bbH","ttH"};
   

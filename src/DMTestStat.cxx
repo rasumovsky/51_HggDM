@@ -39,8 +39,8 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   dataForExp = "asimovDataMu0";
   
   TFile inputFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		       masterOutput.Data(), jobName.Data(), DMSignal.Data()),
-		  "read");
+		       DMAnalysis::masterOutput.Data(), jobName.Data(),
+		       DMSignal.Data()), "read");
   
   if (newWorkspace == NULL) {
     if (inputFile.IsOpen()) {
@@ -66,7 +66,8 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   calculatedValues.clear();
   
   // Create output directories:
-  outputDir = Form("%s/%s/TestStat/",masterOutput.Data(),jobName.Data());
+  outputDir = Form("%s/%s/TestStat/", DMAnalysis::masterOutput.Data(), 
+		   jobName.Data());
   system(Form("mkdir -vp %s",outputDir.Data()));
   system(Form("mkdir -vp %s/CL/",outputDir.Data()));
   system(Form("mkdir -vp %s/p0/",outputDir.Data()));

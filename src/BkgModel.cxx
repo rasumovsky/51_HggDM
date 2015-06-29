@@ -79,10 +79,10 @@ RooAbsPdf* BkgModel::getBkgPDF(TString function) {
   RooConstVar max("max", "max", m_obsMax);
   
   // Pointers to the background PDFs:
-  RooAbsPdf *background;
-  RooBernsteinM *bern;
-  RooGenericPdf *exppol;
-  RooLandau *landau;
+  RooAbsPdf *background = NULL;
+  RooBernsteinM *bern = NULL;
+  RooGenericPdf *exppol = NULL;
+  RooLandau *landau = NULL;
   
   // Background fit variables:
   RooRealVar *pVar[10];

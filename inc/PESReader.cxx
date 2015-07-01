@@ -15,6 +15,7 @@
 #include "PESReader.h"
 
 /**
+   -----------------------------------------------------------------------------
    Initialize the PESReader class.
    @param inputFileName - the file location containing PES values.
    @param nCategories - the number of analysis categories.
@@ -46,6 +47,7 @@ PESReader::PESReader(TString inputFileName, int nCategories) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Finds the index associated with a particular PES source.
    @param name - the name of the PES.
    @returns - the index of the PES.
@@ -61,6 +63,7 @@ int PESReader::sourceNameToIndex(TString name) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the value of a particular PES in a given category.
    @param name - the name of the PES.
    @param cateIndex - the index of the category.
@@ -71,6 +74,7 @@ double PESReader::getValue(TString name, int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Returns the sign of the PES.
    @param name - the name of the PES.
    @param cateIndex - the index of the category.
@@ -85,6 +89,7 @@ int PESReader::getSign(TString name, int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Returns the number of PES sources that have been defined.
    @returns - the number of PES sources.
 */
@@ -93,10 +98,19 @@ int PESReader::getNumberOfSources() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Retrieve the name of a source from its index.
    @param sourceIndex - the index of the PES.
    @returns - the name of the PES.
 */
 TString PESReader::getNameOfSource(int indexPES) {
   return nameListPES[indexPES];
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Retrieve the vector of PES systematics names.
+*/
+std::vector<TString> PESReader::listSources() {
+  return nameListPES;
 }

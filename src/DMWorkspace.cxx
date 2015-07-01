@@ -427,14 +427,12 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // SYSTEMATICS: Resolution:
-  vector<TString> perList; perList.clear();
   if (m_per) {
     double setupPER[4] = {0.0, 0, 1, 1};
     // Loop over sources of resolution systematic uncertainty:
     for (int i_s = 0; i_s < per->getNumberOfSources(); i_s++) {
       TString currPERSource = per->getNameOfSource(i_s);
       TString currPERName = Form("EM_%s",currPERSource.Data());
-      perList.push_back(currPERName);
       setupPER[0] = per->getValue(currPERSource, currCateIndex);
       setupPER[2] = per->getSign(currPERSource, currCateIndex);
       
@@ -463,14 +461,12 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // SYSTEMATICS: Energy-scale
-  vector<TString> pesList; pesList.clear();
   if (m_pes) {
     double setupPES[4] = {0.0, 0, 1, 1};
     // loop over sources of energy scale systematic uncertainty:
     for (int i_s = 0; i_s < pes->getNumberOfSources(); i_s++) {
       TString currPESSource = pes->getNameOfSource(i_s);
       TString currPESName = Form("EM_%s",currPESSource.Data());
-      pesList.push_back(currPESName);
       setupPES[0] = pes->getValue(currPESSource, currCateIndex);
       setupPES[2] = pes->getSign(currPESSource, currCateIndex);
       makeNP(currPESName, setupPES, *&nuisParams, *&constraints, *&globalObs,
@@ -600,6 +596,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   std::cout << "DMWorkspace: Finished importing signal PDFs." << std::endl;
   
   /*
+  // FOR THE LISTS BELOW, use PER->listSources(), returns vector<TString>
+  // SAME FOR PES
   currSigParam->addSigToCateWS(tempWS,pesList,perList,DMSignal,currCateIndex);
   currSigParam->addSigToCateWS(tempWS,pesList,perList,"SM",currCateIndex);
   if (options.Contains("ProdModes")) {

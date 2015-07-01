@@ -8,13 +8,12 @@
 //                                                                            //
 //  This class implements the resonance modeling for the ATLAS Hgamma group.  //
 //                                                                            //
-//  Development notes:                                                        //
-//  Modeling of individual resonances with a Crystal Ball + Gaussian or       //
-//  double-Crystal Ball function has been implemented. Parameterization over  //
-//  multiple mH values has also been implemented for the double-Crystal Ball  //
-//  function. However, the parameterization currently fails for the Crystal   //
-//  Ball + Gaussian function for unknown reasons. Open issues include the     //
-//  parameterization of signal yields.                                        //
+//  General notes:                                                            //
+//                                                                            //
+//    - Function names can be "DoubleCB" for double-sided Crystal Ball or     //
+//      CBGA for Crystal Ball + Gaussian.                                     //
+//                                                                            //
+//    - Category indices should start at zero.                                //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,9 +26,7 @@
    @param directory - The directory for input and output files.
 */
 SigParam::SigParam(TString signalType, TString directory) {
-  std::cout << "\nSigParam::Initializing..." << "\n\tsignalType = "
-	    << signalType << "\n\toutputDirectory = " << directory
-	    << std::endl;
+  std::cout << "\nSigParam::Initializing..." << std::endl;
   
   // Assign output directory:
   setSignalType(signalType);
@@ -61,10 +58,10 @@ SigParam::SigParam(TString signalType, TString directory) {
 /**
    -----------------------------------------------------------------------------
    Adds the data from a RooDataSet object to the dataset for parameterization.
-   @param resonanceMass - the truth mass of the resonance.
-   @param cateIndex - the event category index (starting at 0).
-   @param dataSet - the RooDataSet object to import.
-   @param observableName - the name of the observable.
+   @param resonanceMass - The truth mass of the resonance.
+   @param cateIndex - The event category index (starting at 0).
+   @param dataSet - The RooDataSet object to import.
+   @param observableName - The name of the observable.
 */
 void SigParam::addDataSet(double resonanceMass, int cateIndex,
 			  RooDataSet* dataSet, TString observableName) {
@@ -101,11 +98,11 @@ void SigParam::addDataSet(double resonanceMass, int cateIndex,
    -----------------------------------------------------------------------------
    Adds the data from a Root TTree object or an MxAOD to the dataset for
    signal parameterization. Note: the input 
-   @param resonanceMass - the truth mass of the resonance.
-   @param cateIndex - the event category index (starting at 0).
-   @param dataTree - the TTree or MxAOD object to import.
-   @param massBranchName - the name of the branch storing mass values.
-   @param weightBranchName - the name of the branch storing event weights.
+   @param resonanceMass - The truth mass of the resonance.
+   @param cateIndex - The event category index (starting at 0).
+   @param dataTree - The TTree or MxAOD object to import.
+   @param massBranchName - The name of the branch storing mass values.
+   @param weightBranchName - The name of the branch storing event weights.
 */
 void SigParam::addDataTree(double resonanceMass, int cateIndex,
 			   TTree* dataTree, TString massBranchName,
@@ -127,10 +124,10 @@ void SigParam::addDataTree(double resonanceMass, int cateIndex,
 /**
    -----------------------------------------------------------------------------
    Adds a mass point to the dataset for fitting the signal diphoton resonance.
-   @param resonanceMass - the truth mass of the resonance.
-   @param cateIndex - the event category index (starting at 0).
-   @param diphotonMass - the reconstructed diphoton invariant mass.
-   @param eventWeight - the weight of the event.
+   @param resonanceMass - The truth mass of the resonance.
+   @param cateIndex - The event category index (starting at 0).
+   @param diphotonMass - The reconstructed diphoton invariant mass.
+   @param eventWeight - The weight of the event.
 */
 void SigParam::addMassPoint(double resonanceMass, int cateIndex, 
 			    double diphotonMass, double eventWeight) {
@@ -139,7 +136,7 @@ void SigParam::addMassPoint(double resonanceMass, int cateIndex,
   
   // Create new dataset if the corresponding one doesn't yet exist.
   if (!dataExists(resonanceMass, cateIndex)) {
-    
+
     RooDataSet* newData 
       = new RooDataSet(Form("data_%s",currKey.Data()),
 		       Form("data_%s",currKey.Data()),
@@ -167,7 +164,7 @@ void SigParam::addMassPoint(double resonanceMass, int cateIndex,
    -----------------------------------------------------------------------------
    Add a single mass resolution systematic uncertainty to the signal shape.
    Note: the constraint terms must be defined separately. 
-   @param nameMResSys - the name of the systematic nuisance parameter.
+   @param nameMResSys - The name of the systematic nuisance parameter.
 */
 void SigParam::addMResSystematic(TString nameMResSys) {
 
@@ -189,7 +186,7 @@ void SigParam::addMResSystematic(TString nameMResSys) {
    -----------------------------------------------------------------------------
    Add several mass resolution systematic uncertainties to the signal shape. 
    Note: the constraint terms must be defined separately. 
-   @param namesMResSys - list of the names of systematic nuisance parameters.
+   @param namesMResSys - A list of the names of systematic nuisance parameters.
 */
 void SigParam::addMResSystematics(std::vector<TString> namesMResSys) {
   for (std::vector<TString>::iterator sysIter = namesMResSys.begin();
@@ -202,7 +199,7 @@ void SigParam::addMResSystematics(std::vector<TString> namesMResSys) {
    -----------------------------------------------------------------------------
    Add a single mass scale systematic uncertainty to the signal shape.
    Note: the constraint terms must be defined separately. 
-   @param nameMScaleSys - the name of the systematic nuisance parameter.
+   @param nameMScaleSys - The name of the systematic nuisance parameter.
 */
 void SigParam::addMScaleSystematic(TString nameMScaleSys) {
   
@@ -224,7 +221,7 @@ void SigParam::addMScaleSystematic(TString nameMScaleSys) {
    -----------------------------------------------------------------------------
    Add several mass scale systematic uncertainties to the signal shape. 
    Note: the constraint terms must be defined separately. 
-   @param namesMScaleSys - list of the names of systematic nuisance parameters.
+   @param namesMScaleSys - List of the names of systematic nuisance parameters.
 */
 void SigParam::addMScaleSystematics(std::vector<TString> namesMScaleSys) {
   for (std::vector<TString>::iterator sysIter = namesMScaleSys.begin();
@@ -236,8 +233,8 @@ void SigParam::addMScaleSystematics(std::vector<TString> namesMScaleSys) {
 /**
    -----------------------------------------------------------------------------
    Adds a signal PDF from this class to a pre-existing workspace. 
-   @param workspace - the pre-existing workspace.
-   @param cateIndex - the index of the category of the desired PDF.
+   @param workspace - The pre-existing workspace.
+   @param cateIndex - The index of the category of the desired PDF.
    @returns - True iff the PDF and yield parameter were imported.
 */
 bool SigParam::addSigToWS(RooWorkspace *&workspace, int cateIndex) {
@@ -296,9 +293,9 @@ bool SigParam::addSigToWS(RooWorkspace *&workspace, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Adds a signal PDF from this class to a pre-existing workspace. 
-   @param workspace - the pre-existing workspace.
-   @param resonanceMass - the mass of the resonance.
-   @param cateIndex - the index of the category of the desired PDF.
+   @param workspace - The pre-existing workspace.
+   @param resonanceMass - The mass of the resonance.
+   @param cateIndex - The index of the category of the desired PDF.
    @returns - True iff the PDF and yield parameter were imported.
 */
 bool SigParam::addSigToWS(RooWorkspace *&workspace, double resonanceMass,
@@ -357,8 +354,8 @@ bool SigParam::addSigToWS(RooWorkspace *&workspace, double resonanceMass,
 /**
    -----------------------------------------------------------------------------
    Get a list of categories corresponding to a single mass point.
-   @param resonanceMass - the mass value.
-   @returns - a vector of category indices.
+   @param resonanceMass - The mass value.
+   @returns - A vector of category indices.
 */
 std::vector<int> SigParam::categoriesForMass(double resonanceMass) {
   // Create a list of mass points in this category.
@@ -375,9 +372,9 @@ std::vector<int> SigParam::categoriesForMass(double resonanceMass) {
 /**
    -----------------------------------------------------------------------------
    Check if the dataset being requested has been instantiated (exists in map).
-   @param massIndex - the index of the signal mass.
-   @param cateIndex - the index of the category.
-   @returns - true iff the dataset has been defined.
+   @param massIndex - The index of the signal mass.
+   @param cateIndex - The index of the category.
+   @returns - True iff the dataset has been defined.
 */
 bool SigParam::dataExists(double resonanceMass, int cateIndex) {
   for (int i_p = 0; i_p < (int)m_massCatePairs.size(); i_p++) {
@@ -392,9 +389,9 @@ bool SigParam::dataExists(double resonanceMass, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Check if two doubles are equal.
-   @param massValue1 - the first mass value to compare.
-   @param massValue2 - the second mass value to compare.
-   @returns - true iff the masses are equal within 0.001 GeV.
+   @param massValue1 - The first mass value to compare.
+   @param massValue2 - The second mass value to compare.
+   @returns - True iff the masses are equal within 0.001 GeV.
 */
 bool SigParam::equalMasses(double massValue1, double massValue2) {
   return (fabs(massValue1 - massValue2) <= 0.001);// mass precision in GeV
@@ -403,9 +400,9 @@ bool SigParam::equalMasses(double massValue1, double massValue2) {
 /**
    -----------------------------------------------------------------------------
    Perform a single or simultaneous fit.
-   @param resonanceMass - the truth mass of the resonance.
-   @param cateIndex - the index of the category.
-   @returns - the RooFitResult, which gives fit status.
+   @param resonanceMass - The truth mass of the resonance.
+   @param cateIndex - The index of the category.
+   @returns - The RooFitResult, which gives fit status.
 */
 RooFitResult* SigParam::fitResult(double resonanceMass, int cateIndex) {
   std::cout << "SigParam: Preparing to fit resonance" << std::endl;
@@ -433,8 +430,8 @@ RooFitResult* SigParam::fitResult(double resonanceMass, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Perform a simultaneous fit across multiple masses.
-   @param cateIndex - the index of the category.
-   @returns - the RooFitResult, which gives fit status.
+   @param cateIndex - The index of the category.
+   @returns - The RooFitResult, which gives fit status.
 */
 RooFitResult* SigParam::fitResult(int cateIndex) {
   return SigParam::fitResult(-999.9, cateIndex);
@@ -442,10 +439,10 @@ RooFitResult* SigParam::fitResult(int cateIndex) {
 
 /**
    -----------------------------------------------------------------------------
-   Retrieve the map key name for the dataset map.
-   @param resonanceMass - the floating value of the signal mass.
-   @param cateIndex - the index of the category.
-   @returns - a key string for the dataset map.
+   Retrieve a key string for the given mass and category index.
+   @param resonanceMass - The floating value of the signal mass.
+   @param cateIndex - The index of the category.
+   @returns - A key string specific to the mass and category.
 */
 TString SigParam::getKey(double resonanceMass, int cateIndex) {
   TString key = Form("m%d_c%d", massDoubleToInt(resonanceMass), cateIndex);
@@ -457,7 +454,7 @@ TString SigParam::getKey(double resonanceMass, int cateIndex) {
    Get the number of categories contained in the datasets for fitting. Note:
    it is possible that there are different numbers of categories defined for 
    different mass points. This is up to the user to sort out. 
-   @returns - the total number of categories for the parameterization.
+   @returns - The total number of categories for the parameterization.
 */
 int SigParam::getNCategories() {
   m_nCategories = 0;
@@ -474,10 +471,10 @@ int SigParam::getNCategories() {
 /**
    -----------------------------------------------------------------------------
    Get the value of the fit error for a particular parameter of the signal PDF. 
-   @param paramName - the name of the shape parameter of interest.
-   @param resonanceMass - the truth mass of the resonance.
+   @param paramName - The name of the shape parameter of interest.
+   @param resonanceMass - The truth mass of the resonance.
    @param cateIndex - The index of the category.
-   @returns - the value of the specified signal parameter. 
+   @returns - The value of the specified signal parameter. 
 */
 double SigParam::getParameterError(TString paramName, double resonanceMass,
 				   int cateIndex) {
@@ -485,9 +482,9 @@ double SigParam::getParameterError(TString paramName, double resonanceMass,
     return SigParam::getParameterError(paramName, cateIndex);
   }
   else {
-    RooRealVar *var = m_ws->var(Form("%s_%s%s", paramName.Data(),
-				     m_signalType.Data(), 
-				     (getKey(resonanceMass,cateIndex)).Data()));
+    RooRealVar *var
+      = m_ws->var(Form("%s_%s%s", paramName.Data(), m_signalType.Data(), 
+		       (getKey(resonanceMass,cateIndex)).Data()));
     if (!var) {
       std::cout << "SigParam: requested parameter not found: " 
 		<< paramName << std::endl;
@@ -502,9 +499,9 @@ double SigParam::getParameterError(TString paramName, double resonanceMass,
 /**
    -----------------------------------------------------------------------------
    Get the value of the fit error for a particular parameter of the signal PDF. 
-   @param paramName - the name of the shape parameter of interest.
+   @param paramName - The name of the shape parameter of interest.
    @param cateIndex - The index of the category.
-   @returns - the value of the specified signal parameter. 
+   @returns - The value of the specified signal parameter. 
 */
 double SigParam::getParameterError(TString paramName, int cateIndex) {
   RooRealVar *var = m_ws->var(Form("%s_%sc%d", paramName.Data(),
@@ -522,10 +519,10 @@ double SigParam::getParameterError(TString paramName, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Get the value of a particular parameter of the signal PDF. 
-   @param paramName - the name of the shape parameter of interest.
-   @param resonanceMass - the truth mass of the resonance.
+   @param paramName - The name of the shape parameter of interest.
+   @param resonanceMass - The truth mass of the resonance.
    @param cateIndex - The index of the category.
-   @returns - the value of the specified signal parameter. 
+   @returns - The value of the specified signal parameter. 
 */
 double SigParam::getParameterValue(TString paramName, double resonanceMass, 
 				   int cateIndex) {
@@ -550,9 +547,9 @@ double SigParam::getParameterValue(TString paramName, double resonanceMass,
 /**
    -----------------------------------------------------------------------------
    Get the value of a particular parameter of the signal PDF. 
-   @param paramName - the name of the shape parameter of interest.
+   @param paramName - The name of the shape parameter of interest.
    @param cateIndex - The index of the category.
-   @returns - the value of the specified signal parameter. 
+   @returns - The value of the specified signal parameter. 
 */
 double SigParam::getParameterValue(TString paramName, int cateIndex) {
   RooRealVar *var = m_ws->var(Form("%s_%sc%d", paramName.Data(),
@@ -585,7 +582,7 @@ RooAbsPdf* SigParam::getResonance(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Get the resonance shape for a single category and mass.
-   @param resonanceMass - the truth mass of the resonance
+   @param resonanceMass - The truth mass of the resonance
    @param cateIndex - The index of the category for which we want the PDF.
    @returns - A pointer to the signal PDF.
 */
@@ -602,7 +599,7 @@ RooAbsPdf* SigParam::getSingleResonance(double resonanceMass, int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Get the signal yield for a particular mass in a particular category.
-   @param resonanceMass - the truth mass of the resonance.
+   @param resonanceMass - The truth mass of the resonance.
    @param cateIndex - The index of the category for which we want the PDF.
    @returns - The signal yield for the specified mass in the given category.
 */
@@ -676,8 +673,8 @@ bool SigParam::loadParameterization(TString directory, TString signalType){
 /**
    -----------------------------------------------------------------------------
    Parameterize the resonance shape in all categories.
-   @param function - the functional form of the resonance.
-   @returns - true iff. all fits converge.
+   @param function - The functional form of the resonance.
+   @returns - True iff. all fits converge.
 */
 bool SigParam::makeAllParameterizations(TString function) {
   std::cout << "SigParam: Engage full signal parameterization!" << std::endl;
@@ -695,9 +692,9 @@ bool SigParam::makeAllParameterizations(TString function) {
 /**
    -----------------------------------------------------------------------------
    Parameterize the resonance shape as a function of mass for a single category.
-   @param cateIndex - the index of the category to fit.
-   @param function - the functional form of the resonance.
-   @returns - true iff. all fits converge.
+   @param cateIndex - The index of the category to fit.
+   @param function - The functional form of the resonance.
+   @returns - True iff. all fits converge.
 */
 bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
   std::cout << "SigParam: parameterizing category " << cateIndex << std::endl;
@@ -723,28 +720,46 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
   }
   // If more than 1 mass points, parameterize variables:
   else {
-    m_ws->factory(Form("a_muCBNom_%sc%d[-0.38,-1.0,1.0]",m_signalType.Data(),cateIndex));
-    m_ws->factory(Form("b_muCBNom_%sc%d[-0.06,-0.1,0.1]",m_signalType.Data(),cateIndex));
-    m_ws->factory(Form("c_muCBNom_%sc%d[-0.02,-0.1,0.1]",m_signalType.Data(),cateIndex));
-    m_ws->factory(Form("a_sigmaCBNom_%sc%d[1.54,0.5,4.0]",m_signalType.Data(),cateIndex));
-    m_ws->factory(Form("b_sigmaCBNom_%sc%d[0.90,0.1,2.0]",m_signalType.Data(),cateIndex));
+    m_ws->factory(Form("a_muCBNom_%sc%d[-0.38,-1.0,1.0]",
+		       m_signalType.Data(), cateIndex));
+    m_ws->factory(Form("b_muCBNom_%sc%d[-0.06,-0.1,0.1]", 
+		       m_signalType.Data(), cateIndex));
+    m_ws->factory(Form("c_muCBNom_%sc%d[-0.02,-0.1,0.1]",
+		       m_signalType.Data(), cateIndex));
+    m_ws->factory(Form("a_sigmaCBNom_%sc%d[1.54,0.5,4.0]",
+		       m_signalType.Data(), cateIndex));
+    m_ws->factory(Form("b_sigmaCBNom_%sc%d[0.90,0.1,2.0]",
+		       m_signalType.Data(), cateIndex));
 
     if (function.EqualTo("CBGA")) {
-      m_ws->factory(Form("a_alphaCB_%sc%d[2.2,0.0,4.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("b_alphaCB_%sc%d[0.0,-0.1,0.1]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("nCB_%sc%d[5.0,0.1,10.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("a_sigmaGANom_%sc%d[5.0,0.1,20.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("b_sigmaGANom_%sc%d[1.0,0.1,2.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("fracCB_%sc%d[0.9,0.0,1.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("a_alphaCB_%sc%d[2.2,0.0,4.0]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("b_alphaCB_%sc%d[0.0,-0.1,0.1]", 
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("nCB_%sc%d[5.0,0.1,10.0]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("a_sigmaGANom_%sc%d[5.0,0.1,20.0]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("b_sigmaGANom_%sc%d[1.0,0.1,2.0]", 
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("fracCB_%sc%d[0.9,0.0,1.0]", 
+			 m_signalType.Data(), cateIndex));
     }
     else if (function.EqualTo("DoubleCB")) {
-      m_ws->factory(Form("a_alphaCBLo_%sc%d[2.42,1.0,4.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("b_alphaCBLo_%sc%d[-483,-1000,0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("c_alphaCBLo_%sc%d[380,100,500]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("nCBLo_%sc%d[9.0,0.1,20.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("a_alphaCBHi_%sc%d[2.2,0.0,4.0]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("b_alphaCBHi_%sc%d[0.0,-0.1,0.1]",m_signalType.Data(),cateIndex));
-      m_ws->factory(Form("nCBHi_%sc%d[5.0,0.1,10.0]",m_signalType.Data(),cateIndex));
+      m_ws->factory(Form("a_alphaCBLo_%sc%d[2.42,1.0,4.0]", 
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("b_alphaCBLo_%sc%d[-483,-1000,0]", 
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("c_alphaCBLo_%sc%d[380,100,500]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("nCBLo_%sc%d[9.0,0.1,20.0]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("a_alphaCBHi_%sc%d[2.2,0.0,4.0]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("b_alphaCBHi_%sc%d[0.0,-0.1,0.1]",
+			 m_signalType.Data(), cateIndex));
+      m_ws->factory(Form("nCBHi_%sc%d[5.0,0.1,10.0]",
+			 m_signalType.Data(), cateIndex));
     }
     
     // Loop over mass points, define resonance model in each:
@@ -824,10 +839,10 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
 /**
    -----------------------------------------------------------------------------
    Create the resonance for a single mass point and category. 
-   @param resonanceMass - the truth mass of the resonance
-   @param cateIndex - the index of the category to fit.
-   @param function - the functional form of the resonance.
-   @returns - true iff. all fits converge.
+   @param resonanceMass - The truth mass of the resonance
+   @param cateIndex - The index of the category to fit.
+   @param function - The functional form of the resonance.
+   @returns - True iff. all fits converge.
 */
 bool SigParam::makeSingleResonance(double resonanceMass, int cateIndex,
 				   TString function) {
@@ -882,7 +897,7 @@ bool SigParam::makeSingleResonance(double resonanceMass, int cateIndex,
 /**
    -----------------------------------------------------------------------------
    Parameterizes the signal yields in a category as a function of mH.
-   @param cateIndex - the index of the category to fit.
+   @param cateIndex - The index of the category to fit.
 */
 void SigParam::makeYieldParameterization(int cateIndex) {
   std::cout << "SigParam: Parameterizing the signal yield." << std::endl;
@@ -926,8 +941,8 @@ void SigParam::makeYieldParameterization(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Convert the resonance mass integer to a floating value.
-   @param massInteger - an integer value representing the mass.
-   @returns - the floating value of the mass in GeV.
+   @param massInteger - An integer value representing the mass.
+   @returns - The floating value of the mass in GeV.
 */
 double SigParam::massIntToDouble(int massInteger) {
   return ((double)massInteger) / 1000.0;
@@ -936,8 +951,8 @@ double SigParam::massIntToDouble(int massInteger) {
 /**
    -----------------------------------------------------------------------------
    Convert the resonance mass value to an integer representation. 
-   @param resonanceMass - the value of the mass.
-   @returns - the integer representation of the mass.
+   @param resonanceMass - The value of the mass.
+   @returns - The integer representation of the mass.
 */
 int SigParam::massDoubleToInt(double resonanceMass) {
   return (int)(resonanceMass * 1000.0);
@@ -946,8 +961,8 @@ int SigParam::massDoubleToInt(double resonanceMass) {
 /**
    -----------------------------------------------------------------------------
    Get a list of mass points corresponding to a single category.
-   @param cateIndex - the index of the category.
-   @returns - a vector of mass values.
+   @param cateIndex - The index of the category.
+   @returns - A vector of mass values.
 */
 std::vector<double> SigParam::massPointsForCategory(int cateIndex) {
   // Create a list of mass points in this category.
@@ -964,7 +979,7 @@ std::vector<double> SigParam::massPointsForCategory(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Plot a resonance PDF for all masses defined for one category.
-   @param cateIndex - the index of the category.
+   @param cateIndex - The index of the category.
 */
 void SigParam::plotCategoryResonances(int cateIndex) {
   std::cout << "SigParam: Plot resonances in cate. " << cateIndex << std::endl;
@@ -1020,8 +1035,8 @@ void SigParam::plotCategoryResonances(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Plot a resonance PDF for one value of the resonance mass in one category.
-   @param resonanceMass - the mass value in GeV.
-   @param cateIndex - the index of the category.
+   @param resonanceMass - The mass value in GeV.
+   @param cateIndex - The index of the category.
 */
 void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   std::cout << "SigParam: Plotting resonance at mass " << resonanceMass 
@@ -1067,6 +1082,8 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
 
 /**
    -----------------------------------------------------------------------------
+   Graph the signal yields as function of resonance mass in the given category.
+   @param cateIndex - The index of the category for yield plotting. 
 */
 void SigParam::plotYields(int cateIndex) {
   std::cout << "SigParam: Plotting yields in category " << cateIndex
@@ -1088,8 +1105,8 @@ void SigParam::plotYields(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Create a regularized mass variable that helps minimizers converge.
-   @param resonanceMass - the mass value in GeV.
-   @returns - the regularized mass mR = (m-100)/100;
+   @param resonanceMass - The mass value in GeV.
+   @returns - The regularized mass mR = (m-100)/100;
 */
 double SigParam::regularizedMass(double resonanceMass) {
   return ((resonanceMass - 100.0) / 100.0);
@@ -1098,8 +1115,7 @@ double SigParam::regularizedMass(double resonanceMass) {
 /**
    -----------------------------------------------------------------------------
    Create the resonance shape corresponding to a single mass point in a single
-   analysis category. The shape will be stored in the workspace under the name
-   "sigPdf_%s%s", where %s%s is given by the signal type and getKey() method.
+   analysis category. The signal will be stored in the class workspace. 
    @param resonanceMass - the truth mass of the resonance.
    @param cateIndex - the index of the category to fit.
    @param function - the functional form of the resonance.
@@ -1199,7 +1215,7 @@ void SigParam::saveYieldList() {
 /**
    -----------------------------------------------------------------------------
    Set the output directory for files.
-   @param directory - the new input/output directory for files.
+   @param directory - The new input/output directory for files.
 */
 void SigParam::setDirectory(TString directory) {
   TString simpSigName = m_signalType;
@@ -1215,13 +1231,14 @@ void SigParam::setDirectory(TString directory) {
   
   // Create the output directory if it doesn't exist:
   system(Form("mkdir -vp %s", m_directory.Data()));
+  std::cout << "SigParam: I/O directory set to " << directory << std::endl;
 }
 
 /**
    -----------------------------------------------------------------------------
    Make the parameters of a PDF free or fixed.
-   @param pdf - the PDF containing the parameters to be freed/fixed.
-   @param isConstant - true iff setting the parameters constant.
+   @param pdf - The PDF containing the parameters to be freed/fixed.
+   @param isConstant - True iff setting the parameters constant.
 */
 void SigParam::setParamsConstant(RooAbsPdf* pdf, bool isConstant) {
   RooArgSet *currArgs = pdf->getVariables();
@@ -1235,7 +1252,7 @@ void SigParam::setParamsConstant(RooAbsPdf* pdf, bool isConstant) {
 /**
    -----------------------------------------------------------------------------
    Set the signal type to avoid collisions when using many production modes.
-   @param signalType - the type of signal. 
+   @param signalType - The type of signal. 
 */
 void SigParam::setSignalType(TString signalType) {
   if (signalType == "") {
@@ -1244,4 +1261,5 @@ void SigParam::setSignalType(TString signalType) {
   else {
     m_signalType = Form("%s_", signalType.Data());
   }
+  std::cout << "SigParam: Signal type set to " << signalType << std::endl;
 }

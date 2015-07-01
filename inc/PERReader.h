@@ -31,6 +31,7 @@ class PERReader {
   int getSign(TString name, int cateIndex);
   int getNumberOfSources();
   TString getNameOfSource(int indexPER);
+  std::vector<TString> listSources();
   
  private:
   

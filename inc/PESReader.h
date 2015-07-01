@@ -32,6 +32,7 @@ class PESReader {
   int getSign(TString name, int cateIndex);
   int getNumberOfSources();
   TString getNameOfSource(int sourceIndex);
+  std::vector<TString> listSources();
   
  private:
   

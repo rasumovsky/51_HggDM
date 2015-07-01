@@ -14,6 +14,7 @@
 #include "PERReader.h"
 
 /**
+   -----------------------------------------------------------------------------
    Initialize the PERReader class.
    @param inputFileName - the file location containing PER sys values.
    @param nCategories - the number of analysis categories.
@@ -45,6 +46,7 @@ PERReader::PERReader(TString inputFileName, int nCategories) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Finds the index associated with a particular PER sys source.
    @param name - the name of the PER sys.
    @returns - the index of the PER sys.
@@ -59,6 +61,7 @@ int PERReader::sourceNameToIndex(TString name) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the value of a particular PER sys. in a given category.
    @param name - the name of the PER sys.
    @param cateIndex - the index of the category.
@@ -69,6 +72,7 @@ double PERReader::getValue(TString name, int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Returns the sign of the PER sys.
    @param name - the name of the PER sys.
    @param cateIndex - the index of the category.
@@ -83,6 +87,7 @@ int PERReader::getSign(TString name, int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Returns the number of PER sys. sources that have been defined.
    @returns - the number of PER sys. sources.
 */
@@ -91,10 +96,19 @@ int PERReader::getNumberOfSources() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Retrieve the name of a source from its index.
    @param sourceIndex - the index of the PER sys.
    @returns - the name of the PER sys.
 */
 TString PERReader::getNameOfSource(int indexPER) {
   return nameListPER[indexPER];
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Retrieve the vector of PES systematics names.
+*/
+std::vector<TString> PERReader::listSources() {
+  return nameListPER;
 }

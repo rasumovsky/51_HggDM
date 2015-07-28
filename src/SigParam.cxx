@@ -619,6 +619,10 @@ double SigParam::getYieldInCategory(double resonanceMass, int cateIndex) {
     return (*m_ws->var(Form("sigYield_%s%s",m_signalType.Data(),
 			    currKey.Data()))).getVal();
   }
+  // Then try to get directly from dataset normalization:
+  else if ((m_ws->data(Form("data_%s",currKey.Data())))) {
+    return (*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries();
+  }
   // Or return error message:
   else {
     std::cout << "SigParam: requested yield not found." << std::endl;
@@ -720,15 +724,15 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
   }
   // If more than 1 mass points, parameterize variables:
   else {
-    m_ws->factory(Form("a_muCBNom_%sc%d[-0.38,-1.0,1.0]",
+    m_ws->factory(Form("a_muCBNom_%sc%d[-0.0,-2.0,2.0]",
 		       m_signalType.Data(), cateIndex));
-    m_ws->factory(Form("b_muCBNom_%sc%d[-0.06,-0.1,0.1]", 
+    m_ws->factory(Form("b_muCBNom_%sc%d[-0.1,-0.5,0.5]", 
 		       m_signalType.Data(), cateIndex));
-    m_ws->factory(Form("c_muCBNom_%sc%d[-0.02,-0.1,0.1]",
+    m_ws->factory(Form("c_muCBNom_%sc%d[-0.02,-0.5,0.5]",
 		       m_signalType.Data(), cateIndex));
-    m_ws->factory(Form("a_sigmaCBNom_%sc%d[1.54,0.5,4.0]",
+    m_ws->factory(Form("a_sigmaCBNom_%sc%d[0.0,-10.0,10.0]",
 		       m_signalType.Data(), cateIndex));
-    m_ws->factory(Form("b_sigmaCBNom_%sc%d[0.90,0.1,2.0]",
+    m_ws->factory(Form("b_sigmaCBNom_%sc%d[3.90,0.01,10.0]",
 		       m_signalType.Data(), cateIndex));
 
     if (function.EqualTo("CBGA")) {
@@ -738,9 +742,9 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
 			 m_signalType.Data(), cateIndex));
       m_ws->factory(Form("nCB_%sc%d[5.0,0.1,10.0]",
 			 m_signalType.Data(), cateIndex));
-      m_ws->factory(Form("a_sigmaGANom_%sc%d[5.0,0.1,20.0]",
+      m_ws->factory(Form("a_sigmaGANom_%sc%d[5.0,-1.0,20.0]",
 			 m_signalType.Data(), cateIndex));
-      m_ws->factory(Form("b_sigmaGANom_%sc%d[1.0,0.1,2.0]", 
+      m_ws->factory(Form("b_sigmaGANom_%sc%d[1.8,0.1,4.0]", 
 			 m_signalType.Data(), cateIndex));
       m_ws->factory(Form("fracCB_%sc%d[0.9,0.0,1.0]", 
 			 m_signalType.Data(), cateIndex));
@@ -756,7 +760,7 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
 			 m_signalType.Data(), cateIndex));
       m_ws->factory(Form("a_alphaCBHi_%sc%d[2.2,0.0,4.0]",
 			 m_signalType.Data(), cateIndex));
-      m_ws->factory(Form("b_alphaCBHi_%sc%d[0.0,-0.1,0.1]",
+      m_ws->factory(Form("b_alphaCBHi_%sc%d[0.0,-0.5,0.5]",
 			 m_signalType.Data(), cateIndex));
       m_ws->factory(Form("nCBHi_%sc%d[5.0,0.1,10.0]",
 			 m_signalType.Data(), cateIndex));
@@ -870,7 +874,7 @@ bool SigParam::makeSingleResonance(double resonanceMass, int cateIndex,
 		       currKey.Data(), resonanceMass, 0.9*resonanceMass,
 		       1.1*resonanceMass));
     m_ws->factory(Form("sigmaCBNom_%s%s[%f,%f,%f]", m_signalType.Data(), 
-		       currKey.Data(), 2.0, 0.01, 40.0));
+		       currKey.Data(), 2.0, 0.01, 200.0));
     m_ws->factory(Form("alphaCBLo_%s%s[%f,%f,%f]", m_signalType.Data(), 
 		       currKey.Data(), 1.5, 1.0, 2.5));
     if (!m_ws->var(Form("nCBLo_%sc%d", m_signalType.Data(), cateIndex))) {
@@ -978,44 +982,120 @@ std::vector<double> SigParam::massPointsForCategory(int cateIndex) {
 
 /**
    -----------------------------------------------------------------------------
+*/
+RooDataSet* SigParam::plotDivision(RooAbsData *data, RooAbsPdf *pdf,
+				   double xMin, double xMax, double xBins,
+				   double &chi2) {
+  double minOrigin = m_yy->getMin();
+  double maxOrigin = m_yy->getMax();
+  double nEvents = data->sumEntries();
+  
+  chi2 = 0.0;
+  
+  RooDataSet *result = new RooDataSet("dataSub", "dataSub",
+				      RooArgSet(*m_yy,*m_wt), 
+				      RooFit::WeightVar(*m_wt));
+  double increment = (xMax - xMin ) / ((double)xBins);
+  
+  m_yy->setRange("fullRange", xMin, xMax);
+  RooAbsReal* intTot
+    = (RooAbsReal*)pdf->createIntegral(RooArgSet(*m_yy),
+				       RooFit::NormSet(*m_yy), 
+				       RooFit::Range("fullRange"));
+  double valTot = intTot->getVal();
+  
+  for (double i_m = xMin; i_m < xMax; i_m += increment) {
+    m_yy->setRange(Form("range%2.2f",i_m), i_m, (i_m+increment));
+    RooAbsReal* intCurr
+      = (RooAbsReal*)pdf->createIntegral(RooArgSet(*m_yy), 
+					 RooFit::NormSet(*m_yy), 
+					 RooFit::Range(Form("range%2.2f",i_m)));
+    double valCurr = intCurr->getVal();
+    
+    double currMass = i_m + (0.5*increment);
+    double currPdfWeight = nEvents * (valCurr / valTot);
+    TString varName = m_yy->GetName();
+    double currDataWeight
+      = data->sumEntries(Form("%s>%f&&%s<%f",varName.Data(),i_m,varName.Data(),(i_m+increment)));
+    
+    double currWeight = currDataWeight - currPdfWeight;
+    m_yy->setVal(currMass);
+    m_wt->setVal(currWeight);
+    result->add(RooArgSet(*m_yy,*m_wt), currWeight);
+    
+    chi2 += ((currDataWeight-currPdfWeight) * (currDataWeight-currPdfWeight));
+  }
+  chi2 = chi2 / (xBins-1.0);
+  m_yy->setMin(minOrigin);
+  m_yy->setMax(maxOrigin);
+  
+  return result;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Plot a resonance PDF for all masses defined for one category.
    @param cateIndex - The index of the category.
 */
 void SigParam::plotCategoryResonances(int cateIndex) {
   std::cout << "SigParam: Plot resonances in cate. " << cateIndex << std::endl;
   
+  TCanvas *can = new TCanvas("can", "can", 800, 800);
+  can->cd();
+  TPad *pad1 = new TPad( "pad1", "pad1", 0.00, 0.33, 1.00, 1.00 );
+  TPad *pad2 = new TPad( "pad2", "pad2", 0.00, 0.00, 1.00, 0.33 );
+  pad1->SetBottomMargin(0.00001);
+  pad1->SetBorderMode(0);
+  pad2->SetTopMargin(0.00001);
+  pad2->SetBottomMargin(0.4);
+  pad2->SetBorderMode(0);
+  
+  can->cd();
+  pad1->Draw();
+  pad2->Draw();
+
+    
   // Get a list of the resonance masses:
   std::vector<double> currMassPoints = massPointsForCategory(cateIndex);
   int xMin = currMassPoints[0] - 10;
   int xMax = currMassPoints[currMassPoints.size()-1] + 10;
-  int xBins = 20 + xMax - xMin;
-  TCanvas *can = new TCanvas("can", "can", 800, 600);
-  can->cd();
+  //int xBins = 20 + xMax - xMin;
+  int xBins = 50;
+  
   RooPlot* frame = m_yy->frame(RooFit::Bins(xBins), RooFit::Range(xMin, xMax));
   frame->SetYTitle("Events/0.5 GeV");
-  frame->SetXTitle("M_{#gamma#gamma} [GeV]");
-    
+  frame->SetXTitle("Mass [GeV]");
+  
+  double totChi2 = 0.0;
+  double totDOF = 0.0;
+  
   // Loop over mass points, drawing data and PDF for each.
   for (int i_m = 0; i_m < (int)currMassPoints.size(); i_m++) {
+    pad1->cd();
+    RooAbsData *currData = NULL;
+    RooAbsPdf *currPdf = NULL;
+    
     TString currKey = getKey(currMassPoints[i_m], cateIndex);
     double currN = (*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries();
     if ((m_ws->data(Form("data_%s",currKey.Data())))) {
-      (*m_ws->data(Form("data_%s",currKey.Data()))).plotOn(frame);
+      currData = (m_ws->data(Form("data_%s",currKey.Data())));
+      currData->plotOn(frame);
     }
     else {
       std::cout << "SigParam: data for plotting undefined." << std::endl;
       return;
     }
-
+    
     if ((m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)))) {
       (*m_ws->var("mResonance")).setVal(currMassPoints[i_m]);
-      (*m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)))
-	.plotOn(frame, RooFit::LineColor(4));
+      currPdf = (m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)));
+      currPdf->plotOn(frame, RooFit::LineColor(4));
     }
     else if ((m_ws->pdf(Form("sigPdf_%s%s",
 			      m_signalType.Data(),currKey.Data())))) {
-      (*m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),currKey.Data())))
-	.plotOn(frame, RooFit::LineColor(4));
+      currPdf
+	= (m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),currKey.Data())));
+      currPdf->plotOn(frame, RooFit::LineColor(4));
     }
     else {
       std::cout << "SigParam: resonance for plotting undefined." << std::endl;
@@ -1024,10 +1104,47 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     
     if (i_m == 0) frame->Draw();
     else frame->Draw("SAME");
+    
+    pad2->cd();
+    double currChi2 = 0.0;
+    RooDataSet* subData = plotDivision(currData, currPdf, xMin, xMax, xBins,
+				       currChi2);
+    RooPlot* frame2 = m_yy->frame(RooFit::Bins(xBins),RooFit::Range(xMin,xMax));
+    subData->plotOn(frame2);
+    totChi2 += (currChi2 * xBins);
+    totDOF += xBins;
+    
+    if (i_m == 0) {
+      
+      frame2->SetLineWidth(2);
+      frame2->GetXaxis()->SetTitle("Mass [GeV]");
+      frame2->GetXaxis()->SetTitleOffset(0.95);
+      frame2->GetYaxis()->SetTitleOffset(0.7);
+      frame2->GetXaxis()->SetTitleSize(0.1);
+      frame2->GetYaxis()->SetTitleSize(0.1);
+      frame2->GetXaxis()->SetLabelSize(0.1);
+      frame2->GetYaxis()->SetLabelSize(0.1);
+      frame2->GetYaxis()->SetNdivisions(4);
+      frame2->GetYaxis()->SetTitle("Data - Fit");
+      
+      frame2->Draw();
+      TLine *line = new TLine();
+      line->SetLineStyle(1);
+      line->SetLineWidth(1);
+      line->SetLineColor(kRed);
+      line->DrawLine(xMin, 0, xMax, 0);
+    }
+    frame2->Draw("SAME");
+    
   }
   
+  pad1->cd();
   TLatex text; text.SetNDC(); text.SetTextColor(1);
-  text.DrawLatex(0.75, 0.88, Form("category %d", cateIndex));
+  text.DrawLatex(0.72, 0.88, Form("category %d", cateIndex));
+  
+  double chi2OverNDOF = totChi2 / totDOF;
+  //text.DrawLatex(0.72, 0.82, Form("#chi^{2}/D.O.F = %2.2f", chi2OverNDOF));
+  
   can->Print(Form("%s/plot_paramResonance_c%d.eps", 
 		  m_directory.Data(), cateIndex));
 }
@@ -1042,15 +1159,33 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   std::cout << "SigParam: Plotting resonance at mass " << resonanceMass 
 	    << " in category " << cateIndex << std::endl;
   
-  TCanvas *can = new TCanvas("can","can",800,600);
+  TCanvas *can = new TCanvas("can","can",800,800);
   can->cd();
-  double rMin = 0.9*resonanceMass;
-  double rMax = 1.1*resonanceMass;
-  RooPlot* frame = m_yy->frame(RooFit::Bins(40), RooFit::Range(rMin,rMax));
+  TPad *pad1 = new TPad( "pad1", "pad1", 0.00, 0.33, 1.00, 1.00 );
+  TPad *pad2 = new TPad( "pad2", "pad2", 0.00, 0.00, 1.00, 0.33 );
+  pad1->SetBottomMargin(0.00001);
+  pad1->SetBorderMode(0);
+  pad2->SetTopMargin(0.00001);
+  pad2->SetBottomMargin(0.4);
+  pad2->SetBorderMode(0);
+  can->cd();
+  pad1->Draw();
+  pad2->Draw();
+  pad1->cd();
+  
+  double rMin = 0.5*resonanceMass;
+  double rMax = 1.5*resonanceMass;
+  int rBins = 40;
+  RooPlot* frame = m_yy->frame(RooFit::Bins(rBins), RooFit::Range(rMin,rMax));
   frame->SetYTitle("Events/0.5 GeV");
-  frame->SetXTitle("M_{#gamma#gamma} [GeV]");
+  frame->SetXTitle("Mass [GeV]");
+  
+  RooAbsData *currData = NULL;
+  RooAbsPdf *currPdf = NULL;
+  
   TString currKey = getKey(resonanceMass,cateIndex);
   if ((m_ws->data(Form("data_%s",currKey.Data())))) {
+    currData = (m_ws->data(Form("data_%s",currKey.Data())));
     (*m_ws->data(Form("data_%s",currKey.Data()))).plotOn(frame);
   }
   else {
@@ -1061,12 +1196,17 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   // First check to see if parameterized shape exists:
   if ((m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)))) {
     (*m_ws->var("mResonance")).setVal(resonanceMass);
-    (*m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)))
-      .plotOn(frame, RooFit::LineColor(2));
+    currPdf = (m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)));
+    //(*m_ws->pdf(Form("sigPdf_%sc%d",m_signalType.Data(),cateIndex)))
+    //.plotOn(frame, RooFit::LineColor(2));
+    currPdf->plotOn(frame, RooFit::LineColor(2));
   }
   else if((m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),currKey.Data())))){
-    (*m_ws->pdf(Form("sigPdf_%s%s", m_signalType.Data(), currKey.Data())))
-      .plotOn(frame, RooFit::LineColor(2));
+    currPdf
+      = (m_ws->pdf(Form("sigPdf_%s%s",m_signalType.Data(),currKey.Data())));
+    //(*m_ws->pdf(Form("sigPdf_%s%s", m_signalType.Data(), currKey.Data())))
+    //.plotOn(frame, RooFit::LineColor(2));
+    currPdf->plotOn(frame, RooFit::LineColor(2));
   }
   else {
     std::cout << "SigParam: resonance for plotting undefined." << std::endl;
@@ -1075,7 +1215,38 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   frame->Draw();
 
   TLatex text; text.SetNDC(); text.SetTextColor(1);
-  text.DrawLatex(0.18, 0.88, Form("category %d", cateIndex));
+  text.DrawLatex(0.2, 0.88, Form("category %d", cateIndex));
+  
+  pad2->cd();
+  
+  double currChi2 = 0.0;
+  RooDataSet* subData = plotDivision(currData, currPdf, rMin, rMax, rBins,
+				     currChi2);
+  RooPlot* frame2 = m_yy->frame(RooFit::Bins(rBins),RooFit::Range(rMin,rMax));
+  frame2->SetLineWidth(2);
+  frame2->GetXaxis()->SetTitle("Mass [GeV]");
+  frame2->GetXaxis()->SetTitleOffset(0.95);
+  frame2->GetYaxis()->SetTitleOffset(0.7);
+  frame2->GetXaxis()->SetTitleSize(0.1);
+  frame2->GetYaxis()->SetTitleSize(0.1);
+  frame2->GetXaxis()->SetLabelSize(0.1);
+  frame2->GetYaxis()->SetLabelSize(0.1);
+  frame2->GetYaxis()->SetNdivisions(4);
+  frame2->GetYaxis()->SetTitle("Data - Fit");
+  
+  
+  subData->plotOn(frame2);
+  frame2->Draw();
+  TLine *line = new TLine();
+  line->SetLineStyle(1);
+  line->SetLineWidth(1);
+  line->SetLineColor(kRed);
+  line->DrawLine(rMin, 0, rMax, 0);
+ 
+  pad1->cd();
+  
+  //text.DrawLatex(0.2, 0.82, Form("#chi^{2}/D.O.F = %2.2f", currChi2));
+  
   can->Print(Form("%s/plot_singleRes_m%2.2f_c%d.eps", 
 		  m_directory.Data(), resonanceMass, cateIndex));
 }
@@ -1090,16 +1261,16 @@ void SigParam::plotYields(int cateIndex) {
 	    << std::endl;
   
   // Get a list of the mass points in the category:
-  TCanvas *can = new TCanvas("can", "can", 800, 600);
-  can->cd();
+  TCanvas *canY = new TCanvas("can", "can", 800, 600);
+  canY->cd();
   yieldFunc[cateIndex]->SetLineColor(kBlue);
   yieldGraph[cateIndex]->Draw("AP");
   yieldFunc[cateIndex]->Draw("LSAME");
   TLatex text; text.SetNDC(); text.SetTextColor(1);
   text.DrawLatex(0.4, 0.88, Form("%s signal, category %d",
-				  m_signalType.Data(), cateIndex));
-  can->Print(Form("%s/plot_paramYield_%sc%d.eps", m_directory.Data(),
-		  m_signalType.Data(), cateIndex));
+				 m_signalType.Data(), cateIndex));
+  canY->Print(Form("%s/plot_paramYield_%sc%d.eps", m_directory.Data(),
+		   m_signalType.Data(), cateIndex));
 }
 
 /**
@@ -1155,7 +1326,9 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
   
   // Define the yield:
   if (!function.Contains("Parameterized")) {
-    m_ws->factory(Form("sigYield_%s%s[%f]",m_signalType.Data(),currKey.Data(),(*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries()));
+    double yieldValue
+      = (*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries();
+    m_ws->factory(Form("sigYield_%s%s[%f]",m_signalType.Data(),currKey.Data(),yieldValue));
   }
   
   std::cout << "SigParam: Resonance succesfully added." << std::endl;

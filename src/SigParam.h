@@ -10,6 +10,10 @@
 //  Accessors access class data without modifying the member objects, while   //
 //  mutators modify the state of the class (and also sometimes return data.   //
 //                                                                            //
+//  Private accessors and mutators are marked as such because they depend on  //
+//  a number of internal settings that are hidden to the user. All of the     //
+//  functionalities are available through proper use of the public methods.   //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SigParam_h
@@ -25,10 +29,12 @@
 #include <vector>
 
 // ROOT includes:
+#include "TAxis.h"
 #include "TCanvas.h"
 #include "TF1.h"
 #include "TFile.h"
 #include "TLatex.h"
+#include "TLine.h"
 #include "TROOT.h"
 #include "TString.h"
 #include "TTree.h"
@@ -111,6 +117,8 @@ class SigParam {
   void makeYieldParameterization(int cateIndex);
   void plotCategoryResonances(int cateIndex);
   void plotSingleResonance(double resonanceMass, int cateIndex);
+  RooDataSet* plotDivision(RooAbsData *data, RooAbsPdf *pdf, double xMin,
+			   double xMax, double xBins, double& chi2);
   void plotYields(int cateIndex);
   void saveAll();
   void saveParameterization();

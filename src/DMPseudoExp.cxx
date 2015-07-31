@@ -21,13 +21,13 @@
 
 #include "DMPseudoExp.h"
 
-/**
+/*
    -----------------------------------------------------------------------------
    Generates a pseudo-experiment dataset. 
    @param w - input workspace containing the statistical model
    @param mc - the modelconfig object containing the statistical model
    @param seed - the random seed for data generation.
-*/
+
 void createPseudoData(RooWorkspace *w, ModelConfig *mc, int seed) {
   std::cout << "DMPseudoExp: Create pseudodata with seed " << seed << std::endl;
   
@@ -99,6 +99,7 @@ void createPseudoData(RooWorkspace *w, ModelConfig *mc, int seed) {
   // Import into the workspace:
   w->import(*toyData);
 }
+*/
 
 /**
    -----------------------------------------------------------------------------
@@ -192,6 +193,8 @@ int main(int argc, char **argv) {
     // Load model, data, etc. from workspace:
     TFile inputFile(copiedFile, "read");
     RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");    
+    
+    /*
     ModelConfig *mc = (ModelConfig*)workspace->obj("modelConfig");
     TString dataName = (DMAnalysis::doBlind) ? "asimovDataMu0" : "obsData";
     if (options.Contains("FixBkgParam")) dataName = "asimovDataMu0";
@@ -218,12 +221,15 @@ int main(int argc, char **argv) {
     
     // Create a pseudo-dataset:
     createPseudoData(workspace, mc, seed);
-    numEvents = workspace->data("toyData")->sumEntries();
-    
     firstPOI->setConstant(false);
-    
+    */
+        
     DMTestStat *dmts = new DMTestStat(jobName, DMSignal, cateScheme, "new",
 				      workspace);
+    
+    RooDataSet *newToyData
+      = dmts->createPseudoData(seed, inputMuDM, 1, options.Contains("FixMu"));
+    numEvents = workspace->data("toyData")->sumEntries();
     
     // Mu = 0 fits:
     nllMu0 = dmts->getFitNLL("toyData", 0, true, muDMVal);

@@ -4,7 +4,7 @@
 //                                                                            //
 //  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
-//  Date: 19/04/2015                                                          //
+//  Date: 30/07/2015                                                          //
 //                                                                            //
 //  This class allows the user to calculate p0, CL, and CLs based on an input //
 //  workspace.                                                                //
@@ -29,58 +29,56 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
 	    << newOptions << "\n\t" << std::endl;
   
   // Assign input variables: 
-  jobName = newJobName;
-  DMSignal = newDMSignal;
-  options = newOptions;
-  allGoodFits = true;
+  m_jobName = newJobName;
+  m_DMSignal = newDMSignal;
+  m_cateScheme = newCateScheme;
+  m_options = newOptions;
   
+  // Start with a clean class:
+  clearData();
+    
   // Use Asimov data if the analysis is blind.
-  dataForObs = (DMAnalysis::doBlind) ? "asimovDataMu0" : "obsData";
-  dataForExp = "asimovDataMu0";
-  
-  TFile inputFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		       DMAnalysis::masterOutput.Data(), jobName.Data(),
-		       DMSignal.Data()), "read");
+  m_dataForObs = (DMAnalysis::doBlind) ? "asimovDataMu0" : "obsData";
+  m_dataForExp = "asimovDataMu0";
   
   if (newWorkspace == NULL) {
-    if (inputFile.IsOpen()) {
+    m_inputFile
+      = new TFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
+		       DMAnalysis::masterOutput.Data(), m_jobName.Data(),
+		       m_DMSignal.Data()), "read");
+    
+    if (m_inputFile->IsOpen()) {
       std::cout << "DMTestStat: Loading workspace." << std::endl;
-      workspace = (RooWorkspace*)inputFile.Get("combinedWS");
+      m_workspace = (RooWorkspace*)m_inputFile->Get("combinedWS");
     }
     else {
       std::cout << "DMTestStat: Error loading workspace." << std::endl;
       
       // Load the workspace from the nominal location.
-      dmw = new DMWorkspace(newJobName, newDMSignal, newCateScheme, "FromFile");
-      workspace = dmw->getCombinedWorkspace();
+      DMWorkspace *m_dmws = new DMWorkspace(newJobName, newDMSignal, 
+					   m_cateScheme, "FromFile");
+      m_workspace = m_dmws->getCombinedWorkspace();
     }
   }
   // Use the workspace passed to the class constructor:
-  else {
-    workspace = newWorkspace;
-  }
+  else m_workspace = newWorkspace;
   
-  mc = (ModelConfig*)workspace->obj("modelConfig");
+  m_mc = (ModelConfig*)m_workspace->obj("modelConfig");
   
   // Map storing all calculations:
-  calculatedValues.clear();
+  m_calculatedValues.clear();
   
   // Create output directories:
-  outputDir = Form("%s/%s/TestStat/", DMAnalysis::masterOutput.Data(), 
-		   jobName.Data());
-  system(Form("mkdir -vp %s",outputDir.Data()));
-  system(Form("mkdir -vp %s/CL/",outputDir.Data()));
-  system(Form("mkdir -vp %s/p0/",outputDir.Data()));
+  m_outputDir = Form("%s/%s/TestStat/", DMAnalysis::masterOutput.Data(), 
+		     m_jobName.Data());
+  system(Form("mkdir -vp %s", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/CL/", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/p0/", m_outputDir.Data()));
 
   // Make new or load old values:
-  if (options.Contains("FromFile")) {
-    loadStatsFromFile();
-  }
-  //else {
-  //  calculateNewCL();
-  //  calculateNewP0();
-  //}
+  if (m_options.Contains("FromFile")) loadStatsFromFile();
   
+  // Finished instantiating the test statistic class. 
   std::cout << "DMTestStat: Initialized Successfully!" << std::endl;
   return;
 }
@@ -96,7 +94,7 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
 double DMTestStat::accessValue(TString testStat, bool observed, int N) {
   TString currMapKey = getKey(testStat, observed, N);
   // Check that corresponding entry exists:
-  if (mapValueExists(currMapKey)) return calculatedValues[currMapKey];
+  if (mapValueExists(currMapKey)) return m_calculatedValues[currMapKey];
   else return 0;
 }
 
@@ -109,14 +107,14 @@ void DMTestStat::calculateNewCL() {
   
   // Calculate observed qmu: 
   double muHatObs = 0.0;
-  double nllMu1Obs = getFitNLL(dataForObs, 1.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL(dataForObs, 1.0, false, muHatObs);
+  double nllMu1Obs = getFitNLL(m_dataForObs, 1.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(m_dataForObs, 1.0, false, muHatObs);
   double obsQMu = getQMuFromNLL(nllMu1Obs, nllMuHatObs, muHatObs, 1);
   
   // Calculate expected qmu:
   double muHatExp = 0.0;
-  double nllMu1Exp = getFitNLL(dataForExp, 1.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL(dataForExp, 0.0, false, muHatExp);
+  double nllMu1Exp = getFitNLL(m_dataForExp, 1.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(m_dataForExp, 0.0, false, muHatExp);
   double expQMu = getQMuFromNLL(nllMu1Exp, nllMuHatExp, muHatExp, 1);
   
   // Calculate CL:
@@ -129,8 +127,9 @@ void DMTestStat::calculateNewCL() {
   
   // Write CL values to file:
   ofstream textCL;
-  textCL.open(Form("%s/CL/CL_values_%s.txt",outputDir.Data(),DMSignal.Data()));
-  textCL << DMSignal << " " << obsCL << " " << expCLn2 << " " << expCLn1
+  textCL.open(Form("%s/CL/CL_values_%s.txt", m_outputDir.Data(), 
+		   m_DMSignal.Data()));
+  textCL << m_DMSignal << " " << obsCL << " " << expCLn2 << " " << expCLn1
 	 << " " << expCL << " " << expCLp1 << " " << expCLp2 << std::endl;
   textCL.close();
   
@@ -142,26 +141,26 @@ void DMTestStat::calculateNewCL() {
   std::cout << "  expected CL -2s = " << expCLn2 << std::endl;
   std::cout << "  observed CL = " << obsCL << std::endl;
   std::cout << " " << std::endl;
-  if (allGoodFits) std::cout << "All good fits? True" << std::endl;
+  if (m_allGoodFits) std::cout << "All good fits? True" << std::endl;
   else std::cout << "All good fits? False" << std::endl;
   cout << " " << endl;
   if (obsQMu < 0) std::cout << "WARNING! obsQMu < 0 : " << obsQMu << std::endl;
   if (expQMu < 0) std::cout << "WARNING! expQMu < 0 : " << expQMu << std::endl;
   
   // save CL and CLs for later access:
-  calculatedValues[getKey("CL",0,-2)] = expCLn2;
-  calculatedValues[getKey("CL",0,-1)] = expCLn1;
-  calculatedValues[getKey("CL",0,0)] = expCL;
-  calculatedValues[getKey("CL",0,1)] = expCLp1;
-  calculatedValues[getKey("CL",0,2)] = expCLp2;
-  calculatedValues[getKey("CL",1,0)] = obsCL;
+  m_calculatedValues[getKey("CL",0,-2)] = expCLn2;
+  m_calculatedValues[getKey("CL",0,-1)] = expCLn1;
+  m_calculatedValues[getKey("CL",0,0)] = expCL;
+  m_calculatedValues[getKey("CL",0,1)] = expCLp1;
+  m_calculatedValues[getKey("CL",0,2)] = expCLp2;
+  m_calculatedValues[getKey("CL",1,0)] = obsCL;
   
-  calculatedValues[getKey("CLs",0,-2)] = getCLsFromCL(expCLn2);
-  calculatedValues[getKey("CLs",0,-1)] = getCLsFromCL(expCLn1);
-  calculatedValues[getKey("CLs",0,0)] = getCLsFromCL(expCL);
-  calculatedValues[getKey("CLs",0,1)] = getCLsFromCL(expCLp1);
-  calculatedValues[getKey("CLs",0,2)] = getCLsFromCL(expCLp2);
-  calculatedValues[getKey("CLs",1,0)] = getCLsFromCL(obsCL);
+  m_calculatedValues[getKey("CLs",0,-2)] = getCLsFromCL(expCLn2);
+  m_calculatedValues[getKey("CLs",0,-1)] = getCLsFromCL(expCLn1);
+  m_calculatedValues[getKey("CLs",0,0)] = getCLsFromCL(expCL);
+  m_calculatedValues[getKey("CLs",0,1)] = getCLsFromCL(expCLp1);
+  m_calculatedValues[getKey("CLs",0,2)] = getCLsFromCL(expCLp2);
+  m_calculatedValues[getKey("CLs",1,0)] = getCLsFromCL(obsCL);
 }
 
 /**
@@ -173,14 +172,14 @@ void DMTestStat::calculateNewP0() {
   
   // Calculate observed q0: 
   double muHatObs = 0.0;
-  double nllMu0Obs = getFitNLL(dataForObs, 0.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL(dataForObs, 0.0, false, muHatObs);
+  double nllMu0Obs = getFitNLL(m_dataForObs, 0.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(m_dataForObs, 0.0, false, muHatObs);
   double obsQ0 = getQ0FromNLL(nllMu0Obs, nllMuHatObs, muHatObs);
   
   // Calculate expected q0:
   double muHatExp = 0.0;
-  double nllMu0Exp = getFitNLL(dataForExp, 0.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL(dataForExp, 0.0, false, muHatExp);
+  double nllMu0Exp = getFitNLL(m_dataForExp, 0.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(m_dataForExp, 0.0, false, muHatExp);
   double expQ0 = getQ0FromNLL(nllMu0Exp, nllMuHatExp, muHatExp);
   
   // Calculate p0 from q0:
@@ -189,8 +188,9 @@ void DMTestStat::calculateNewP0() {
   
   // Write p0 values to file:
   ofstream textP0;
-  textP0.open(Form("%s/p0/p0_values_%s.txt",outputDir.Data(),DMSignal.Data()));
-  textP0 << DMSignal << " " << expP0 << " " << obsP0 << std::endl;
+  textP0.open(Form("%s/p0/p0_values_%s.txt", m_outputDir.Data(), 
+		   m_DMSignal.Data()));
+  textP0 << m_DMSignal << " " << expP0 << " " << obsP0 << std::endl;
   textP0.close();
   
   // Print summary:
@@ -204,8 +204,8 @@ void DMTestStat::calculateNewP0() {
   }
   
   // Save p0 for later access:
-  calculatedValues[getKey("p0",1,0)] = obsP0;
-  calculatedValues[getKey("p0",0,0)] = expP0;
+  m_calculatedValues[getKey("p0", 1, 0)] = obsP0;
+  m_calculatedValues[getKey("p0", 0, 0)] = expP0;
 }
 
 /**
@@ -213,12 +213,191 @@ void DMTestStat::calculateNewP0() {
    Clears all data stored by the class, but does not modify the workspace.
 */
 void DMTestStat::clearData() {
-  allGoodFits = true;
-  calculatedValues.clear();
-  namesGlobs.clear();
-  namesNP.clear();
-  valuesGlobs.clear();
-  valuesNP.clear();
+  m_allGoodFits = true;
+  m_calculatedValues.clear();
+  m_namesGlobs.clear();
+  m_namesNP.clear();
+  m_valuesGlobs.clear();
+  m_valuesNP.clear();
+  
+  //m_nBins = 240;
+  
+  m_doSaveSnapshot = false;
+  m_doPlot = false;
+  m_plotDir = "";
+
+  clearFitParamSettings();
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Clears all specifications for parameter values during fits.
+*/
+void DMTestStat::clearFitParamSettings() {
+  m_setParamConsts.clear();
+  m_setParamNames.clear();
+  m_setParamVals.clear();
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Create Asimov data for the statistical model, using a fit to observed data
+   for the shape and normalizaiton of the background.
+   @param cateWS - the current category workspace.
+   @param valMuDM - the value of the dark matter signal strength to use.
+   @param valMuSM - the value of the SM Higgs signal strength to use.
+   @returns - A RooDataSet with Asimov data, also imports in workspace. 
+*/
+RooDataSet* DMTestStat::createAsimovData(int valMuDM, int valMuSM) {
+  std::cout << "DHWorkspace: Creating Asimov data, mu_DM = " << valMuDM
+	    << " and mu_SM = " << valMuSM << std::endl;
+  
+  // Set mu_DH and mu_SH to the specified values:
+  RooRealVar *poi = m_workspace->var("mu_DM");
+  double initialMuDM = poi->getVal();
+  double initialMuSM = m_workspace->var("mu_SM")->getVal();
+  poi->setVal(valMuDM);
+  poi->setConstant(true);
+  m_workspace->var("mu_SM")->setVal(valMuSM);
+  m_workspace->var("mu_SM")->setConstant(true);
+    
+  //RooDataSet *asimovData = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_workspace->pdf("combinedPdf"), *m_workspace->set("observables"));
+  RooDataSet *asimovData = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_mc->GetPdf(), *m_mc->GetObservables());
+  
+  TString asimovName = Form("asimovDataMu%d_%s", valMuDM, m_DMSignal.Data());
+  asimovData->SetNameTitle(asimovName, asimovName);
+  
+  m_workspace->import(*asimovData);
+  m_workspace->var("mu_DM")->setVal(initialMuDM);
+  m_workspace->var("mu_SM")->setVal(initialMuSM);
+  m_workspace->var("mu_DM")->setConstant(false);
+  m_workspace->var("mu_SM")->setConstant(true);
+  std::cout << "DMWorkspace: Asimov data has " << asimovData->sumEntries() 
+	    << " entries" << std::endl;
+  return asimovData;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Create an Asimov dataset using the name.
+   @param datasetName - the name of the Asimov data set.
+   @returns - A RooDataSet with Asimov data, also imports in workspace.
+*/
+RooDataSet* DMTestStat::createAsimovData(TString datasetName) {
+  if (datasetName.Contains("Mu1")) return createAsimovData(1, 1);
+  else if (datasetName.Contains("Mu0")) return createAsimovData(0, 1);
+  else {
+    std::cout << "DMTestStat: Asimov data creation error for " << datasetName
+	      << std::endl;
+    return NULL;
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Create a pseudo-dataset with a given value of DM and SM signal strength.
+   @param seed - the random seed for dataset generation.
+   @param valMuDM - the value of the DM signal strength.
+   @param valMuSM - the value of the SM signal strength.
+   @returns - a pseudo-dataset.
+*/
+RooDataSet* DMTestStat::createPseudoData(int seed, int valMuDM, int valMuSM,
+					 bool fixMu) {
+  std::cout << "DMTestStat: Create pseudodata with seed = " << seed 
+	    << "muDM = " << valMuDM << " muSM = " << valMuSM << std::endl;
+  
+  // Load the original parameters from profiling:
+  m_workspace->loadSnapshot("paramsOrigin");
+  
+  RooSimultaneous* combPdf = (RooSimultaneous*)m_mc->GetPdf();
+  RooArgSet* nuisanceParameters = (RooArgSet*)m_mc->GetNuisanceParameters();
+  RooArgSet* globalObservables = (RooArgSet*)m_mc->GetGlobalObservables();
+  RooArgSet* observables = (RooArgSet*)m_mc->GetObservables();
+  RooArgSet* originValsNP
+    = (RooArgSet*)m_mc->GetNuisanceParameters()->snapshot();
+  RooRealVar* firstPOI = (RooRealVar*)m_mc->GetParametersOfInterest()->first();
+  
+  RooRandom::randomGenerator()->SetSeed(seed);
+  statistics::constSet(nuisanceParameters, true);
+  statistics::constSet(globalObservables, false);
+  
+  map<string,RooDataSet*> toyDataMap; 
+  RooCategory *categories = (RooCategory*)m_workspace->obj("categories");
+  TIterator *cateIter = combPdf->indexCat().typeIterator();
+  RooCatType *cateType = NULL;
+  RooDataSet *dataTemp[20];
+  
+  // Loop over all channels:
+  int index = 0;
+  // Previously this was commented and similar line below was uncommented
+  statistics::randomizeSet(combPdf, globalObservables, seed); 
+  statistics::constSet(globalObservables, true);
+  
+  //numEventsPerCate.clear();
+    
+  // Set mu_DH and mu_SH to the specified values:
+  RooRealVar *poi = m_workspace->var("mu_DM");
+  double initialMuDM = poi->getVal();
+  double initialMuSM = m_workspace->var("mu_SM")->getVal();
+  poi->setVal(valMuDM);
+  poi->setConstant(fixMu);
+  m_workspace->var("mu_SM")->setVal(valMuSM);
+  m_workspace->var("mu_SM")->setConstant(true);
+  
+  // Check if other parameter settings have been specified for toys:
+  // WARNING! This overrides the randomization settings above!
+  for (int i_p = 0; i_p < (int)m_setParamNames.size(); i_p++) {
+    std::cout << "i_p=" << i_p << ", " << m_setParamNames[i_p] << std::endl;
+    m_workspace->var(m_setParamNames[i_p])->setVal(m_setParamVals[i_p]);
+    m_workspace->var(m_setParamNames[i_p])->setConstant(m_setParamConsts[i_p]);
+  }
+  
+  // Iterate over the categories:
+  while ((cateType=(RooCatType*) cateIter->Next())) {
+    RooAbsPdf *currPDF = combPdf->getPdf(cateType->GetName());
+    RooArgSet *currObs = currPDF->getObservables(observables);
+    RooArgSet *currGlobs = currPDF->getObservables(globalObservables);
+    RooRealVar *t = (RooRealVar*)currObs->first();
+    
+    //statistics::randomizeSet(currPDF, currGlobs, -1);
+    //statistics::constSet(currGlobs, true);
+    
+    // If you want to bin the pseudo-data (speeds up calculation):
+    if (m_options.Contains("Binned")) {
+      currPDF->setAttribute("PleaseGenerateBinned");
+      TIterator *iterObs = currObs->createIterator();
+      RooRealVar *currObs = NULL;
+      // Bin each of the observables:
+      while ((currObs = (RooRealVar*)iterObs->Next())) {
+	currObs->setBins(120);
+      }
+      dataTemp[index]
+	= (RooDataSet*)currPDF->generate(*currObs, AutoBinned(true),
+					 Extended(currPDF->canBeExtended()),
+					 GenBinned("PleaseGenerateBinned"));
+    }
+    // Construct unbinned pseudo-data by default:
+    else {
+      dataTemp[index] = (RooDataSet*)currPDF->generate(*currObs,Extended(true));
+    }
+    
+    toyDataMap[(std::string)cateType->GetName()] = dataTemp[index];
+    //numEventsPerCate.push_back((double)dataTemp[index]->sumEntries());
+    index++;
+  }
+  
+  // Import the new data into the workspace:
+  RooDataSet* pseudoData = new RooDataSet("toyData", "toyData", *observables, 
+					  RooFit::Index(*categories),
+					  RooFit::Import(toyDataMap));
+  
+  // release nuisance parameters:
+  statistics::constSet(nuisanceParameters, false);
+  
+  // Import into the workspace:
+  m_workspace->import(*pseudoData);
+  
+  return pseudoData;
 }
 
 /**
@@ -227,7 +406,7 @@ void DMTestStat::clearData() {
    @returns - true iff. all of the fits have been successfully convergent.
 */
 bool DMTestStat::fitsAllConverged() { 
-  return allGoodFits;
+  return m_allGoodFits;
 }
 
 /**
@@ -329,14 +508,28 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   std::cout << "DMTestStat: getFitNLL(" << datasetName << ", " << muVal
 	    << ", " << fixMu << ")" << std::endl;
     
-  RooAbsPdf* combPdf = mc->GetPdf();
-  RooArgSet* nuisanceParameters = (RooArgSet*)mc->GetNuisanceParameters();
-  RooArgSet* globalObservables = (RooArgSet*)mc->GetGlobalObservables();
-  workspace->loadSnapshot("paramsOrigin");
-  RooArgSet* origValNP = (RooArgSet*)workspace->getSnapshot("paramsOrigin");
-  RooArgSet* poi = (RooArgSet*)mc->GetParametersOfInterest();
+  RooAbsPdf* combPdf = m_mc->GetPdf();
+  RooArgSet* nuisanceParameters = (RooArgSet*)m_mc->GetNuisanceParameters();
+  RooArgSet* globalObservables = (RooArgSet*)m_mc->GetGlobalObservables();
+  m_workspace->loadSnapshot("paramsOrigin");
+  RooArgSet* origValNP = (RooArgSet*)m_workspace->getSnapshot("paramsOrigin");
+  RooArgSet* poi = (RooArgSet*)m_mc->GetParametersOfInterest();
   RooRealVar* firstpoi = (RooRealVar*)poi->first();
-  RooAbsData *data = workspace->data(datasetName);
+   RooArgSet* poiAndNuis = new RooArgSet();
+  poiAndNuis->add(*nuisanceParameters);
+  poiAndNuis->add(*poi);
+    
+  // Look for dataset, and create if non-existent and Asimov. 
+  RooAbsData *data = NULL;
+  if (m_workspace->data(datasetName)) data = m_workspace->data(datasetName);
+  else if (datasetName.Contains("asimovData")) {
+    data = createAsimovData(datasetName);
+  }
+  else {
+    std::cout << "DMTestStat: Error! Requested data not available: " 
+	      << datasetName << std::endl;
+    exit(0);
+  }
   
   // release nuisance parameters after fit and recovery the default values
   statistics::constSet(nuisanceParameters, false, origValNP);
@@ -346,8 +539,15 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   firstpoi->setVal(muVal);
   firstpoi->setConstant(fixMu);
   
+  // Check if parameter settings have been specified during fit:
+  for (int i_p = 0; i_p < (int)m_setParamNames.size(); i_p++) {
+    std::cout << "i_p=" << i_p << ", " << m_setParamNames[i_p] << std::endl;
+    m_workspace->var(m_setParamNames[i_p])->setVal(m_setParamVals[i_p]);
+    m_workspace->var(m_setParamNames[i_p])->setConstant(m_setParamConsts[i_p]);
+  }
+  
   // Iterate over SM mu values and fix all to 1:
-  RooArgSet* muConstants = (RooArgSet*)workspace->set("muSMConstants");
+  RooArgSet* muConstants = (RooArgSet*)m_workspace->set("muSMConstants");
   TIterator *iterMuConst = muConstants->createIterator();
   RooRealVar *currMuConst = NULL;
   while ((currMuConst = (RooRealVar*)iterMuConst->Next())) {
@@ -360,32 +560,45 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   int status = 0; 
   RooNLLVar* varNLL = (RooNLLVar*)combPdf->createNLL(*data, Constrain(*nuisanceParameters), Extended(combPdf->canBeExtended()));
   statistics::minimize(status, varNLL, "", NULL, false);
-  if (status != 0) {
-    allGoodFits = false;
+  if (status != 0) m_allGoodFits = false;
+  
+  // Save a snapshot if requested:
+  if (m_doSaveSnapshot) {
+    TString muDMValue = fixMu ? (Form("%d",(int)muVal)) : "Free";
+    m_workspace->saveSnapshot(Form("paramsProfileMu%s", muDMValue.Data()),
+			      *poiAndNuis);
   }
-  //profiledMu = fixMu ? muVal : firstpoi->getVal();
+  
+  // Plot the fit result if the user has set an output directory for plots:
+  if (m_doPlot) {
+    if (fixMu && ((int)muVal) == 1) plotFits("Mu1", datasetName);
+    else if (fixMu && ((int)muVal) == 0) plotFits("Mu0", datasetName);
+    else plotFits("MuFree", datasetName);
+  }
+  
+  // Save the NLL and mu from profiling:
   profiledMu = firstpoi->getVal();
   double nllValue = varNLL->getVal();
   delete varNLL;
   
   // Save names and values of nuisance parameters:
-  namesNP.clear();
-  valuesNP.clear();
+  m_namesNP.clear();
+  m_valuesNP.clear();
   TIterator *iterNuis = nuisanceParameters->createIterator();
   RooRealVar *currNuis = NULL;
   while ((currNuis = (RooRealVar*)iterNuis->Next())) {
-    namesNP.push_back((std::string)currNuis->GetName());
-    valuesNP.push_back(currNuis->getVal());
+    m_namesNP.push_back((std::string)currNuis->GetName());
+    m_valuesNP.push_back(currNuis->getVal());
   }
   
   // Save names and values of global observables:
-  namesGlobs.clear();
-  valuesGlobs.clear();
+  m_namesGlobs.clear();
+  m_valuesGlobs.clear();
   TIterator *iterGlobs = globalObservables->createIterator();
   RooRealVar *currGlob = NULL;
   while ((currGlob = (RooRealVar*)iterGlobs->Next())) {
-    namesGlobs.push_back((std::string)currGlob->GetName());
-    valuesGlobs.push_back(currGlob->getVal());
+    m_namesGlobs.push_back((std::string)currGlob->GetName());
+    m_valuesGlobs.push_back(currGlob->getVal());
   }
   
   // release nuisance parameters after fit and recovery the default values
@@ -398,7 +611,7 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
    Get a vector of global observable names from the most recent fit.
 */
 std::vector<std::string> DMTestStat::getGlobsNames() {
-  return namesGlobs;
+  return m_namesGlobs;
 }
 
 /**
@@ -406,7 +619,7 @@ std::vector<std::string> DMTestStat::getGlobsNames() {
    Get a vector of global observable values from the most recent fit.
 */
 std::vector<double> DMTestStat::getGlobsValues() {
-  return valuesGlobs;
+  return m_valuesGlobs;
 }
 
 /**
@@ -433,7 +646,7 @@ TString DMTestStat::getKey(TString testStat, bool observed, int N) {
    Get a vector of nuisance parameter names from the most recent fit.
 */
 std::vector<std::string> DMTestStat::getNPNames() {
-  return namesNP;
+  return m_namesNP;
 }
 
 /**
@@ -441,7 +654,7 @@ std::vector<std::string> DMTestStat::getNPNames() {
    Get a vector of nuisance parameter values from the most recent fit.
 */
 std::vector<double> DMTestStat::getNPValues() {
-  return valuesNP;
+  return m_valuesNP;
 }
 
 /**
@@ -549,11 +762,13 @@ void DMTestStat::loadStatsFromFile() {
   
   // Load input p0 file:
   ifstream textP0;
-  textP0.open(Form("%s/p0/p0_values_%s.txt",outputDir.Data(),DMSignal.Data()));
+  textP0.open(Form("%s/p0/p0_values_%s.txt", m_outputDir.Data(),
+		   m_DMSignal.Data()));
   
   // Load input CL file:
   ifstream textCL;
-  textCL.open(Form("%s/CL/CL_values_%s.txt",outputDir.Data(),DMSignal.Data()));
+  textCL.open(Form("%s/CL/CL_values_%s.txt", m_outputDir.Data(), 
+		   m_DMSignal.Data()));
   
   // If the input files don't exist, create from scratch:
   if (!textCL || !textP0) {
@@ -568,8 +783,8 @@ void DMTestStat::loadStatsFromFile() {
     textP0 >> inName >> inExpP0 >> inObsP0;
     textP0.close();
   }
-  calculatedValues[getKey("p0",1,0)] = inObsP0;
-  calculatedValues[getKey("p0",0,0)] = inExpP0;
+  m_calculatedValues[getKey("p0",1,0)] = inObsP0;
+  m_calculatedValues[getKey("p0",0,0)] = inExpP0;
   
   // Read CL values:
   double inObsCL, inExpCLn2, inExpCLn1, inExpCL, inExpCLp1, inExpCLp2;
@@ -580,33 +795,211 @@ void DMTestStat::loadStatsFromFile() {
   textCL.close();
   
   // save CL and CLs for later access:
-  calculatedValues[getKey("CL",0,-2)] = inExpCLn2;
-  calculatedValues[getKey("CL",0,-1)] = inExpCLn1;
-  calculatedValues[getKey("CL",0,0)] = inExpCL;
-  calculatedValues[getKey("CL",0,1)] = inExpCLp1;
-  calculatedValues[getKey("CL",0,2)] = inExpCLp2;
-  calculatedValues[getKey("CL",1,0)] = inObsCL;
+  m_calculatedValues[getKey("CL", 0, -2)] = inExpCLn2;
+  m_calculatedValues[getKey("CL", 0, -1)] = inExpCLn1;
+  m_calculatedValues[getKey("CL", 0, 0)] = inExpCL;
+  m_calculatedValues[getKey("CL", 0, 1)] = inExpCLp1;
+  m_calculatedValues[getKey("CL", 0, 2)] = inExpCLp2;
+  m_calculatedValues[getKey("CL", 1, 0)] = inObsCL;
   
-  calculatedValues[getKey("CLs",0,-2)] = getCLsFromCL(inExpCLn2);
-  calculatedValues[getKey("CLs",0,-1)] = getCLsFromCL(inExpCLn1);
-  calculatedValues[getKey("CLs",0,0)] = getCLsFromCL(inExpCL);
-  calculatedValues[getKey("CLs",0,1)] = getCLsFromCL(inExpCLp1);
-  calculatedValues[getKey("CLs",0,2)] = getCLsFromCL(inExpCLp2);
-  calculatedValues[getKey("CLs",1,0)] = getCLsFromCL(inObsCL);
+  m_calculatedValues[getKey("CLs", 0, -2)] = getCLsFromCL(inExpCLn2);
+  m_calculatedValues[getKey("CLs", 0, -1)] = getCLsFromCL(inExpCLn1);
+  m_calculatedValues[getKey("CLs", 0, 0)] = getCLsFromCL(inExpCL);
+  m_calculatedValues[getKey("CLs", 0, 1)] = getCLsFromCL(inExpCLp1);
+  m_calculatedValues[getKey("CLs", 0, 2)] = getCLsFromCL(inExpCLp2);
+  m_calculatedValues[getKey("CLs", 1, 0)] = getCLsFromCL(inObsCL);
 }
 
 /**
    -----------------------------------------------------------------------------
-    Check whether the specified category has been defined.
-    @param cateScheme - the name of the categorization.
-    @returns - true iff the categorization has been defined. 
+   Plot the fits produced by the specified model.
+   @param fitType - the type of fit.
+   @param datasetName - the name of the profiled dataset.
+*/
+void DMTestStat::plotFits(TString fitType, TString datasetName) {
+  
+  TCanvas *can = new TCanvas("can", "can", 800, 800);
+  
+  // loop over categories:
+  int nCategories = DMAnalysis::getNumCategories(m_cateScheme);
+  for (int i_c = 0; i_c < nCategories; i_c++) {
+    TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
+    RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
+    m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data()))
+      ->plotOn(frame);
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame, Components((*m_workspace->pdf("sigPdfDM_"+currCateName))), 
+	      LineColor(6));
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame, Components((*m_workspace->pdf("sigPdfSM_"+currCateName))), 
+	      LineColor(3));
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame, Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
+	      LineColor(4));
+    (*m_workspace->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
+    
+    //double chi2 = frame->chiSquare();
+    frame->SetYTitle("Events / GeV");
+    frame->SetXTitle("M_{#gamma#gamma} [GeV]");
+    frame->Draw();
+    
+    TLatex text; text.SetNDC(); text.SetTextColor(1);
+    text.DrawLatex(0.2, 0.81, Form("Category %d", i_c));
+    text.DrawLatex(0.2, 0.87, Form("Signal %s", m_DMSignal.Data()));
+    TH1F *histDM = new TH1F("histDM", "histDM", 1, 0, 1);
+    TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
+    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
+    TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
+    histDM->SetLineColor(6);
+    histSM->SetLineColor(3);
+    histBkg->SetLineColor(4);
+    histSig->SetLineColor(2);
+    TLegend leg(0.61, 0.63, 0.89, 0.77);
+    leg.SetFillColor(0);
+    leg.SetTextSize(0.04);
+    leg.SetBorderSize(0);
+    leg.AddEntry(histDM, "Dark matter", "l");
+    leg.AddEntry(histSM, "SM Higgs", "l");
+    leg.AddEntry(histBkg, "Non-resonant", "l");
+    leg.AddEntry(histSig, "Sig. + bkg.", "l");
+    leg.Draw("SAME");
+    can->Print(Form("%s/fitPlot_%s_%s_%s.eps", m_plotDir.Data(),
+		    m_DMSignal.Data(), fitType.Data(), currCateName.Data()));
+  }
+  delete can;
+}
+
+/*
+   -----------------------------------------------------------------------------
+   Plot the fits produced by the specified model.
+   @param fitType - the type of fit.
+   @param datasetName - the name of the dataset to plot.
+void DMTestStat::plotFits(TString fitType, TString datasetName) {
+  std::cout << "DMTestStat: Plot final fits for " << fitType << std::endl;
+  std::cout << "DEBUG1" << std::endl;
+  TCanvas *can = new TCanvas("can", "can", 800, 800);
+  // loop over categories:
+  int nCategories = DMAnalysis::getNumCategories(m_cateScheme, m_anaType);
+  for (int i_c = 0; i_c < nCategories; i_c++) {
+    can->Clear();
+    std::cout << "DEBUG2" << std::endl;
+    TString currCateName
+      = DMAnalysis::cateIndexToName(m_cateScheme, m_anaType, i_c);
+    TString obsName = m_anaType.EqualTo("NonRes") ? 
+      Form("m_yy_%s", currCateName.Data()) : 
+      Form("m_bbyy_%s", currCateName.Data());
+    RooPlot* frame =  (*m_workspace->var(obsName)).frame(50);
+    TString cutName = Form("categories_%s==categories_%s::%s", m_anaType.Data(),
+			   m_anaType.Data(), currCateName.Data());
+    std::cout << "DEBUG3" << std::endl;
+    RooDataSet *currData
+      =(RooDataSet*)(m_workspace->data(Form("%s", datasetName.Data())));
+    std::cout << "DEBUG3.1" << std::endl;
+    //currData->plotOn(frame, RooFit::Cut(cutName));
+    
+    // Everything below here was commented out for debugging.
+    //RooCategory *categories
+    //=(RooCategory*)(m_workspace->var(Form("categories_%s",m_anaType.Data())));
+    m_workspace->Print("v");
+    std::cout << "DEBUG3.2" << std::endl;
+    RooArgSet tempSet = m_workspace->allCats();
+    tempSet.Print("v");
+    std::cout << "DEBUG3.3" << std::endl;
+    RooCategory *categories
+      =(RooCategory*)(m_workspace->cat(Form("categories_%s",m_anaType.Data())));
+
+    std::cout << "DEBUG4" << std::endl;
+    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
+      .plotOn(frame, Components((*m_workspace->pdf("sigPdfDH_"+currCateName))),
+	      LineColor(6));
+    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
+      .plotOn(frame, Components((*m_workspace->pdf("sigPdfSH_"+currCateName))),
+	      LineColor(3));
+    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
+      .plotOn(frame, Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
+	      LineColor(4));
+    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
+      .plotOn(frame, LineColor(2));
+    
+    std::cout << "DEBUG5" << std::endl;
+    //double chi2 = frame->chiSquare();
+    frame->SetYTitle("Events / GeV");
+    frame->SetXTitle("M_{#gamma#gamma} [GeV]");
+    frame->Draw();
+    
+    TLatex text; text.SetNDC(); text.SetTextColor(1);
+    text.DrawLatex(0.2, 0.81, currCateName);
+    TH1F *histDH = new TH1F("histDH", "histDH", 1, 0, 1);
+    TH1F *histSH = new TH1F("histSH", "histSH", 1, 0, 1);
+    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
+    TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
+    histDH->SetLineColor(6);
+    histSH->SetLineColor(3);
+    histBkg->SetLineColor(4);
+    histSig->SetLineColor(2);
+    TLegend leg(0.61, 0.63, 0.89, 0.77);
+    leg.SetFillColor(0);
+    leg.SetTextSize(0.04);
+    leg.SetBorderSize(0);
+    leg.AddEntry(histDH, "Di-Higgs", "l");
+    leg.AddEntry(histSH, "Single Higgs", "l");
+    leg.AddEntry(histBkg, "Non-resonant", "l");
+    leg.AddEntry(histSig, "Sum", "l");
+    leg.Draw("SAME");
+    can->Print(Form("%s/fitPlot_%s_%s_%s.eps", m_plotDir.Data(),
+		    m_DHSignal.Data(), fitType.Data(), currCateName.Data()));
+    
+  }
+  delete can;
+}
+*/
+
+/**
+   -----------------------------------------------------------------------------
+   Check whether the specified value has been stored in the value map.
+   @param mapKey - the key for the map of values.
+   @returns - true iff the categorization has been defined. 
 */
 bool DMTestStat::mapValueExists(TString mapKey) {
 
   // Checks if there is a key corresponding to mapKey in the map: 
-  bool nonExistent = (calculatedValues.find(mapKey) == calculatedValues.end());
+  bool nonExistent = (m_calculatedValues.find(mapKey) ==
+		      m_calculatedValues.end());
   if (nonExistent) {
     std::cout << "DMTestStat: key " << mapKey << " not defined!" << std::endl;
   }
   return !nonExistent;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Choose whether or not to save snapshots from profiling data.
+   @param doSaveSnapshot - true iff you want to save snapshots in future fits.
+*/
+void DMTestStat::saveSnapshots(bool doSaveSnapshot) {
+  m_doSaveSnapshot = doSaveSnapshot;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set an output directory and enable plotting.
+   @param directory - the output directory path.
+*/
+void DMTestStat::setPlotDirectory(TString directory) {
+  m_plotDir = directory;
+  m_doPlot = true;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the named parameter to a certain value and either fix or free it.
+   @param paramName - The name of the fit parameter.
+   @param paramVal - The new value of the fit parameter.
+   @param doSetConstant - True iff the parameter should be set constant. 
+*/
+void DMTestStat::setParams(TString paramName, double paramVal,
+			   bool doSetConstant) {
+  m_setParamConsts.push_back(doSetConstant);
+  m_setParamNames.push_back(paramName);
+  m_setParamVals.push_back(paramVal);
 }

@@ -13,24 +13,24 @@
 
 #include "BkgModel.h"
 #include "CommonHead.h"
-#include "RooFitHead.h"
-#include "RooStatsHead.h"
 #include "CommonFunc.h"
-#include "statistics.h"
-#include "PESReader.h"
-#include "PERReader.h"
+#include "Config.h"
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
 #include "DMTestStat.h"
+#include "PESReader.h"
+#include "PERReader.h"
+#include "RooFitHead.h"
+#include "RooStatsHead.h"
 #include "SigParam.h"
 #include "SigParamInterface.h"
+#include "statistics.h"
 
 class DMWorkspace {
 
  public:
   
-  DMWorkspace(TString newJobName, TString newDMSignal, TString newCateScheme, 
-	      TString newOptions);
+  DMWorkspace(TString newConfigFile, TString newDMSignal, TString newOptions);
   virtual ~DMWorkspace() {};
   
   bool fitsAllConverged();
@@ -57,9 +57,8 @@ class DMWorkspace {
   //			  double &profiledMu);
 
   // Member variables:
-  TString m_jobName;
+  TString m_configFile;
   TString m_DMSignal;
-  TString m_cateScheme;
   TString m_options;
   TString m_outputDir;
 
@@ -68,9 +67,9 @@ class DMWorkspace {
   TString m_dataToPlot;
 
   // Helper classes:
+  Config *m_config;
   PESReader *m_pes;
   PERReader* m_per;
-  //DMSigParam *currSigParam;
   SigParamInterface *m_spi;
 
   // Updated for each call to createNewCategoryWS():
@@ -79,7 +78,7 @@ class DMWorkspace {
   
   // The Final RooWorkspace and ModelConfig:
   RooWorkspace *m_combinedWS;
-  ModelConfig *m_mConfig;
+  ModelConfig *m_modelConfig;
   
   bool m_allGoodFits;
  

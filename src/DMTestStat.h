@@ -16,6 +16,7 @@
 
 #include "CommonHead.h"
 #include "CommonFunc.h"
+#include "Config.h"
 #include "RooFitHead.h"
 #include "statistics.h"
 #include "DMWorkspace.h"
@@ -24,8 +25,8 @@ class DMTestStat {
   
  public:
   
-  DMTestStat(TString newJobName, TString newDMSignal, TString newCateScheme,
-	     TString newOptions, RooWorkspace *newWorkspace);
+  DMTestStat(TString newConfigFile, TString newDMSignal, TString newOptions, 
+	     RooWorkspace *newWorkspace);
   virtual ~DMTestStat() {};
   
   double accessValue(TString testStat, bool observed, int N);
@@ -84,7 +85,10 @@ class DMTestStat {
 
   // Pointer to the input file:
   TFile *m_inputFile;
-  
+
+  // The configuration of the analysis:
+  Config *m_config;
+
   // Check whether all fits successful:
   bool m_allGoodFits;
   

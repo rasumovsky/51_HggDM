@@ -12,8 +12,10 @@
 #ifndef DMToyAnalysis_h
 #define DMToyAnalysis_h
 
+// Package libraries:
 #include "CommonHead.h"
 #include "CommonFunc.h"
+#include "Config.h"
 #include "DMToyTree.h"
 #include "DMTestStat.h"
 #include "RooFitHead.h"
@@ -23,8 +25,7 @@ class DMToyAnalysis {
 
  public:
   
-  DMToyAnalysis(TString newJobName, TString newDMSignal, TString newCateScheme,
-		TString newOptions);
+  DMToyAnalysis(TString newConfigFile, TString newDMSignal);
   virtual ~DMToyAnalysis() {};
   
   void fillToyHistograms(int muValue, DMToyTree *toyTree);
@@ -44,39 +45,35 @@ class DMToyAnalysis {
   TString printStatName(TString statistic);
   
   // Private member variables:
-  TString jobName;
-  TString DMSignal;
-  TString cateScheme;
-  TString options;
-  TString outputDir;
+  TString m_outputDir;
   
   // Classes for statistics access:
-  DMTestStat *dmts;
-  RooWorkspace *workspace;
+  DMTestStat *m_dmts;
+  RooWorkspace *m_workspace;
   
   // Test statistic binning:
-  int nBins;
-  int binMin;
-  int binMax;
+  int m_nBins;
+  int m_binMin;
+  int m_binMax;
   
   // Histograms:
-  TH1F *hAsymptotic;
-  TH1F *hMuProfiled[2];
-  TH1F *hQ0[2];
-  TH1F *hQMu[2];
-  TH1F *hQMuTilde[2];
-  TH1F *hNuisMu0[20][2];
-  TH1F *hNuisMu1[20][2];
-  TH1F *hNuisMuFree[20][2];
-  TH1F *hGlobsMu0[20][2];
-  TH1F *hGlobsMu1[20][2];
-  TH1F *hGlobsMuFree[20][2];
+  TH1F *m_hAsymptotic;
+  TH1F *m_hMuProfiled[2];
+  TH1F *m_hQ0[2];
+  TH1F *m_hQMu[2];
+  TH1F *m_hQMuTilde[2];
+  TH1F *m_hNuisMu0[20][2];
+  TH1F *m_hNuisMu1[20][2];
+  TH1F *m_hNuisMuFree[20][2];
+  TH1F *m_hGlobsMu0[20][2];
+  TH1F *m_hGlobsMu1[20][2];
+  TH1F *m_hGlobsMuFree[20][2];
   
   // Parameter data:
-  std::vector<std::string> namesGlobs;
-  std::vector<std::string> namesNuisParams;
-  int nGlobs;
-  int nNuisParams;
+  std::vector<std::string> m_namesGlobs;
+  std::vector<std::string> m_namesNuis;
+  int m_nGlobs;
+  int m_nNuis;
   
 };
 

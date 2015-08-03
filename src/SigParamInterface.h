@@ -12,18 +12,19 @@
 #ifndef SigParamInterface_h
 #define SigParamInterface_h
 
-// C++ includes:
+// C++ libraries:
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 
-// ROOT includes:
+// ROOT libraries:
 #include "TString.h"
 
-// Package includes:
+// Package libraries:
 #include "CommonFunc.h"
+#include "Config.h"
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
 #include "SigParam.h"
@@ -34,8 +35,7 @@ class SigParamInterface
  public:
   
   // Constructor / destructor:
-  SigParamInterface(TString newJobName, TString newCateScheme,
-		    TString newOptions);
+  SigParamInterface(TString newConfigFile, TString newOptions);
   virtual ~SigParamInterface() {};
   
   // Accessors:
@@ -48,15 +48,14 @@ class SigParamInterface
  private:
   
   // Member variables:
-  TString jobName;
-  TString cateScheme;
-  TString options;
-  TString outputDir;
+  TString m_configFile;
+  TString m_outputDir;
   
-  TString failedSigParam;
-  bool signalsOK;
+  TString m_failedSigParam;
+  bool m_signalsOK;
   
-  std::map<TString,SigParam*> sigMap;
+  std::map<TString,SigParam*> m_sigMap;
+
 };
 
 #endif

@@ -12,7 +12,7 @@
 #ifndef DMMassPoints_h
 #define DMMassPoints_h
 
-// C++ includes:
+// C++ libraries:
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -20,13 +20,14 @@
 #include <vector>
 #include <string>
 
-// ROOT includes:
+// ROOT libraries:
 #include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
 #include "TString.h"
 
-// Package includes:
+// Package libraries:
+#include "Config.h"
 #include "CommonFunc.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
@@ -40,8 +41,8 @@ class DMMassPoints {
   
  public:
   
-  DMMassPoints(TString newJobName, TString newSampleName, TString newCateScheme,
-	       TString newOptions, RooRealVar *newObservable);
+  DMMassPoints(TString newConfigFile, TString newSampleName, TString newOptions,
+	       RooRealVar *newObservable);
   virtual ~DMMassPoints() {};
   
   // Accessors:
@@ -59,15 +60,13 @@ class DMMassPoints {
   void loadMassPointsFromFile();
   
   // Member variables:
-  TString jobName;
-  TString sampleName;
-  TString cateScheme;
-  TString options;
+  TString m_sampleName;
+  TString m_outputDir;
+  bool m_isWeighted;
   
-  TString outputDir;
-  bool isWeighted;
+  Config *m_config;
   
-  RooDataSet *cateData[20];
+  RooDataSet *m_cateData[20];
   RooRealVar *m_yy;
 
 };

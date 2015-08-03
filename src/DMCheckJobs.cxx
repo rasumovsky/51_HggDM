@@ -12,13 +12,12 @@
 
 #include "DMCheckJobs.h"
 
-using namespace DMAnalysis;
 /**
    Initialize the class for checking job statuses.
-   @param newJobName - the name of the analysis job.
+   @param configFileName - the name of the config file for the analysis.
 */
-DMCheckJobs::DMCheckJobs(TString newJobName) {
-  jobName = newJobName;
+DMCheckJobs::DMCheckJobs(TString configFileName) {
+  m_config = new Config(configFileName);
   updateJobStatus("DMWorkspace");
   updateJobStatus("DMTestStat");
   updateJobStatus("DMMuLimit");
@@ -27,7 +26,7 @@ DMCheckJobs::DMCheckJobs(TString newJobName) {
 
 /**
    Get the number of jobs that need to be resubmitted.
-   @param jobType - the type of job (DMWorkspace, DMTestStat).
+   @param jobType - the type of job (DMWorkspace, DMTestStat, DMMuLimit).
    @returns - the number of jobs that failed the first attempt.
 */
 int DMCheckJobs::getNumberToResubmit(TString jobType) {
@@ -42,15 +41,9 @@ int DMCheckJobs::getNumberToResubmit(TString jobType) {
 */
 std::vector<TString> DMCheckJobs::getResubmitList(TString jobType) {
   std::vector<TString> result; result.clear();
-  if (jobType.EqualTo("DMWorkspace")) {
-    result = listDMWorkspace;
-  }
-  else if (jobType.EqualTo("DMTestStat")) {
-    result = listDMTestStat;
-  }
-  else if (jobType.EqualTo("DMMuLimit")) {
-    result = listDMMuLimit;
-  }
+  if (jobType.EqualTo("DMWorkspace")) result = m_listDMWorkspace;
+  else if (jobType.EqualTo("DMTestStat")) result = m_listDMTestStat;
+  else if (jobType.EqualTo("DMMuLimit")) result = m_listDMMuLimit;
   return result;
 }
 
@@ -62,45 +55,48 @@ std::vector<TString> DMCheckJobs::getResubmitList(TString jobType) {
 void DMCheckJobs::updateJobStatus(TString jobType) {
   
   // Save names of failed jobs:
-  listDMWorkspace.clear();
-  listDMTestStat.clear();
-  listDMMuLimit.clear();
+  m_listDMWorkspace.clear();
+  m_listDMTestStat.clear();
+  m_listDMMuLimit.clear();
   
   // Then loop over submissions to see whether output files exist:
-  for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
-    
+  std::vector<TString> sigDMModes = m_config->getStr("sigDMModes");
+  for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
     TString currDMSignal = sigDMModes[i_DM];
     
     TString fileName;
     TString fullName;
     if (jobType.EqualTo("DMWorkspace")) {
       fileName = Form("workspaceDM_%s.root", currDMSignal.Data());
-      fullName = Form("%s/%s/DMWorkspace/rootfiles/%s", masterOutput.Data(),
-		      jobName.Data(), fileName.Data());
+      fullName = Form("%s/%s/DMWorkspace/rootfiles/%s", 
+		      (m_config->getStr("masterOutput")).Data(),
+		      (m_config->getStr("jobName")).Data(), fileName.Data());
     }
     if (jobType.EqualTo("DMTestStat")) {
       fileName = Form("CL_values_%s.txt", currDMSignal.Data());
-      fullName = Form("%s/%s/DMTestStat/CL/%s", masterOutput.Data(), 
-		      jobName.Data(), fileName.Data());
+      fullName = Form("%s/%s/DMTestStat/CL/%s", 
+		      (m_config->getStr("masterOutput")).Data(), 
+		      (m_config->getStr("jobName")).Data(), fileName.Data());
     }
     
     if (jobType.EqualTo("DMMuLimit")) {
       fileName = Form("text_CLs_%s.txt", currDMSignal.Data());
-      fullName = Form("%s/%s/DMMuLimit/single_files/%s", masterOutput.Data(), 
-		      jobName.Data(), fileName.Data());
+      fullName = Form("%s/%s/DMMuLimit/single_files/%s", 
+		      (m_config->getStr("masterOutput")).Data(), 
+		      (m_config->getStr("jobName")).Data(), fileName.Data());
     }
 
     // Then test the existence of the file.
     std::ifstream testFile(fullName);
     if (!testFile) {
       if (jobType.EqualTo("DMWorkspace")) {
-	listDMWorkspace.push_back(currDMSignal);
+	m_listDMWorkspace.push_back(currDMSignal);
       }
       if (jobType.EqualTo("DMTestStat")) {
-	listDMTestStat.push_back(currDMSignal);
+	m_listDMTestStat.push_back(currDMSignal);
       }
       if (jobType.EqualTo("DMMuLimit")) {
-	listDMMuLimit.push_back(currDMSignal);
+	m_listDMMuLimit.push_back(currDMSignal);
       }
     }
   }

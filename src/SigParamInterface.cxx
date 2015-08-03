@@ -17,66 +17,67 @@
 /**
    -----------------------------------------------------------------------------
    Initialize the SigParamInterface class with a new RooCategory.
-   @param newJobName - The name of the job 
-   @param newCateScheme - The name of the event categorization
+   @param newConfigFile - The name of the analysis config file.
    @param newOptions - The job options ("New", "FromFile")
 */
-SigParamInterface::SigParamInterface(TString newJobName, TString newCateScheme,
-				     TString newOptions) {
+SigParamInterface::SigParamInterface(TString newConfigFile, TString newOptions){
   std::cout << "\nSigParamInterface::Initializing..."
-	    << "\n\tjobName = " << newJobName
-	    << "\n\tcateScheme = " << newCateScheme 
+	    << "\n\tconfigFile = " << newConfigFile
 	    << "\n\toptions = " << newOptions << std::endl;
   
   // Assign member variables:
-  jobName = newJobName;
-  cateScheme = newCateScheme;
-  options = newOptions;
+  m_configFile = newConfigFile;
+    
+  m_signalsOK = true;
+  m_failedSigParam = "";
+  m_sigMap.clear();
   
-  signalsOK = true;
-  failedSigParam = "";
-  sigMap.clear();
-  
+  // Set the ATLAS Style for plots:
   CommonFunc::SetAtlasStyle();
-
+  
+  // Load the configuration for the analysis:
+  Config *config = new Config(m_configFile);
+  
   // Assign output directory, and make sure it exists:
-  outputDir = Form("%s/%s/DMSigParam", DMAnalysis::masterOutput.Data(),
-		   jobName.Data());
-  system(Form("mkdir -vp %s", outputDir.Data()));
+  m_outputDir = Form("%s/%s/DMSigParam", 
+		     (config->getStr("masterOutput")).Data(),
+		     (config->getStr("jobName")).Data());
+  system(Form("mkdir -vp %s", m_outputDir.Data()));
   
   // Load the SM signal parameterization from file or start from scratch:
-  for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
-    if ((options.Contains("FromFile") && loadFile(DMAnalysis::sigSMModes[i_SM]))
-	|| createNew(DMAnalysis::sigSMModes[i_SM])) {
-      std::cout << "SigParamInterface: " << DMAnalysis::sigSMModes[i_SM] 
-		<< " ready!" << std::endl;
+  std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+  for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
+    if ((newOptions.Contains("FromFile") && loadFile(sigSMModes[i_SM]))
+	|| createNew(sigSMModes[i_SM])) {
+      std::cout << "SigParamInterface: " << sigSMModes[i_SM] << " ready!"
+		<< std::endl;
     }
-    else signalsOK = false;
+    else m_signalsOK = false;
   }
   
   // Load the DM signal parameterization from file or start from scratch:
-  for (int i_DM = 0; i_DM < DMAnalysis::nDMModes; i_DM++) {
-    if ((options.Contains("FromFile") && loadFile(DMAnalysis::sigDMModes[i_DM]))
-	|| createNew(DMAnalysis::sigDMModes[i_DM])) {
-      std::cout << "SigParamInterface: " << DMAnalysis::sigDMModes[i_DM]
-		<< " ready!" << std::endl;
+  std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+  for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
+    if ((newOptions.Contains("FromFile") && loadFile(sigDMModes[i_DM]))
+	|| createNew(sigDMModes[i_DM])) {
+      std::cout << "SigParamInterface: " << sigDMModes[i_DM] << " ready!"
+		<< std::endl;
     }
-    else signalsOK = false;
+    else m_signalsOK = false;
   }
   
   // Also load or create the total SM parameterization:
-  
-  if ((options.Contains("FromFile") && loadFile("SM")) || createNew("SM")) {
+  if ((newOptions.Contains("FromFile") && loadFile("SM")) || createNew("SM")) {
     std::cout << "SigParamInterface: Total SM signal ready!" << std::endl;
   }
-  else signalsOK = false;
+  else m_signalsOK = false;
   
-  if (signalsOK) {
+  if (m_signalsOK) {
     std::cout << "SigParamInterface: Successfully initialized!" << std::endl;
   }
   else {
     std::cout << "SigParamInterface: Problem initializing :(" << std::endl;
-    std::cout << "\tFailed fits: " << failedSigParam << std::endl;
+    std::cout << "\tFailed fits: " << m_failedSigParam << std::endl;
   }
 }
 
@@ -85,11 +86,11 @@ SigParamInterface::SigParamInterface(TString newJobName, TString newCateScheme,
    Check if all of the signals were either loaded successfully or created.
 */
 bool SigParamInterface::allSignalsReady() {
-  if (!signalsOK) {
+  if (!m_signalsOK) {
     std::cout << "SigParamInterface: Problems detected with following signals"
-	      << failedSigParam << std::endl;
+	      << m_failedSigParam << std::endl;
   }
-  return signalsOK;
+  return m_signalsOK;
 }
 
 /**
@@ -103,20 +104,20 @@ bool SigParamInterface::createNew(TString signalType) {
 	    << signalType << std::endl;
   
   bool signalConverged = true;
-  SigParam *sp = new SigParam(signalType, outputDir);
-  for (int i_c = 0; i_c < DMAnalysis::getNumCategories(cateScheme); i_c++) {
+  SigParam *sp = new SigParam(signalType, m_outputDir);
+  for (int i_c = 0; i_c < config->getInt("nCategories"); i_c++) {
     RooDataSet *currDataSet = getData(signalType, i_c);
-    sp->addDataSet(DMAnalysis::higgsMass, i_c, currDataSet, "m_yy");
+    sp->addDataSet(config->getNum("higgsMass"), i_c, currDataSet, "m_yy");
     
-    if (sp->makeSingleResonance(DMAnalysis::higgsMass, i_c, 
-				DMAnalysis::resonancePDF)) {
+    if (sp->makeSingleResonance(config->getNum("higgsMass"), i_c, 
+				config->getStr("resonancePDF"))) {
       sp->saveAll();
-      sp->plotSingleResonance(DMAnalysis::higgsMass, i_c);
-      sigMap[signalType] = sp;
+      sp->plotSingleResonance(config->getNum("higgsMass"), i_c);
+      m_sigMap[signalType] = sp;
     }
     else {
       signalConverged = false;
-      failedSigParam += signalType + ", ";
+      m_failedSigParam += signalType + ", ";
     }
   }
   return signalConverged;
@@ -132,17 +133,18 @@ bool SigParamInterface::createNew(TString signalType) {
 RooDataSet* SigParamInterface::getData(TString signalType, int cateIndex) {
   if (signalType.EqualTo("SM")) {
     RooDataSet *currData = NULL;
-    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
-      DMMassPoints *mp = new DMMassPoints(jobName, DMAnalysis::sigSMModes[i_SM],
-					  cateScheme, "FromFile", NULL);
+    std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+    for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
+      DMMassPoints *mp = new DMMassPoints(m_configFile, sigSMModes[i_SM],
+					  "FromFile", NULL);
       if (i_SM == 0) currData = mp->getCateDataSet(cateIndex);
       else currData->append(*(mp->getCateDataSet(cateIndex)));
     }
     return currData;
   }
   else {
-    DMMassPoints *mp = new DMMassPoints(jobName, signalType, cateScheme, 
-					"FromFile", NULL);
+    DMMassPoints *mp
+      = new DMMassPoints(m_configFile, signalType, "FromFile", NULL);
     return mp->getCateDataSet(cateIndex);
   }
 }
@@ -153,7 +155,7 @@ RooDataSet* SigParamInterface::getData(TString signalType, int cateIndex) {
    @param signalType - The type of signal for parameterization.
 */
 SigParam* SigParamInterface::getSigParam(TString signalType) {
-  return sigMap[signalType];
+  return m_sigMap[signalType];
 }
 
 /**
@@ -163,9 +165,9 @@ SigParam* SigParamInterface::getSigParam(TString signalType) {
    @returns - True iff successfully loaded or created.
 */
 bool SigParamInterface::loadFile(TString signalType) {
-  SigParam *sp = new SigParam(signalType, outputDir);
-  if (sp->loadParameterization(outputDir, signalType)) {
-    sigMap[signalType] = sp;
+  SigParam *sp = new SigParam(signalType, m_outputDir);
+  if (sp->loadParameterization(m_outputDir, signalType)) {
+    m_sigMap[signalType] = sp;
     std::cout << "SigParamInterface: Successful load from file for "
 	      << signalType << std::endl;
     return true;

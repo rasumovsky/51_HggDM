@@ -19,40 +19,39 @@
    -----------------------------------------------------------------------------
    Constructor for the DMToyAnalysis class.
 */
-DMToyAnalysis::DMToyAnalysis(TString newJobName, TString newDMSignal,
-			     TString newCateScheme, TString newOptions) {
-  jobName = newJobName;
-  DMSignal = newDMSignal;
-  cateScheme = newCateScheme;
-  options = newOptions;
+DMToyAnalysis::DMToyAnalysis(TString newConfigFile, TString newDMSignal) {
+  
+  // Load the config file:
+  Config *config = new Config(newConfigFile);
+  TString jobName = config->getStr("jobName");
   
   // set input and output directories:
-  outputDir = Form("%s/%s/DMToyAnalysis", DMAnalysis::masterOutput.Data(),
+  m_outputDir = Form("%s/%s/DMToyAnalysis", DMAnalysis::masterOutput.Data(),
 		   jobName.Data());
   TString toyDir = Form("%s/%s/DMPseudoExp", DMAnalysis::masterOutput.Data(),
 			jobName.Data());
   TString wsFileName = Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
 			    DMAnalysis::masterOutput.Data(), jobName.Data(), 
-			    DMSignal.Data());
+			    newDMSignal.Data());
   
   // Set the internal (private) variable initial conditions:
-  namesGlobs.clear();
-  namesNuisParams.clear();
-  nGlobs = 0;
-  nNuisParams = 0;
-  nBins = 500;
-  binMin = 0;
-  binMax = 20;
+  m_namesGlobs.clear();
+  m_namesNuis.clear();
+  m_nGlobs = 0;
+  m_nNuis = 0;
+  m_nBins = 500;
+  m_binMin = 0;
+  m_binMax = 20;
   
   // Create output directory:
-  system(Form("mkdir -vp %s",outputDir.Data()));
+  system(Form("mkdir -vp %s", m_outputDir.Data()));
   
   // Set ATLAS style template:
   CommonFunc::SetAtlasStyle();
   
   // Add all of the individual pseudoexperiment files together:
-  TString toyFileMu0 = Form("%s/toy_mu0.root",toyDir.Data());
-  TString toyFileMu1 = Form("%s/toy_mu1.root",toyDir.Data());
+  TString toyFileMu0 = Form("%s/toy_mu0.root", toyDir.Data());
+  TString toyFileMu1 = Form("%s/toy_mu1.root", toyDir.Data());
   system(Form("hadd -f %s %s/single_files/toy_mu0*",
 	      toyFileMu0.Data(), toyDir.Data()));
   system(Form("hadd -f %s %s/single_files/toy_mu1*", 
@@ -76,8 +75,8 @@ DMToyAnalysis::DMToyAnalysis(TString newJobName, TString newDMSignal,
   
   // Get the Asimov form of the test statistic:
   TFile workspaceFile(wsFileName, "read");
-  workspace = (RooWorkspace*)workspaceFile.Get("combinedWS");
-  dmts = new DMTestStat(jobName, DMSignal, cateScheme, "new", workspace);
+  m_workspace = (RooWorkspace*)workspaceFile.Get("combinedWS");
+  m_dmts = new DMTestStat(newConfigFile, newDMSignal, "new", m_workspace);
   
   // Get the asymptotic test statistic distribution:
   getAsymptoticForm("QMu");// THIS SHOULD BE GENERALIZED!!!
@@ -90,8 +89,8 @@ DMToyAnalysis::DMToyAnalysis(TString newJobName, TString newDMSignal,
   plotTestStatComparison("Q0");
   
   // Remove the temporary file lists:
-  system(Form("rm %s",listMu0.Data()));
-  system(Form("rm %s",listMu1.Data()));
+  system(Form("rm %s", listMu0.Data()));
+  system(Form("rm %s", listMu1.Data()));
   
   std::cout << "DMToyAnalysis: Finished!" << std::endl;
   std::cout << "\t" << treeMu0->fChain->GetEntries()
@@ -112,30 +111,30 @@ void DMToyAnalysis::fillToyHistograms(int muValue, DMToyTree *toyTree) {
 	    << " pseudoexperiments with mu = " << muValue << std::endl;
   
   // Instantiate the histograms:
-  hMuProfiled[muValue] = new TH1F(Form("hMuProfiled%d",muValue),
-				  Form("hMuProfiled%d",muValue), 
-				  nBins, -2.0, 4.0);
-  hQMu[muValue] = new TH1F(Form("hQMu%d",muValue),Form("hQMu%d",muValue),
-			   nBins, binMin, binMax);
-  hQ0[muValue] = new TH1F(Form("hQ0%d",muValue),Form("hQ0%d",muValue),
-			  nBins, binMin, binMax);
+  m_hMuProfiled[muValue] = new TH1F(Form("hMuProfiled%d",muValue),
+				    Form("hMuProfiled%d",muValue), 
+				    m_nBins, -2.0, 4.0);
+  m_hQMu[muValue] = new TH1F(Form("hQMu%d",muValue),Form("hQMu%d",muValue),
+			     m_nBins, m_binMin, m_binMax);
+  m_hQ0[muValue] = new TH1F(Form("hQ0%d",muValue),Form("hQ0%d",muValue),
+			    m_nBins, m_binMin, m_binMax);
   
   for (int i_p = 0; i_p < 20; i_p++) {
-    hNuisMu0[i_p][muValue] = new TH1F(Form("hNuisMu0_%d",muValue),
-				      Form("hNuisMu0_%d",muValue), 100, -5, 5);
-    hNuisMu1[i_p][muValue] = new TH1F(Form("hNuisMu1_%d",muValue),
-				      Form("hNuisMu1_%d",muValue), 100, -5, 5);
-    hNuisMuFree[i_p][muValue] = new TH1F(Form("hNuisMuFree_%d",muValue),
-					 Form("hNuisMuFree_%d",muValue),
-					 100, -5, 5);
+    m_hNuisMu0[i_p][muValue] = new TH1F(Form("hNuisMu0_%d",muValue),
+					Form("hNuisMu0_%d",muValue),100,-5,5);
+    m_hNuisMu1[i_p][muValue] = new TH1F(Form("hNuisMu1_%d",muValue),
+					Form("hNuisMu1_%d",muValue),100,-5,5);
+    m_hNuisMuFree[i_p][muValue] = new TH1F(Form("hNuisMuFree_%d",muValue),
+					   Form("hNuisMuFree_%d",muValue),
+					   100,-5,5);
     
-    hGlobsMu0[i_p][muValue] = new TH1F(Form("hGlobsMu0_%d",muValue),
-				       Form("hGlobsMu0_%d",muValue),100,-5,5);
-    hGlobsMu1[i_p][muValue] = new TH1F(Form("hGlobsMu1_%d",muValue),
-				       Form("hGlobsMu1_%d",muValue),100,-5,5);
-    hGlobsMuFree[i_p][muValue] = new TH1F(Form("hGlobsMuFree_%d",muValue),
-					  Form("hGlobsMuFree_%d",muValue),
-					  100, -5, 5);
+    m_hGlobsMu0[i_p][muValue] = new TH1F(Form("hGlobsMu0_%d",muValue),
+					 Form("hGlobsMu0_%d",muValue),100,-5,5);
+    m_hGlobsMu1[i_p][muValue] = new TH1F(Form("hGlobsMu1_%d",muValue),
+					 Form("hGlobsMu1_%d",muValue),100,-5,5);
+    m_hGlobsMuFree[i_p][muValue] = new TH1F(Form("hGlobsMuFree_%d",muValue),
+					    Form("hGlobsMuFree_%d",muValue),
+					    100,-5,5);
   }
   
   // Loop over events in the TTree:
@@ -148,42 +147,42 @@ void DMToyAnalysis::fillToyHistograms(int muValue, DMToyTree *toyTree) {
 	  toyTree->convergedMuFree)) continue;
     
     // Get the test statistic values:
-    double valueQMu = dmts->getQMuFromNLL(toyTree->nllMu1, toyTree->nllMuFree, 
-					  toyTree->muDMVal, 1);
-    double valueQ0 = dmts->getQ0FromNLL(toyTree->nllMu0, toyTree->nllMuFree,
-					toyTree->muDMVal);
+    double valueQMu = m_dmts->getQMuFromNLL(toyTree->nllMu1, toyTree->nllMuFree,
+					    toyTree->muDMVal, 1);
+    double valueQ0 = m_dmts->getQ0FromNLL(toyTree->nllMu0, toyTree->nllMuFree,
+					  toyTree->muDMVal);
     
     // Fill histograms for the test statistics and POI:
-    hQMu[muValue]->Fill(valueQMu);
-    hQ0[muValue]->Fill(valueQ0);
-    hMuProfiled[muValue]->Fill(toyTree->muDMVal);
+    m_hQMu[muValue]->Fill(valueQMu);
+    m_hQ0[muValue]->Fill(valueQ0);
+    m_hMuProfiled[muValue]->Fill(toyTree->muDMVal);
     
     // Fill the nuisance parameter histograms:
-    if (isFirstLoop) nNuisParams = (int)((*toyTree->namesNP).size());
+    if (isFirstLoop) m_nNuis = (int)((*toyTree->namesNP).size());
     // loop over the nuisance parameters in the tree:
-    for (int i_p = 0; i_p < nNuisParams; i_p++) {
-      hNuisMu0[i_p][muValue]->Fill((*toyTree->valuesNPMu0)[i_p] );
-      hNuisMu1[i_p][muValue]->Fill((*toyTree->valuesNPMu1)[i_p] );
-      hNuisMuFree[i_p][muValue]->Fill((*toyTree->valuesNPMuFree)[i_p]);
-      if (isFirstLoop) namesNuisParams.push_back((*toyTree->namesNP)[i_p]);
+    for (int i_p = 0; i_p < m_nNuis; i_p++) {
+      m_hNuisMu0[i_p][muValue]->Fill((*toyTree->valuesNPMu0)[i_p] );
+      m_hNuisMu1[i_p][muValue]->Fill((*toyTree->valuesNPMu1)[i_p] );
+      m_hNuisMuFree[i_p][muValue]->Fill((*toyTree->valuesNPMuFree)[i_p]);
+      if (isFirstLoop) m_namesNuis.push_back((*toyTree->namesNP)[i_p]);
     }
     
     // Fill the global observable histograms:
-    if (isFirstLoop) nGlobs = (int)((*toyTree->namesGlobs).size());
+    if (isFirstLoop) m_nGlobs = (int)((*toyTree->m_namesGlobs).size());
     // loop over the nuisance parameters in the tree:
-    for (int i_p = 0; i_p < nGlobs; i_p++) {
-      hGlobsMu0[i_p][muValue]->Fill((*toyTree->valuesGlobsMu0)[i_p] );
-      hGlobsMu1[i_p][muValue]->Fill((*toyTree->valuesGlobsMu1)[i_p] );
-      hGlobsMuFree[i_p][muValue]->Fill((*toyTree->valuesGlobsMuFree)[i_p]);
-      if (isFirstLoop) namesNuisParams.push_back((*toyTree->namesNP)[i_p]);
+    for (int i_p = 0; i_p < m_nGlobs; i_p++) {
+      m_hGlobsMu0[i_p][muValue]->Fill((*toyTree->valuesGlobsMu0)[i_p]);
+      m_hGlobsMu1[i_p][muValue]->Fill((*toyTree->valuesGlobsMu1)[i_p]);
+      m_hGlobsMuFree[i_p][muValue]->Fill((*toyTree->valuesGlobsMuFree)[i_p]);
+      if (isFirstLoop) m_namesNuis.push_back((*toyTree->namesNP)[i_p]);
     }
     
     isFirstLoop = false;
   }
   
   // Then scale the histograms:
-  hQMu[muValue]->Scale(1.0 / hQMu[muValue]->Integral(1, nBins));
-  hQ0[muValue]->Scale(1.0 / hQ0[muValue]->Integral(1, nBins));
+  m_hQMu[muValue]->Scale(1.0 / m_hQMu[muValue]->Integral(1, m_nBins));
+  m_hQ0[muValue]->Scale(1.0 / m_hQ0[muValue]->Integral(1, m_nBins));
 }
 
 /**
@@ -196,15 +195,17 @@ void DMToyAnalysis::getAsymptoticForm(TString statistic) {
 	    << statistic << "." << std::endl;
   
   // The histogram to contain the asymptotic form:
-  hAsymptotic = new TH1F("hAsymptotic", "hAsymptotic", nBins, binMin, binMax);
+  m_hAsymptotic 
+    = new TH1F("hAsymptotic", "hAsymptotic", m_nBins, m_binMin, m_binMax);
   
   // First get the value from fitting Asimov data (asimovDataMu0):
   double muHat = 0.0;
-  double nllMu1 = dmts->getFitNLL("asimovDataMu0", 1.0, true, muHat);
-  double nllMu0 = dmts->getFitNLL("asimovDataMu0", 0.0, true, muHat);
-  double nllMuHat = dmts->getFitNLL("asimovDataMu0", 0.0, false, muHat);
-  double qMu = dmts->getQMuFromNLL(nllMu1, nllMuHat, muHat, 1);
-  double qMuTilde = dmts->getQMuTildeFromNLL(nllMu1, nllMu0, nllMuHat, muHat,1);
+  double nllMu1 = m_dmts->getFitNLL("asimovDataMu0", 1.0, true, muHat);
+  double nllMu0 = m_dmts->getFitNLL("asimovDataMu0", 0.0, true, muHat);
+  double nllMuHat = m_dmts->getFitNLL("asimovDataMu0", 0.0, false, muHat);
+  double qMu = m_dmts->getQMuFromNLL(nllMu1, nllMuHat, muHat, 1);
+  double qMuTilde 
+    = m_dmts->getQMuTildeFromNLL(nllMu1, nllMu0, nllMuHat, muHat,1);
   
   double asimovTestStat = 0.0;
   if (statistic.EqualTo("QMu")) asimovTestStat = qMu;
@@ -212,20 +213,21 @@ void DMToyAnalysis::getAsymptoticForm(TString statistic) {
   
   // Construct the test statistic function:
   for (int i_b = 1; i_b <= 1000; i_b++) {
-    double q = hAsymptotic->GetBinCenter(i_b);
+    double q = m_hAsymptotic->GetBinCenter(i_b);
     if (statistic.EqualTo("QMu")) {
-      hAsymptotic->SetBinContent(i_b, dmts->functionQMu(q));
+      m_hAsymptotic->SetBinContent(i_b, m_dmts->functionQMu(q));
     }
     else if (statistic.EqualTo("QMuTilde")) {
-      hAsymptotic->SetBinContent(i_b, dmts->functionQMuTilde(q,asimovTestStat));
+      m_hAsymptotic
+	->SetBinContent(i_b, m_dmts->functionQMuTilde(q,asimovTestStat));
     }
   }
   // Then scale:
-  hAsymptotic->SetBinContent(0, 0);
-  hAsymptotic->SetBinContent(nBins+1, 0);
-  hAsymptotic->Scale(1.0 / hAsymptotic->Integral(1, nBins));
-  hAsymptotic->SetBinContent(1,1+hAsymptotic->GetBinContent(1));// WHY?
-  hAsymptotic->Scale(1.0 / hAsymptotic->Integral(1,nBins));
+  m_hAsymptotic->SetBinContent(0, 0);
+  m_hAsymptotic->SetBinContent(m_nBins+1, 0);
+  m_hAsymptotic->Scale(1.0 / m_hAsymptotic->Integral(1, m_nBins));
+  m_hAsymptotic->SetBinContent(1,1+m_hAsymptotic->GetBinContent(1));// WHY?
+  m_hAsymptotic->Scale(1.0 / m_hAsymptotic->Integral(1,m_nBins));
 }
 
 /**
@@ -233,7 +235,7 @@ void DMToyAnalysis::getAsymptoticForm(TString statistic) {
    Retrieve the functional form of the asymptotic test statistic approximation.
 */
 TH1F* DMToyAnalysis::getAsymptoticHist() {
-  return hAsymptotic;
+  return m_hAsymptotic;
 }
 
 /**
@@ -246,12 +248,12 @@ TH1F* DMToyAnalysis::getAsymptoticHist() {
 TH1F* DMToyAnalysis::getGlobsHist(TString paramName, TString fitType,
 				  int toyMu) {
   int paramIndex = 0;
-  for (paramIndex = 0; paramIndex < (int)namesGlobs.size(); paramIndex++) {
-    if (TString(namesGlobs[paramIndex]).Contains(paramName)) break;
+  for (paramIndex = 0; paramIndex < (int)m_namesGlobs.size(); paramIndex++) {
+    if (TString(m_namesGlobs[paramIndex]).Contains(paramName)) break;
   }
-  if (fitType.EqualTo("Mu0")) return hGlobsMu0[paramIndex][toyMu];
-  else if (fitType.EqualTo("Mu1")) return hGlobsMu1[paramIndex][toyMu];
-  else if (fitType.EqualTo("MuFree")) return hGlobsMuFree[paramIndex][toyMu];
+  if (fitType.EqualTo("Mu0")) return m_hGlobsMu0[paramIndex][toyMu];
+  else if (fitType.EqualTo("Mu1")) return m_hGlobsMu1[paramIndex][toyMu];
+  else if (fitType.EqualTo("MuFree")) return m_hGlobsMuFree[paramIndex][toyMu];
   else return NULL;
 }
 
@@ -265,12 +267,12 @@ TH1F* DMToyAnalysis::getGlobsHist(TString paramName, TString fitType,
 TH1F* DMToyAnalysis::getNuisHist(TString paramName, TString fitType,
 				 int toyMu) {
   int paramIndex = 0;
-  for (paramIndex = 0; paramIndex < (int)namesNuisParams.size(); paramIndex++) {
-    if (TString(namesNuisParams[paramIndex]).Contains(paramName)) break;
+  for (paramIndex = 0; paramIndex < (int)m_namesNuis.size(); paramIndex++) {
+    if (TString(m_namesNuis[paramIndex]).Contains(paramName)) break;
   }
-  if (fitType.EqualTo("Mu0")) return hNuisMu0[paramIndex][toyMu];
-  else if (fitType.EqualTo("Mu1")) return hNuisMu1[paramIndex][toyMu];
-  else if (fitType.EqualTo("MuFree")) return hNuisMuFree[paramIndex][toyMu];
+  if (fitType.EqualTo("Mu0")) return m_hNuisMu0[paramIndex][toyMu];
+  else if (fitType.EqualTo("Mu1")) return m_hNuisMu1[paramIndex][toyMu];
+  else if (fitType.EqualTo("MuFree")) return m_hNuisMuFree[paramIndex][toyMu];
   else return NULL;
 }
 
@@ -280,7 +282,7 @@ TH1F* DMToyAnalysis::getNuisHist(TString paramName, TString fitType,
    @param toyMu - the mu value used to generate the toy data that was fitted.
 */
 TH1F* DMToyAnalysis::getMuHist(int toyMu) {
-  return hMuProfiled[toyMu];
+  return m_hMuProfiled[toyMu];
 }
 
 /**
@@ -290,9 +292,9 @@ TH1F* DMToyAnalysis::getMuHist(int toyMu) {
    @param toyMu - the mu value used to generate the toy data that was fitted.
 */
 TH1F* DMToyAnalysis::getStatHist(TString statistic, int toyMu) {
-  if (statistic.EqualTo("Q0")) return hQ0[toyMu];
-  else if (statistic.EqualTo("QMu")) return hQMu[toyMu];
-  else if (statistic.EqualTo("QMuTilde")) return hQMuTilde[toyMu];
+  if (statistic.EqualTo("Q0")) return m_hQ0[toyMu];
+  else if (statistic.EqualTo("QMu")) return m_hQMu[toyMu];
+  else if (statistic.EqualTo("QMuTilde")) return m_hQMuTilde[toyMu];
   else return NULL;
 }
 
@@ -380,7 +382,7 @@ void DMToyAnalysis::plotParameter(TString paramName, TString paramType,
     }
   }
   
-  can->Print(Form("%s/plot_%s_toy%i.eps", outputDir.Data(), paramName.Data(), 
+  can->Print(Form("%s/plot_%s_toy%i.eps", m_outputDir.Data(), paramName.Data(), 
 		  toyMu));
   can->Clear();
   gPad->SetLogy(0);
@@ -442,7 +444,7 @@ void DMToyAnalysis::plotProfiledMu() {
   textMu1.SetTextSize(0.04);
   textMu1.DrawLatex(0.56, 0.7,Form("#mu=1 toy mean = %2.2f",meanMu1));
   
-  can->Print(Form("%s/plot_profiledMu.eps", outputDir.Data()));
+  can->Print(Form("%s/plot_profiledMu.eps", m_outputDir.Data()));
   can->Clear();
   gPad->SetLogy(0);  
 }
@@ -474,8 +476,8 @@ void DMToyAnalysis::plotTestStat(TString statistic) {
   hStatMu0->Draw("");
   hStatMu1->Draw("SAME");
   
-  hAsymptotic->SetLineColor(kBlack);
-  hAsymptotic->Draw("SAME");
+  m_hAsymptotic->SetLineColor(kBlack);
+  m_hAsymptotic->Draw("SAME");
   
   TLegend leg(0.49, 0.76, 0.84, 0.9);
   leg.SetBorderSize(0);
@@ -483,10 +485,10 @@ void DMToyAnalysis::plotTestStat(TString statistic) {
   leg.SetTextSize(0.04);
   leg.AddEntry(hStatMu1, "#mu=1 toy MC","l");
   leg.AddEntry(hStatMu0, "#mu=0 toy MC","l");
-  leg.AddEntry(hAsymptotic, "Asyptotic distribution","l");
+  leg.AddEntry(m_hAsymptotic, "Asyptotic distribution","l");
   leg.Draw("SAME");
   
-  can->Print(Form("%s/plot_%s.eps", outputDir.Data(), statistic.Data()));
+  can->Print(Form("%s/plot_%s.eps", m_outputDir.Data(), statistic.Data()));
   can->Clear();
   gPad->SetLogy(0);
 }
@@ -523,21 +525,21 @@ void DMToyAnalysis::plotTestStatComparison(TString statistic) {
   
   // Get the toy and asymptotic distributions:
   TH1F *hStatMu1 = getStatHist(statistic, 1);
-  //hAsymptotic;
+  //m_hAsymptotic;
   
   // Calculate the histograms to plot:
   TH1F *hIntegralToy = new TH1F("hIntegralToy", "hIntegralToy", 
-				nBins, binMin, binMax);
+				m_nBins, m_binMin, m_binMax);
   TH1F *hIntegralAsym = new TH1F("hIntegralAsym", "hIntegralAsym",
-				 nBins, binMin, binMax);
-  TH1F *hRatio = new TH1F("hRatio", "hRatio", nBins, binMin, binMax);
+				 m_nBins, m_binMin, m_binMax);
+  TH1F *hRatio = new TH1F("hRatio", "hRatio", m_nBins, m_binMin, m_binMax);
   TH1F *hSignificanceToy = new TH1F("hSignificanceToy", "hSignificanceToy",
-				    nBins, binMin, binMax);
+				    m_nBins, m_binMin, m_binMax);
   TH1F *hSignificanceAsym = new TH1F("hSignificanceAsym", "hSignificanceAsym",
-				     nBins, binMin, binMax);
-  for (int i_b = 1; i_b <= nBins; i_b++) {
-    double valueAsym = hAsymptotic->Integral(i_b, nBins);
-    double valueToy = hStatMu1->Integral(i_b, nBins);
+				     m_nBins, m_binMin, m_binMax);
+  for (int i_b = 1; i_b <= m_nBins; i_b++) {
+    double valueAsym = m_hAsymptotic->Integral(i_b, m_nBins);
+    double valueToy = hStatMu1->Integral(i_b, m_nBins);
     hIntegralToy->SetBinContent(i_b, valueToy);
     hIntegralAsym->SetBinContent(i_b, valueAsym);
     hSignificanceToy->SetBinContent(i_b, -1.0*TMath::NormQuantile(valueToy));
@@ -551,9 +553,9 @@ void DMToyAnalysis::plotTestStatComparison(TString statistic) {
    
   // Pad 1: Draw test statistic under mu=1 hypothesis and asymptotic function.
   pad1->cd();
-  hAsymptotic->SetLineColor(kBlue);
+  m_hAsymptotic->SetLineColor(kBlue);
   hStatMu1->Draw("");
-  hAsymptotic->Draw("SAME");
+  m_hAsymptotic->Draw("SAME");
   gPad->SetLogy();
   gPad->SetLogx();
   
@@ -563,7 +565,7 @@ void DMToyAnalysis::plotTestStatComparison(TString statistic) {
   leg.SetTextSize(0.06);
   TString printName = printStatName(statistic);
   leg.AddEntry(hStatMu1,Form("Toy MC %s",printName.Data()),"l");
-  leg.AddEntry(hAsymptotic,Form("Asymptotic %s",printName.Data()),"l");
+  leg.AddEntry(m_hAsymptotic,Form("Asymptotic %s",printName.Data()),"l");
   leg.Draw("SAME");
   TLatex textToy;
   textToy.SetNDC();
@@ -577,7 +579,7 @@ void DMToyAnalysis::plotTestStatComparison(TString statistic) {
   textAsym.SetTextFont(42);
   textAsym.SetTextSize(0.05);
   textAsym.DrawLatex(0.2, 0.15, Form("Asymptotics Mean = %2.2f", 
-				     hAsymptotic->GetMean()));
+				     m_hAsymptotic->GetMean()));
   
   // Pad 2: Draw the CDFs for asymptotics and pseudo-experiments
   pad2->cd();
@@ -634,10 +636,10 @@ void DMToyAnalysis::plotTestStatComparison(TString statistic) {
   line2->SetLineStyle(2);
   line2->SetLineWidth(1);
   line2->SetLineColor(kBlack);
-  line2->DrawLine(binMin, 1.0, binMax, 1.0);
+  line2->DrawLine(m_binMin, 1.0, m_binMax, 1.0);
   
-  can->Print(Form("%s/plot_comp_%s.eps", outputDir.Data(), statistic.Data()));
-  can->Print(Form("%s/plot_comp_%s.png", outputDir.Data(), statistic.Data()));
+  can->Print(Form("%s/plot_comp_%s.eps", m_outputDir.Data(), statistic.Data()));
+  can->Print(Form("%s/plot_comp_%s.png", m_outputDir.Data(), statistic.Data()));
   can->Clear();
 }
 

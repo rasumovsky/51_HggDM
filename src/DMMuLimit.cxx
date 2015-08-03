@@ -82,8 +82,8 @@ NOTE: The script runs significantly faster when compiled
 */
 
 
-
-
+// Package libraries:
+#include "Config.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "RooStatsHead.h"
@@ -93,7 +93,6 @@ NOTE: The script runs significantly faster when compiled
 using namespace std;
 using namespace RooFit;
 using namespace RooStats;
-using namespace DMAnalysis;
 
 TString INPUTDMSignal;
 
@@ -1481,25 +1480,29 @@ RooDataSet* makeAsimovData(bool doConditional, RooNLLVar* conditioning_nll, doub
 
 int main(int argc, char* argv[]) {
   if (argc < 4) {
-    cout << "Usage: " << argv[0] << " <jobName> <DMSignal> <option>" << endl;
+    cout << "Usage: " << argv[0] << " <configFile> <DMSignal> <option>" << endl;
     return 0;
   }
   
-  TString jobName = argv[1];
+
+  TString configFile = argv[1];
   INPUTDMSignal = argv[2];
   TString option = argv[3];// can be "highCL", "nosys"
-  
-  TString inputDir = Form("%s/%s", masterOutput.Data(), jobName.Data());
+
+  Config *config = new Config(configFile);
+   
+  TString inputDir = Form("%s/%s", (config->getStr("masterOutput")).Data(),
+			  (config->getStr("jobName")).Data());
   TString inputFileName = Form("%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
 				inputDir.Data(), INPUTDMSignal.Data());
-  TString outputDir = Form("%s/DMMuLimit/single_files",inputDir.Data());
- 
+  
   // Make the output directory if it doesn't already exist:
-  system(Form("mkdir -vp %s",outputDir.Data()));
+  TString outputDir = Form("%s/DMMuLimit/single_files", inputDir.Data());
+  system(Form("mkdir -vp %s", outputDir.Data()));
   
   // Copy the input file locally:
   TString localInputFileName = Form("workspaceDM_%s.root",INPUTDMSignal.Data());
-  system(Form("cp %s %s",inputFileName.Data(),localInputFileName.Data()));
+  system(Form("cp %s %s", inputFileName.Data(),localInputFileName.Data()));
   
   TString wname = "combinedWS";
   TString mname = "modelConfig";
@@ -1519,5 +1522,5 @@ int main(int argc, char* argv[]) {
 		    option);
   
   // Remove the local input file copy when job completes.
-  system(Form("rm %s",localInputFileName.Data()));
+  system(Form("rm %s", localInputFileName.Data()));
 }

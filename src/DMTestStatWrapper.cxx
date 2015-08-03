@@ -16,15 +16,19 @@
 int main(int argc, char **argv) {
   
   // Check that arguments are provided.
-  if (argc < 5) {
+  if (argc < 4) {
     std::cout << "\nUsage: " << argv[0]
-	      << " <jobName> <DMSignal> <cateScheme> <options>" << std::endl;
+	      << " <configFile> <DMSignal> <options>" << std::endl;
     exit(0);
   }
-  TString jobName = argv[1];
+  TString configFile= argv[1];
   TString DMSignal = argv[2];
-  TString cateScheme = argv[3];
-  TString options = argv[4];
+  TString options = argv[3];
+  
+  // Load the analysis configuration file:
+  Config *config = new Config(configFile);
+  TString jobName = config->getStr("jobName");
+  TString cateScheme = config->getStr("cateScheme");
   
   // Define the input file, then make a local copy (for remote jobs):
   TString originFile = Form("%s/%s/workspaces/rootfiles/workspaceDM_%s.root",
@@ -37,8 +41,7 @@ int main(int argc, char **argv) {
   TFile inputFile(copiedFile, "read");
   RooWorkspace *workspace = (RooWorkspace*)inputFile.Get("combinedWS");
   
-  DMTestStat *ts = new DMTestStat(jobName, DMSignal, cateScheme, "new",
-				  workspace);
+  DMTestStat *ts = new DMTestStat(configFile, DMSignal, "new", workspace);
   ts->calculateNewCL();
   ts->calculateNewP0();
   if (ts->fitsAllConverged()) {

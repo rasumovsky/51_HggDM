@@ -16,36 +16,37 @@
 /**
    -----------------------------------------------------------------------------
    Constructor for the DMTestStat class. 
-   @param newJobName - The name of the job
+   @param newConfigFile - The analysis config file.
    @param newDMSignal - The Dark Matter signal to incorporate in the model.
    @param newOptions - The job options ("New", "FromFile"), etc.
    @param newWorkspace - The workspace with the model for the test stats. 
 */
-DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
-		       TString newCateScheme, TString newOptions,
-		       RooWorkspace *newWorkspace) {
-  std::cout << "DMTestStat: Initializing...\n\t" << newJobName << "\n\t"
-	    << newDMSignal << "\n\t" << newCateScheme << "\n\t" 
-	    << newOptions << "\n\t" << std::endl;
+DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
+		       TString newOptions, RooWorkspace *newWorkspace) {
+  std::cout << "DMTestStat: Initializing...\n\t" << newConfigFile << "\n\t"
+	    << newDMSignal << "\n\t" << newOptions << "\n\t" << std::endl;
   
   // Assign input variables: 
-  m_jobName = newJobName;
   m_DMSignal = newDMSignal;
-  m_cateScheme = newCateScheme;
   m_options = newOptions;
   
   // Start with a clean class:
   clearData();
-    
+  
+  // Set the analysis configuration:
+  m_config = new Config(newConfigFile);
+  m_jobName = m_config->getStr("jobName");
+  m_cateScheme = m_config->getStr("cateScheme");
+  
   // Use Asimov data if the analysis is blind.
-  m_dataForObs = (DMAnalysis::doBlind) ? "asimovDataMu0" : "obsData";
+  m_dataForObs = (config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
   m_dataForExp = "asimovDataMu0";
   
   if (newWorkspace == NULL) {
     m_inputFile
       = new TFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		       DMAnalysis::masterOutput.Data(), m_jobName.Data(),
-		       m_DMSignal.Data()), "read");
+		       (config->getStr("masterOutput")).Data(),
+		       m_jobName.Data(), m_DMSignal.Data()), "read");
     
     if (m_inputFile->IsOpen()) {
       std::cout << "DMTestStat: Loading workspace." << std::endl;
@@ -55,8 +56,8 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
       std::cout << "DMTestStat: Error loading workspace." << std::endl;
       
       // Load the workspace from the nominal location.
-      DMWorkspace *m_dmws = new DMWorkspace(newJobName, newDMSignal, 
-					   m_cateScheme, "FromFile");
+      DMWorkspace *m_dmws = new DMWorkspace(newConfigFile, newDMSignal,
+					    "FromFile");
       m_workspace = m_dmws->getCombinedWorkspace();
     }
   }
@@ -69,12 +70,12 @@ DMTestStat::DMTestStat(TString newJobName, TString newDMSignal,
   m_calculatedValues.clear();
   
   // Create output directories:
-  m_outputDir = Form("%s/%s/TestStat/", DMAnalysis::masterOutput.Data(), 
-		     m_jobName.Data());
+  m_outputDir = Form("%s/%s/TestStat/",
+		     (config->getStr("masterOutput")).Data(), m_jobName.Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   system(Form("mkdir -vp %s/CL/", m_outputDir.Data()));
   system(Form("mkdir -vp %s/p0/", m_outputDir.Data()));
-
+  
   // Make new or load old values:
   if (m_options.Contains("FromFile")) loadStatsFromFile();
   
@@ -821,8 +822,7 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
   TCanvas *can = new TCanvas("can", "can", 800, 800);
   
   // loop over categories:
-  int nCategories = DMAnalysis::getNumCategories(m_cateScheme);
-  for (int i_c = 0; i_c < nCategories; i_c++) {
+  for (int i_c = 0; i_c < config->getInt("nCategories"); i_c++) {
     TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
     RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
     m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data()))

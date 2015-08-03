@@ -1,14 +1,14 @@
 #!/bin/bash
 
-if [[ $# -lt 6 ]]; then
-    echo "USAGE: toy_jobfile.sh <jobname> <input_file> <exe_name> <signal> <option> <seed> <toysperjob>"
+if [[ $# -lt 8 ]]; then
+    echo "USAGE: toy_jobfile.sh <jobname> <configfile> <input_file> <exe_name> <signal> <option> <seed> <toysperjob>"
     
 else
     jobname=$1
-    input_file=$2
-    exe_name=$3
-    signal=$4
-    cates=$5
+    configfile=$2
+    input_file=$3
+    exe_name=$4
+    signal=$5
     option=$6
     seed=$7
     toysperjob=$8
@@ -16,7 +16,7 @@ else
     date
     echo
     
-    echo $jobname $input_file $exe_name $signal $cates $option $seed $toysperjob
+    echo $jobname $configfile $input_file $exe_name $signal $option $seed $toysperjob
     
     out="${jobname}_${seed}"
     output_dir="/afs/cern.ch/user/a/ahard/work_directory/files_HggDM/FullAnalysis/${jobname}/DMPseudoExp"
@@ -47,8 +47,8 @@ else
     echo "Printing directory contents before running."
     ls
     
-    ./bin/${exe_name} ${jobname} ${signal} ${cates} ${option} ${seed} ${toysperjob} 0 1> ${out}_mu0.log 2>${out}_mu0.err;
-    ./bin/${exe_name} ${jobname} ${signal} ${cates} ${option} ${seed} ${toysperjob} 1 1> ${out}_mu1.log 2>${out}_mu1.err;
+    ./bin/${exe_name} ${configfile} ${signal} ${option} ${seed} ${toysperjob} 0 1> ${out}_mu0.log 2>${out}_mu0.err;
+    ./bin/${exe_name} ${configfile} ${signal} ${option} ${seed} ${toysperjob} 1 1> ${out}_mu1.log 2>${out}_mu1.err;
     
     mv *.log ${output_dir}/log/
     mv *.err ${output_dir}/err/

@@ -19,7 +19,16 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "DMPseudoExp.h"
+// Package includes:
+#include "CommonHead.h"
+#include "CommonFunc.h"
+#include "Config.h"
+#include "DMAnalysis.h"
+#include "DMTestStat.h"
+#include "RooBernsteinM.h"
+#include "RooFitHead.h"
+#include "RooStatsHead.h"
+#include "statistics.h"
 
 /*
    -----------------------------------------------------------------------------
@@ -104,39 +113,42 @@ void createPseudoData(RooWorkspace *w, ModelConfig *mc, int seed) {
 /**
    -----------------------------------------------------------------------------
    The main method. 
-   @param jobName - the name of the analysis job.
+   @param configFile - the name of the analysis config file.
    @param DMSignal - the name of the DM signal model.
-   @param cateScheme - the category scheme for the analysis.
    @param options - the options (see header note).
    @param seed - the random seed for pseudoexperiment creation.
    @param toysPerJob - the number of pseudoexperiments to create per job.
    @param muDMVal - the value of the DM signal strength to use.
 */
 int main(int argc, char **argv) {
-  if (argc < 8) {
-    std::cout << "Usage: " << argv[0] << " <jobName> <DMSignal> <cateScheme> <options> <seed> <toysPerJob> <mu_DM>" << std::endl;
+  if (argc < 7) {
+    std::cout << "Usage: " << argv[0] << " <configFile> <DMSignal> <options> <seed> <toysPerJob> <mu_DM>" << std::endl;
     exit(0);
   }
   
   // Assign input parameters:
-  TString jobName = argv[1];
+  TString configFile = argv[1];
   TString DMSignal = argv[2];
-  TString cateScheme = argv[3];
-  options = argv[4];
-  int seed = atoi(argv[5]);
-  int nToysPerJob = atoi(argv[6]);
-  int inputMuDM = atoi(argv[7]);
+  TString options = argv[3];
+  int seed = atoi(argv[4]);
+  int nToysPerJob = atoi(argv[5]);
+  int inputMuDM = atoi(argv[6]);
+  
+  // Load the analysis configurations from file:
+  Config *config = new Config(configFile);
   
   // Copy the input workspace file locally:
   TString originFile = Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-			    DMAnalysis::masterOutput.Data(), jobName.Data(), 
+			    (config->getStr("masterOutput")).Data(), 
+			    (config->getStr("jobName")).Data(), 
 			    DMSignal.Data());
-  TString copiedFile = Form("workspaceDM_%s.root",DMSignal.Data());
+  TString copiedFile = Form("workspaceDM_%s.root", DMSignal.Data());
   system(Form("cp %s %s", originFile.Data(), copiedFile.Data()));
   
   // Create output TTree:
-  TString outputDir = Form("%s/%s/DMPseudoExp", DMAnalysis::masterOutput.Data(),
-			   jobName.Data());
+  TString outputDir = Form("%s/%s/DMPseudoExp", 
+			   (config->getStr("masterOutput")).Data(),
+			   (config->getStr("jobName")).Data());
   TString tempOutputFileName = Form("%s/single_files/toy_mu%i_%i.root",
 				    outputDir.Data(), inputMuDM, seed);
   
@@ -224,8 +236,7 @@ int main(int argc, char **argv) {
     firstPOI->setConstant(false);
     */
         
-    DMTestStat *dmts = new DMTestStat(jobName, DMSignal, cateScheme, "new",
-				      workspace);
+    DMTestStat *dmts = new DMTestStat(configFile, DMSignal, "new", workspace);
     
     RooDataSet *newToyData
       = dmts->createPseudoData(seed, inputMuDM, 1, options.Contains("FixMu"));

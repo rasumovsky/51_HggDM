@@ -16,6 +16,7 @@
 //  NOTES:                                                                    //
 //  - Need to remove createAsimov dependence...                               //
 //  - I think we should still create them here for fits.                      //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMWorkspace.h"
@@ -24,47 +25,48 @@ using namespace std;
 using namespace RooFit;
 using namespace RooStats;
 using namespace CommonFunc;
-using namespace DMAnalysis;
 
 /**
    -----------------------------------------------------------------------------
    Instantiate the class.
-   @param newJobName - The name of the job
+   @param newConfigFile - The name of the analysis config file.
    @param newDMSignal - The Dark Matter signal to incorporate in the model.
-   @param newCateScheme - The name of the event categorization
    @param newOptions - The job options ("New", "FromFile"), etc.
    @returns void
 */
-DMWorkspace::DMWorkspace(TString newJobName, TString newDMSignal,
-			 TString newCateScheme, TString newOptions) {
-  m_jobName = newJobName;
+DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
+			 TString newOptions) {
+  m_configFile = newConfigFile;
   m_DMSignal = newDMSignal;
-  m_cateScheme = newCateScheme;
   m_options = newOptions;
   m_allGoodFits = true;
   
   m_combinedWS = NULL;
-  m_mConfig = NULL;
+  m_modelConfig = NULL;
   
   std::cout << "\nDMWorkspace: Initializing..."
-	    << "\n\tjobName = " << m_jobName
+	    << "\n\tconfigFile = " << m_configFile
 	    << "\n\tsignal = " << m_DMSignal
-	    << "\n\tcateScheme = " << m_cateScheme 
 	    << "\n\toptions = " << m_options << std::endl;
   
+  // Load the analysis configuration file:
+  m_config = new Config(m_configFile);
+  
   // Assign output directory, and make sure it exists:
-  m_outputDir = Form("%s/%s/DMWorkspace",masterOutput.Data(),m_jobName.Data());
-  system(Form("mkdir -vp %s",m_outputDir.Data()));
-  system(Form("mkdir -vp %s/Plots/",m_outputDir.Data()));
-  system(Form("mkdir -vp %s/rootfiles/",m_outputDir.Data()));
-  system(Form("mkdir -vp %s/mu/",m_outputDir.Data()));
+  m_outputDir = Form("%s/%s/DMWorkspace", 
+		     (config->getStr("masterOutput")).Data(),
+		     (config->getStr("jobName")).Data());
+  system(Form("mkdir -vp %s", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/Plots/", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/rootfiles/", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/mu/", m_outputDir.Data()));
   
   // Set style for plots:
   CommonFunc::SetAtlasStyle();
     
   m_muNominalSM = 1;
-  m_dataToPlot = (DMAnalysis::doBlind) ? "asimovDataMu1" : "obsData";
-
+  m_dataToPlot = (config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
+  
   // Make new or load old workspace:
   if (m_options.Contains("FromFile")) loadWSFromFile();
   else createNewWS();
@@ -100,7 +102,7 @@ RooWorkspace* DMWorkspace::getCombinedWorkspace() {
    Retrieves a pointer to the model config.
 */
 ModelConfig* DMWorkspace::getModelConfig() {
-  return m_mConfig;
+  return m_modelConfig;
 }
 
 /**
@@ -114,7 +116,7 @@ void DMWorkspace::loadWSFromFile() {
   if (inputFile.IsOpen()) {
     std::cout << "DMWorkspace: Loading workspace from file..."<< std::endl;
     m_combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
-    m_mConfig = (ModelConfig*)m_combinedWS->obj("modelConfig");
+    m_modelConfig = (ModelConfig*)m_combinedWS->obj("modelConfig");
   }
   else {
     std::cout << "WARNING! Cannot locate requested workspace!"<< std::endl;
@@ -133,13 +135,13 @@ void DMWorkspace::createNewWS() {
   std::cout << "Workspace parameters:" << std::endl;
   
   // Define and name analysis categories:
-  m_nCategories = DMAnalysis::getNumCategories(m_cateScheme);
+  m_nCategories = m_config->getInt("nCategories");
   std::cout << "  Number of categories = " << m_nCategories << std::endl;
   
   vector<TString> cateNames; cateNames.clear();
   vector<string> cateNamesS; cateNamesS.clear();
   for (int i_c = 0; i_c < m_nCategories; i_c++) {
-    m_currCateName = Form("%s_%d",m_cateScheme.Data(),i_c);
+    m_currCateName = Form("%s_%d",(m_config->getStr("cateScheme")).Data(),i_c);
     cateNames.push_back(m_currCateName);
     cateNamesS.push_back((string)m_currCateName);
     std::cout << "  \t" << m_currCateName << std::endl;
@@ -153,8 +155,7 @@ void DMWorkspace::createNewWS() {
   m_per = new PERReader(fileNamePERValues, m_nCategories);
   
   // Instantiate the signal parameterization class using the observable:
-  //currSigParam = new DMSigParam(m_jobName, m_cateScheme, "FromFile", NULL);
-  m_spi = new SigParamInterface(m_jobName, m_cateScheme, "FromFile");
+  m_spi = new SigParamInterface(m_configFile, "FromFile");
   
   
   //--------------------------------------//
@@ -250,13 +251,15 @@ void DMWorkspace::createNewWS() {
   //m_combinedWS->import(*asimovDataMu1);
   
   // Define the ModelConfig:
-  m_mConfig = new ModelConfig("modelConfig",m_combinedWS);
-  m_mConfig->SetPdf((*m_combinedWS->pdf("combinedPdf")));
-  m_mConfig->SetObservables((*m_combinedWS->set("observables")));
-  m_mConfig->SetParametersOfInterest((*m_combinedWS->set("poi")));
-  m_mConfig->SetNuisanceParameters((*m_combinedWS->set("nuisanceParameters")));
-  m_mConfig->SetGlobalObservables((*m_combinedWS->set("globalObservables")));
-  m_combinedWS->import(*m_mConfig);
+  m_modelConfig = new ModelConfig("modelConfig",m_combinedWS);
+  m_modelConfig->SetPdf((*m_combinedWS->pdf("combinedPdf")));
+  m_modelConfig->SetObservables((*m_combinedWS->set("observables")));
+  m_modelConfig->SetParametersOfInterest((*m_combinedWS->set("poi")));
+  m_modelConfig
+    ->SetNuisanceParameters((*m_combinedWS->set("nuisanceParameters")));
+  m_modelConfig
+    ->SetGlobalObservables((*m_combinedWS->set("globalObservables")));
+  m_combinedWS->import(*m_modelConfig);
   
   std::cout << "DMWorkspace: Printing the combined workspace." << std::endl;
   m_combinedWS->Print("v");
@@ -271,8 +274,8 @@ void DMWorkspace::createNewWS() {
   profileAndSnapshot("Free", nllMuFree, profiledMuValue);
   */
   
-  DMTestStat *dmts = new DMTestStat(m_jobName, m_DMSignal, m_cateScheme,
-				    "FromFile", m_combinedWS);
+  DMTestStat *dmts = new DMTestStat(m_configFile, m_DMSignal, "FromFile",
+				    m_combinedWS);
   dmts->saveSnapshots(true);
   dmts->setPlotDirectory(Form("%s/Plots/", m_outputDir.Data()));
   double profiledMuValue = -999.0;
@@ -547,13 +550,16 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Loop to load SM signal modes from file and add to workspace:
   if (m_options.Contains("ProdModes")) {
-    for (int i_SM = 0; i_SM < DMAnalysis::nSMModes; i_SM++) {
-      SigParam *sp = m_spi->getSigParam(DMAnalysis::sigSMModes[i_SM]);
-      TString currKey = sp->getKey(DMAnalysis::higgsMass, m_currCateIndex);
-      TString currSig = DMAnalysis::sigSMModes[i_SM];
+    std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
+    for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
+      SigParam *sp = m_spi->getSigParam(sigSMModes[i_SM]);
+      TString currKey
+	= sp->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
+      TString currSig = sigSMModes[i_SM];
       
       // Add the signal to the workspace:
-      if (sp->addSigToWS(tempWS, DMAnalysis::higgsMass, m_currCateIndex)) {
+      if (sp->addSigToWS(tempWS, m_config->getNum("higgsMass"), 
+			 m_currCateIndex)) {
 	// Rename the signal yield variable:
 	(tempWS->var(Form("sigYield_%s_%s",currSig.Data(),currKey.Data())))->SetNameTitle(Form("n%s",currSig.Data()), Form("n%s",currSig.Data()));
 	// Rename the signal PDF:
@@ -570,21 +576,23 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Load total SM signal from file, then add to workspace:
   SigParam *spSM = m_spi->getSigParam("SM");
-  if (spSM->addSigToWS(tempWS, DMAnalysis::higgsMass, m_currCateIndex)) {
-     TString currKeySM = spSM->getKey(DMAnalysis::higgsMass, m_currCateIndex);
-     (tempWS->var(Form("sigYield_SM_%s", currKeySM.Data())))
-       ->SetNameTitle("nSM","nSM");
-     (tempWS->pdf(Form("sigPdf_SM_%s", currKeySM.Data())))
-       ->SetNameTitle("sigPdfSM","sigPdfSM");
-     tempWS->factory("prod::nSigSM(nSM,expectationCommon,expectationSM)");
+  if (spSM->addSigToWS(tempWS, m_config->getNum("higgsMass"), m_currCateIndex)){
+    TString currKeySM 
+      = spSM->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
+    (tempWS->var(Form("sigYield_SM_%s", currKeySM.Data())))
+      ->SetNameTitle("nSM","nSM");
+    (tempWS->pdf(Form("sigPdf_SM_%s", currKeySM.Data())))
+      ->SetNameTitle("sigPdfSM","sigPdfSM");
+    tempWS->factory("prod::nSigSM(nSM,expectationCommon,expectationSM)");
   }
   else std::cout << "DMWorkspace: Error importing SM signal." << std::endl;
   
   // Load DM signal from file, then add to workspace:
   std::cout << "Check0" << std::endl;
   SigParam *spDM = m_spi->getSigParam(m_DMSignal);
-  if (spDM->addSigToWS(tempWS, DMAnalysis::higgsMass, m_currCateIndex)) {
-    TString currKeyDM = spDM->getKey(DMAnalysis::higgsMass, m_currCateIndex);
+  if (spDM->addSigToWS(tempWS, m_config->getNum("higgsMass"), m_currCateIndex)){
+    TString currKeyDM 
+      = spDM->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
     (tempWS->var(Form("sigYield_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
       ->SetNameTitle("nDM","nDM");
     (tempWS->pdf(Form("sigPdf_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
@@ -618,9 +626,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   //     it is possible to go back to redo if necessary. 
   // Construct the background PDF:
   BkgModel *currBkgModel = new BkgModel(tempWS->var("m_yy"));
-  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg,
-			       DMAnalysis::cateToBkgFunc(m_cateScheme,
-							 m_currCateIndex));
+  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, DMAnalysis::cateToBkgFunc(m_config->getStr("cateScheme"), m_currCateIndex));
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
@@ -804,14 +810,12 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Import the observed data set:
   DMMassPoints *currMassPoints = NULL;
-  if (DMAnalysis::doBlind) {
-    currMassPoints = new DMMassPoints(m_jobName, "gg_gjet", m_cateScheme, 
-				      "FromFile",
+  if (m_config->getBool("doBlind")) {
+    currMassPoints = new DMMassPoints(m_configFile, "gg_gjet", "FromFile",
 				      categoryWS->var("m_yy_"+m_currCateName));
   }
   else {
-    currMassPoints = new DMMassPoints(m_jobName, "data", m_cateScheme, 
-				      "FromFile",
+    currMassPoints = new DMMassPoints(m_configFile, "data", "FromFile",
 				      categoryWS->var("m_yy_"+m_currCateName));
   }
   
@@ -1175,14 +1179,14 @@ void DMWorkspace::profileAndSnapshot(TString muDMValue, double &nllValue,
 				     double &profiledMu) {
   std::cout << "\nDMWorkspace: Profile mu_DM = " << muDMValue << std::endl;
   
-  RooRealVar *poi = (RooRealVar*)m_mConfig->GetParametersOfInterest()->first();
+  RooRealVar *poi = (RooRealVar*)m_modelConfig->GetParametersOfInterest()->first();
   RooArgSet* poiAndNuis = new RooArgSet();
-  poiAndNuis->add(*m_mConfig->GetNuisanceParameters());
+  poiAndNuis->add(*m_modelConfig->GetNuisanceParameters());
   poiAndNuis->add(*poi);
   m_combinedWS->saveSnapshot("paramsOrigin",*poiAndNuis);
-  RooArgSet* globs = (RooArgSet*)m_mConfig->GetGlobalObservables();
-  RooArgSet* nuis = (RooArgSet*)m_mConfig->GetNuisanceParameters();
-  RooAbsPdf *pdf = m_mConfig->GetPdf();
+  RooArgSet* globs = (RooArgSet*)m_modelConfig->GetGlobalObservables();
+  RooArgSet* nuis = (RooArgSet*)m_modelConfig->GetNuisanceParameters();
+  RooAbsPdf *pdf = m_modelConfig->GetPdf();
     
   statistics::constSet(poiAndNuis, false);
   statistics::constSet(globs, true);

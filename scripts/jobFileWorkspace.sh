@@ -1,20 +1,20 @@
 #!/bin/bash
 
 if [[ $# -lt 6 ]]; then
-    echo "USAGE: jobFileWorkspace.sh <jobname> <input_file> <option> <exe_name> <signal> <cate_scheme"
+    echo "USAGE: jobFileWorkspace.sh <jobname> <configfile> <input_file> <option> <exe_name> <signal>"
     
 else
     jobname=$1
-    input_file=$2
-    option=$3
-    exe_name=$4
-    signal=$5
-    cate_scheme=$6
+    configfile=$2
+    input_file=$3
+    option=$4
+    exe_name=$5
+    signal=$6
 
     date
     echo
     
-    echo $jobname $input_file $option $exe_name $signal $cate_scheme
+    echo $jobname $configfile $input_file $option $exe_name $signal
     
     out="${jobname}_${signal}"
     output_dir="/afs/cern.ch/user/a/ahard/work_directory/files_HggDM/FullAnalysis/${jobname}/DMWorkspace/"
@@ -45,7 +45,7 @@ else
     echo "Printing directory contents before running."
     ls
     
-    ./bin/${exe_name} ${jobname} ${signal} ${cate_scheme} ${option} 1> ${out}.log 2>${out}.err;
+    ./bin/${exe_name} ${configfile} ${signal} ${option} 1> ${out}.log 2>${out}.err;
     
     mv *.log ${output_dir}/log
     mv *.err ${output_dir}/err

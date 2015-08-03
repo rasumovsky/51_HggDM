@@ -1,20 +1,20 @@
 #!/bin/bash
 
-if [[ $# -lt 5 ]]; then
-    echo "USAGE: jobFileTestStat.sh <jobname> <input_file> <exe_name> <signal> <cateScheme> <options>"
+if [[ $# -lt 6 ]]; then
+    echo "USAGE: jobFileTestStat.sh <jobname> <configfile> <input_file> <exe_name> <signal> <options>"
     
 else
     jobname=$1
-    input_file=$2
-    exe_name=$3
-    signal=$4
-    cateScheme=$5
+    configfile=$2
+    input_file=$3
+    exe_name=$4
+    signal=$5
     options=$6
 
     date
     echo
     
-    echo $jobname $input_file $exe_name $signal $cateScheme $options
+    echo $jobname $configfile $input_file $exe_name $signal $options
     
     out="${jobname}_${signal}"
     output_dir="/afs/cern.ch/user/a/ahard/work_directory/files_NPP/FullAnalysis/${jobname}/TestStat"
@@ -45,7 +45,7 @@ else
     echo "Printing directory contents before running."
     ls
     
-    ./bin/${exe_name} ${jobname} ${signal} ${cateScheme} ${options} 1> ${out}.log 2>${out}.err;
+    ./bin/${exe_name} ${configfile} ${signal} ${options} 1> ${out}.log 2>${out}.err;
     
     mv *.log ${output_dir}/log
     mv *.err ${output_dir}/err

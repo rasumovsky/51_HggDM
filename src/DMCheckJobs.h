@@ -11,14 +11,19 @@
 #ifndef DMCheckJobs_h
 #define DMCheckJobs_h
 
+// C++ libraries:
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
 #include <iostream>
 #include <vector>
+
+// ROOT libraries:
 #include "TString.h"
 
+// Package libraries:
+#include "Config.h"
 #include "DMAnalysis.h"
 
 class DMCheckJobs {
@@ -26,7 +31,7 @@ class DMCheckJobs {
  public:
   
   // Constructor and destructor:
-  DMCheckJobs(TString newJobName);
+  DMCheckJobs(TString configFileName);
   virtual ~DMCheckJobs() {};
   
   // Mutators:
@@ -38,11 +43,12 @@ class DMCheckJobs {
   void printResubmitList(TString jobType);
   
  private:
-    
-  TString jobName;
-  std::vector<TString> listDMWorkspace;
-  std::vector<TString> listDMTestStat;
-  std::vector<TString> listDMMuLimit;
+  
+  Config *m_config;
+
+  std::vector<TString> m_listDMWorkspace;
+  std::vector<TString> m_listDMTestStat;
+  std::vector<TString> m_listDMMuLimit;
   
 };
 

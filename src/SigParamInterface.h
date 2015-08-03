@@ -54,6 +54,9 @@ class SigParamInterface
   TString m_failedSigParam;
   bool m_signalsOK;
   
+  // Access to analysis settings:
+  Config *m_config;
+ 
   std::map<TString,SigParam*> m_sigMap;
 
 };

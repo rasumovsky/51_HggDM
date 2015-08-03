@@ -60,7 +60,7 @@ void DMCheckJobs::updateJobStatus(TString jobType) {
   m_listDMMuLimit.clear();
   
   // Then loop over submissions to see whether output files exist:
-  std::vector<TString> sigDMModes = m_config->getStr("sigDMModes");
+  std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
   for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
     TString currDMSignal = sigDMModes[i_DM];
     

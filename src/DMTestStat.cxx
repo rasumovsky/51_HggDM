@@ -39,13 +39,13 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
   m_cateScheme = m_config->getStr("cateScheme");
   
   // Use Asimov data if the analysis is blind.
-  m_dataForObs = (config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
+  m_dataForObs = (m_config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
   m_dataForExp = "asimovDataMu0";
   
   if (newWorkspace == NULL) {
     m_inputFile
       = new TFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		       (config->getStr("masterOutput")).Data(),
+		       (m_config->getStr("masterOutput")).Data(),
 		       m_jobName.Data(), m_DMSignal.Data()), "read");
     
     if (m_inputFile->IsOpen()) {
@@ -70,8 +70,9 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
   m_calculatedValues.clear();
   
   // Create output directories:
-  m_outputDir = Form("%s/%s/TestStat/",
-		     (config->getStr("masterOutput")).Data(), m_jobName.Data());
+  m_outputDir = Form("%s/%s/TestStat/", 
+		     (m_config->getStr("masterOutput")).Data(), 
+		     m_jobName.Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   system(Form("mkdir -vp %s/CL/", m_outputDir.Data()));
   system(Form("mkdir -vp %s/p0/", m_outputDir.Data()));
@@ -822,7 +823,7 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
   TCanvas *can = new TCanvas("can", "can", 800, 800);
   
   // loop over categories:
-  for (int i_c = 0; i_c < config->getInt("nCategories"); i_c++) {
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
     RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
     m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data()))

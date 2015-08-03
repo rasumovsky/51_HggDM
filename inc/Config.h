@@ -3,7 +3,11 @@
 //  A brief class that handles reading input from a configuration text file   //
 //  based on root's TEnv format, i.e. key-value pairs, and shamelessly stolen //
 //  from the HGamAnalysisTools package.                                       //
-//  author Dag Gillberg                                                       //
+//                                                                            //
+//  Author: Dag Gillberg                                                      //
+//  Appropriator: Andrew Hard                                                 //
+//  Email: ahard@cern.ch                                                      //
+//  Date: 03/08/2015                                                          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -23,11 +27,11 @@
 #include "TObjString.h"
 
 class Config {
+
+ public:
   
   Config(TString fileName);
   virtual ~Config() {};
-  
- public:
   
   Config &operator = (const Config &rhs); // assignment operator
   

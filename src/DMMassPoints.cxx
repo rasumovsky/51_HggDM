@@ -21,8 +21,6 @@
 
 #include "DMMassPoints.h"
 
-using namespace DMAnalysis;
-
 /**
    Initialize the DMMassPoint class and make a new RooCategory.
    @param newConfigFile - The name of the config file.
@@ -46,19 +44,21 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
   
   // Assign the observable based on inputs:
   if (newObservable == NULL) {
-    m_yy = new RooRealVar("m_yy", "m_yy", DMMyyRangeLo, DMMyyRangeHi);
+    m_yy = new RooRealVar("m_yy", "m_yy", m_config->getNum("DMMyyRangeLo"),
+			  m_config->getNum("DMMyyRangeHi"));
   }
   else {
     setMassObservable(newObservable);
   }
   
   // Assign output directory, and make sure it exists:
-  m_outputDir = Form("%s/%s/DMMassPoints", masterOutput.Data(), 
-		   (m_config->getStr("jobName")).Data());
+  m_outputDir = Form("%s/%s/DMMassPoints", 
+		     (m_config->getStr("masterOutput")).Data(), 
+		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   
   // Check if data should be weighted:
-  m_isWeighted = isWeightedSample(m_sampleName);
+  m_isWeighted = DMAnalysis::isWeightedSample(m_config, m_sampleName);
   
   // Either load the masspoints from file or create new ones:
   if (newOptions.Contains("FromFile")) loadMassPointsFromFile();
@@ -115,7 +115,7 @@ void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
   
   // Alternative: use file list:
-  TString listName = nameToFileList(m_sampleName);
+  TString listName = DMAnalysis::nameToFileList(m_config, m_sampleName);
   TChain *chain = CommonFunc::MakeChain("CollectionTree", listName, "badfile");
   DMTree *dmt = new DMTree(chain);
   
@@ -124,11 +124,13 @@ void DMMassPoints::createNewMassPoints() {
   
   // Tool to get the total number of events at the generator level.
   DMxAODCutflow *dmx
-    = new DMxAODCutflow(DMAnalysis::nameToxAODCutFile(m_sampleName));
+    = new DMxAODCutflow(DMAnalysis::nameToxAODCutFile(m_config, m_sampleName));
   double nGeneratedEvt = dmx->getEventsPassingCut(1);
   
   // Tool to load cross sections and branching ratios:
-  BRXSReader *brxs = new BRXSReader(Form("%s/XSBRInputs/",masterInput.Data()));
+  BRXSReader *brxs
+    = new BRXSReader(Form("%s/XSBRInputs/",
+			  (m_config->getStr("masterInput")).Data()));
   
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
@@ -165,33 +167,35 @@ void DMMassPoints::createNewMassPoints() {
     dataMap[Form("%s_%d",(m_config->getStr("cateScheme")).Data(),i_c)]
       = m_cateData[i_c];
   }
-    
+  
   // Loop over the input DMTree:
   Long64_t entries = dmt->fChain->GetEntries();
   std::cout << "DMMassPoints: Loop over DMTree with " << entries
 	    << " entries." << std::endl;
   for (Long64_t event = 0; event < entries; event++) {
     dmt->fChain->GetEntry(event);
-        
+    
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0;
     if (m_isWeighted) {
-      evtWeight *= (DMAnalysis::analysisLuminosity * 
-		    dmt->EventInfoAuxDyn_PileupWeight / nGeneratedEvt);
+      evtWeight *= (m_config->getNum("analysisLuminosity") * 
+	dmt->EventInfoAuxDyn_PileupWeight / nGeneratedEvt);
       
       // Multiply by the appropriate luminosity, xsection & branching ratio.
-      if (isSMSample(m_sampleName)) {
-	evtWeight *= ((brxs->getSMBR(higgsMass, "gammagamma", "BR")) *
-		      (brxs->getSMXS(higgsMass, m_sampleName, "XS")));
+      if (DMAnalysis::isSMSample(m_config, m_sampleName)) {
+	evtWeight *= ((brxs->getSMBR(m_config->getNum("higgsMass"),
+				     "gammagamma", "BR")) *
+		      (brxs->getSMXS(m_config->getNum("higgsMass"), 
+				     m_sampleName, "XS")));
       }
       // Dark matter XSBR includes cross-section and branching ratio.
       // WARNING!!! GETTING RID OF XSBR
-      else if (isDMSample(m_sampleName)) {
+      else if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
 	/*
-	evtWeight *= 10000 * ((brxs->getDMXSBR(getMediatorMass(m_sampleName),
-					       getDarkMatterMass(m_sampleName),
-					       getMediatorName(m_sampleName),
-					       "XS")));
+	  evtWeight *= 10000 * ((brxs->getDMXSBR(getMediatorMass(m_sampleName),
+	  getDarkMatterMass(m_sampleName),
+	  getMediatorName(m_sampleName),
+	  "XS")));
 	*/
 	evtWeight *= 0.006566;// cross-section for mX=1GeV,mZ'=100GeV
       }
@@ -246,10 +250,10 @@ void DMMassPoints::createNewMassPoints() {
   for (int i_f = 0; i_f < m_config->getInt("nCategories"); i_f++) {
     massFiles[i_f].close();
   }
-    
+  
   std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
 }
-  
+
 /**
    Load the mass points from text files that have already been produced. This is
    much faster than producing mass points from scratch, and is preferred. 
@@ -266,7 +270,7 @@ void DMMassPoints::loadMassPointsFromFile() {
   args->add(*m_yy);
   
   // Loop over categories to define datasets and mass files:
-  for (int i_c = 0; i_c < m_config->getInt("nCategories"))); i_c++) {
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     
     if (m_isWeighted) {
       args->add(wt);

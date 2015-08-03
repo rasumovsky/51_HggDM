@@ -26,13 +26,13 @@ DMToyAnalysis::DMToyAnalysis(TString newConfigFile, TString newDMSignal) {
   TString jobName = config->getStr("jobName");
   
   // set input and output directories:
-  m_outputDir = Form("%s/%s/DMToyAnalysis", DMAnalysis::masterOutput.Data(),
-		   jobName.Data());
-  TString toyDir = Form("%s/%s/DMPseudoExp", DMAnalysis::masterOutput.Data(),
-			jobName.Data());
+  m_outputDir = Form("%s/%s/DMToyAnalysis", 
+		     (config->getStr("masterOutput")).Data(), jobName.Data());
+  TString toyDir = Form("%s/%s/DMPseudoExp", 
+			(config->getStr("masterOutput")).Data(),jobName.Data());
   TString wsFileName = Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-			    DMAnalysis::masterOutput.Data(), jobName.Data(), 
-			    newDMSignal.Data());
+			    (config->getStr("masterOutput")).Data(),
+			    jobName.Data(), newDMSignal.Data());
   
   // Set the internal (private) variable initial conditions:
   m_namesGlobs.clear();
@@ -168,7 +168,7 @@ void DMToyAnalysis::fillToyHistograms(int muValue, DMToyTree *toyTree) {
     }
     
     // Fill the global observable histograms:
-    if (isFirstLoop) m_nGlobs = (int)((*toyTree->m_namesGlobs).size());
+    if (isFirstLoop) m_nGlobs = (int)((*toyTree->namesGlobs).size());
     // loop over the nuisance parameters in the tree:
     for (int i_p = 0; i_p < m_nGlobs; i_p++) {
       m_hGlobsMu0[i_p][muValue]->Fill((*toyTree->valuesGlobsMu0)[i_p]);

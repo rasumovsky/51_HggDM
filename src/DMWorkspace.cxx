@@ -54,8 +54,8 @@ DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
   
   // Assign output directory, and make sure it exists:
   m_outputDir = Form("%s/%s/DMWorkspace", 
-		     (config->getStr("masterOutput")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("masterOutput")).Data(),
+		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   system(Form("mkdir -vp %s/Plots/", m_outputDir.Data()));
   system(Form("mkdir -vp %s/rootfiles/", m_outputDir.Data()));
@@ -65,7 +65,7 @@ DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
   CommonFunc::SetAtlasStyle();
     
   m_muNominalSM = 1;
-  m_dataToPlot = (config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
+  m_dataToPlot = (m_config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
   
   // Make new or load old workspace:
   if (m_options.Contains("FromFile")) loadWSFromFile();
@@ -146,18 +146,17 @@ void DMWorkspace::createNewWS() {
     cateNamesS.push_back((string)m_currCateName);
     std::cout << "  \t" << m_currCateName << std::endl;
   }
-  std::cout << "Luminosity at 13 TeV: " << analysisLuminosity 
-	    << " pb-1." << std::endl;
+  std::cout << "Luminosity at 13 TeV: " 
+	    << m_config->getNum("analysisLuminosity") << " pb-1." << std::endl;
   std::cout << "........................................" << std::endl;
   
   // Read tables of PES and PER and store values:
-  m_pes = new PESReader(fileNamePESValues, m_nCategories);
-  m_per = new PERReader(fileNamePERValues, m_nCategories);
+  m_pes = new PESReader(m_config->getStr("fileNamePESValues"), m_nCategories);
+  m_per = new PERReader(m_config->getStr("fileNamePERValues"), m_nCategories);
   
   // Instantiate the signal parameterization class using the observable:
   m_spi = new SigParamInterface(m_configFile, "FromFile");
-  
-  
+    
   //--------------------------------------//
   // Initialize classes relevant to workspace:
   // Everything for simultaneous fit:
@@ -542,7 +541,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   tempWS->import(*expectedBias);
   
   // Declare the observable m_yy, and the observables set:
-  tempWS->factory(Form("m_yy[%f,%f]",DMMyyRangeLo,DMMyyRangeHi));
+  tempWS->factory(Form("m_yy[%f,%f]", m_config->getNum("DMMyyRangeLo"),
+		       m_config->getNum("DMMyyRangeHi")));
   tempWS->defineSet("obsprelim","m_yy");
   
   // Construct the signal PDFs:
@@ -625,8 +625,10 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   //  3) WARNING! SHould create a sigparam class that can be called, just so
   //     it is possible to go back to redo if necessary. 
   // Construct the background PDF:
+  std::vector<TString> bkgFunctions = m_config->getStrV("bkgFunctions");
   BkgModel *currBkgModel = new BkgModel(tempWS->var("m_yy"));
-  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, DMAnalysis::cateToBkgFunc(m_config->getStr("cateScheme"), m_currCateIndex));
+  currBkgModel->addBkgToCateWS(tempWS, nuisParamsBkg, 
+			       bkgFunctions[m_currCateIndex]);
   
   // Add background parameters to uncorrelated collection:
   nuisParamsUncorrelated->add(*nuisParamsBkg);
@@ -852,7 +854,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 
 double DMWorkspace::spuriousSignal() {
   double spurious[10] = { 1.0, 1.0, 1.0, 1.0, 1.0 };// per fb-1
-  return spurious[m_currCateIndex] * analysisLuminosity;
+  return spurious[m_currCateIndex] * m_config->getNum("analysisLuminosity");
 }
 
 /**

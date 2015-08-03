@@ -4,7 +4,7 @@
 //                                                                            //
 //  Created: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
-//  Date: 10/03/2015                                                          //
+//  Date: 03/08/2015                                                          //
 //                                                                            //
 //  This program is useful as an interface to the H->diphoton + DM analysis   //
 //  tools. It centralizes the commands for creating inputs, plots, workspaces,//
@@ -82,7 +82,7 @@ void submitWSViaBsub(TString exeConfigFile, TString exeOption,
 			     exeSignal.Data());
   // Submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
-	      nameErrFile.Data(), nameJobScript.Data()));
+	      nameErrFile.Data(), nameJScript.Data()));
 }
 
 /**
@@ -417,8 +417,7 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("PlotPseudoExp")) {
     std::cout << "DMMaster: Step 5.2 - Plot pseudoexperiment results for "
 	      << currSignal << std::endl;    
-    DMToyAnalysis *dmta = new DMToyAnalysis(configFileName, currSignal,
-					    toyPlotOptions);
+    DMToyAnalysis *dmta = new DMToyAnalysis(configFileName, currSignal);
   }
   
   //--------------------------------------//

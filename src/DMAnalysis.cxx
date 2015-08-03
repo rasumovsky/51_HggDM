@@ -14,35 +14,17 @@
 
 #include "DMAnalysis.h"
 
-/**
-   Get the number of categories for a particular categorization scheme based
-   on the name. --> NOTE: Be sure that all categories defined here are also 
-   implemented in the DMEvtSelect class.
-   @param cateScheme - the name of the categorization scheme.
-   @returns - the number of categories.
-*/
-int DMAnalysis::getNumCategories(TString cateScheme) {
-  int result = 0;
-  if (cateScheme.EqualTo("inclusive")) result = 1;
-  else if (cateScheme.EqualTo("splitETMiss")) result = 2;
-  else {
-    std::cout << "DMAnalysis: Error! Categorization " << cateScheme 
-	      << " has not been defined!." << std::endl;
-    exit(0);
-  }
-  return result;
-}
-
 /** 
     Convert the sample name to the corresponding file list.
     @param name - the name of the sample.
     @returns - the file list location.
 */
-TString DMAnalysis::nameToFileList(TString name) {
+TString DMAnalysis::nameToFileList(Config *config, TString name) {
   TString result = Form("%s/FileLists/%s/list_H2yyMETAnalysis_%s.txt",
-			masterInput.Data(), fileListDir.Data(), name.Data());
+			(config->getStr("masterInput")).Data(),
+			(config->getStr("fileListDir")).Data(), name.Data());
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
-  if (name.EqualTo("bbH")) result = nameToFileList("ggH");
+  if (name.EqualTo("bbH")) result = nameToFileList(config, "ggH");
   return result;
 }
 
@@ -51,25 +33,12 @@ TString DMAnalysis::nameToFileList(TString name) {
    @param name - the name of the sample.
    @returns - the file list location.
 */
-TString DMAnalysis::nameToxAODCutFile(TString name) {
+TString DMAnalysis::nameToxAODCutFile(Config *config, TString name) {
   TString result = Form("%s/xAODCutFlows/%s/hist_H2yyMETAnalysis_%s.root",
-			masterInput.Data(), fileListDir.Data(), name.Data());
+			(config->getStr("masterInput")).Data(), 
+			(config->getStr("fileListDir")).Data(), name.Data());
   // NOTE: use ggH for bbH, weight sigma_bbH/sigma_ggH:
-  if (name.EqualTo("bbH")) result = nameToxAODCutFile("ggH");
-  return result;
-}
-
-/** 
-    Determine the background PDF based on the category.
-    @param cateScheme - the name of the event categorization scheme.
-    @param cateIndex - the category index.
-    @returns - the name of the background PDF.
-*/
-TString DMAnalysis::cateToBkgFunc(TString cateScheme, int cateIndex) {
-  TString result = "";
-  // MAKE SURE THIS IS 'O' AND NOT '0'
-  //Possibilities are "BernO1",... "BernO6", "ExppolO1",... "ExppolO6"
-  result = "ExppolO1";
+  if (name.EqualTo("bbH")) result = nameToxAODCutFile(config, "ggH");
   return result;
 }
 
@@ -88,10 +57,10 @@ TString DMAnalysis::getMediatorName(TString modeName) {
   }
 }
 
-/** 
-    Convert the DM sample name into a mediator mass.
-    @param modeName - the name of the DM production mode.
-    @returns - the mass of the mediator particle.
+/**
+   Convert the DM sample name into a mediator mass.
+   @param modeName - the name of the DM production mode.
+   @returns - the mass of the mediator particle.
 */
 int DMAnalysis::getMediatorMass(TString modeName) {
   for (int currMass = 100; currMass < 1000; currMass += 100) {
@@ -105,10 +74,10 @@ int DMAnalysis::getMediatorMass(TString modeName) {
   exit(0);
 }
 
-/** 
-    Convert the DM sample name into a dark matter particle mass.
-    @param modeName - the name of the DM production mode.
-    @returns - the mass of the DM particle.
+/**
+   Convert the DM sample name into a dark matter particle mass.
+   @param modeName - the name of the DM production mode.
+   @returns - the mass of the DM particle.
 */
 int DMAnalysis::getDarkMatterMass(TString modeName) {
   for (int currMass = 100; currMass < 1000; currMass += 100) {
@@ -119,42 +88,44 @@ int DMAnalysis::getDarkMatterMass(TString modeName) {
   exit(0);
 }
 
-/** 
-    Check if the sample is among those listed as a SM or DM signal. 
-    @param sampleName - the name of the sample being used.
-    @returns - true iff the sample is a signal sample.
+/**
+   Check if the sample is among those listed as a SM or DM signal. 
+   @param sampleName - the name of the sample being used.
+   @returns - true iff the sample is a signal sample.
 */
-bool DMAnalysis::isSMSample(TString sampleName) {
-  for (int i_SM = 0; i_SM < nSMModes; i_SM++) {
+bool DMAnalysis::isSMSample(Config *config, TString sampleName) {
+  std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+  for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
     if (sampleName.EqualTo(sigSMModes[i_SM])) return true;
   }
   return false;
 }
 
-bool DMAnalysis::isDMSample(TString sampleName) {
-  for (int i_DM = 0; i_DM < nDMModes; i_DM++) {
+bool DMAnalysis::isDMSample(Config *config, TString sampleName) {
+  std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+  for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
     if (sampleName.EqualTo(sigDMModes[i_DM])) return true;
   }
   return false;
 }
 
-bool DMAnalysis::isSignalSample(TString sampleName) {
-  return (isSMSample(sampleName) || isDMSample(sampleName));
+bool DMAnalysis::isSignalSample(Config *config, TString sampleName) {
+  return (isSMSample(config, sampleName) || isDMSample(config, sampleName));
 }
 
-/** 
-    Check whether a sample should be weighted.
-    @param sampleName - the name of the sample being used.
-    @returns - true iff the sample has associated event weights.
+/**
+   Check whether a sample should be weighted.
+   @param sampleName - the name of the sample being used.
+   @returns - true iff the sample has associated event weights.
 */
-bool DMAnalysis::isWeightedSample(TString sampleName) {
+bool DMAnalysis::isWeightedSample(Config *config, TString sampleName) {
   // First check if it is a SM or DM signal process:
-  if (isSignalSample(sampleName)) return true;
+  if (isSignalSample(config, sampleName)) return true;
   
   // Finally, check if it is one of the other MC processes:
-  for (int i_MC = 0; i_MC < nMCProcesses; i_MC++) {
+  std::vector<TString> MCProcesses = config->getStrV("MCProcesses");
+  for (int i_MC = 0; i_MC < (int)MCProcesses.size(); i_MC++) {
     if (sampleName.EqualTo(MCProcesses[i_MC])) return true;
   }
   return false;
 }
-

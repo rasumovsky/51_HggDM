@@ -3,7 +3,11 @@
 //  A brief class that handles reading input from a configuration text file   //
 //  based on root's TEnv format, i.e. key-value pairs, and shamelessly stolen //
 //  from the HGamAnalysisTools package.                                       //
-//  author Dag Gillberg                                                       //
+//                                                                            //
+//  Author: Dag Gillberg                                                      //
+//  Appropriator: Andrew Hard                                                 //
+//  Email: ahard@cern.ch                                                      //
+//  Date: 03/08/2015                                                          //
 //                                                                            //
 //  Config:                                                                   //
 //    class to read settings from text files                                  //

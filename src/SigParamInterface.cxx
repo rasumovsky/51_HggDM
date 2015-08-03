@@ -36,16 +36,16 @@ SigParamInterface::SigParamInterface(TString newConfigFile, TString newOptions){
   CommonFunc::SetAtlasStyle();
   
   // Load the configuration for the analysis:
-  Config *config = new Config(m_configFile);
+  m_config = new Config(m_configFile);
   
   // Assign output directory, and make sure it exists:
   m_outputDir = Form("%s/%s/DMSigParam", 
-		     (config->getStr("masterOutput")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("masterOutput")).Data(),
+		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   
   // Load the SM signal parameterization from file or start from scratch:
-  std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+  std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
   for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
     if ((newOptions.Contains("FromFile") && loadFile(sigSMModes[i_SM]))
 	|| createNew(sigSMModes[i_SM])) {
@@ -56,7 +56,7 @@ SigParamInterface::SigParamInterface(TString newConfigFile, TString newOptions){
   }
   
   // Load the DM signal parameterization from file or start from scratch:
-  std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+  std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
   for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
     if ((newOptions.Contains("FromFile") && loadFile(sigDMModes[i_DM]))
 	|| createNew(sigDMModes[i_DM])) {
@@ -105,14 +105,14 @@ bool SigParamInterface::createNew(TString signalType) {
   
   bool signalConverged = true;
   SigParam *sp = new SigParam(signalType, m_outputDir);
-  for (int i_c = 0; i_c < config->getInt("nCategories"); i_c++) {
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     RooDataSet *currDataSet = getData(signalType, i_c);
-    sp->addDataSet(config->getNum("higgsMass"), i_c, currDataSet, "m_yy");
+    sp->addDataSet(m_config->getNum("higgsMass"), i_c, currDataSet, "m_yy");
     
-    if (sp->makeSingleResonance(config->getNum("higgsMass"), i_c, 
-				config->getStr("resonancePDF"))) {
+    if (sp->makeSingleResonance(m_config->getNum("higgsMass"), i_c, 
+				m_config->getStr("resonancePDF"))) {
       sp->saveAll();
-      sp->plotSingleResonance(config->getNum("higgsMass"), i_c);
+      sp->plotSingleResonance(m_config->getNum("higgsMass"), i_c);
       m_sigMap[signalType] = sp;
     }
     else {
@@ -133,7 +133,7 @@ bool SigParamInterface::createNew(TString signalType) {
 RooDataSet* SigParamInterface::getData(TString signalType, int cateIndex) {
   if (signalType.EqualTo("SM")) {
     RooDataSet *currData = NULL;
-    std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+    std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
     for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
       DMMassPoints *mp = new DMMassPoints(m_configFile, sigSMModes[i_SM],
 					  "FromFile", NULL);

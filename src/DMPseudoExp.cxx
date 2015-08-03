@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
   fOutputTree.Branch("llrL1L0", &llrL1L0, "llrL1L0/D");
   fOutputTree.Branch("llrL0Lfree", &llrL0Lfree, "llrL0Lfree/D");
   fOutputTree.Branch("llrL1Lfree", &llrL1Lfree, "llrL1Lfree/D");
-  fOutputTree.Branch("numEventsPerCate", &numEventsPerCate);
+  //fOutputTree.Branch("numEventsPerCate", &numEventsPerCate);
   fOutputTree.Branch("namesNP", &namesNP);
   fOutputTree.Branch("valuesNPMu0", &valuesNPMu0);
   fOutputTree.Branch("valuesNPMu1", &valuesNPMu1);

@@ -39,8 +39,10 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
   m_cateScheme = m_config->getStr("cateScheme");
   
   // Use Asimov data if the analysis is blind.
-  m_dataForObs = (m_config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
-  m_dataForExp = "asimovDataMu0";
+  m_dataForObsQ0 = (m_config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
+  m_dataForExpQ0 = "asimovDataMu1";
+  m_dataForObsQMu =(m_config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
+  m_dataForExpQMu = "asimovDataMu0";
   
   if (newWorkspace == NULL) {
     m_inputFile
@@ -109,14 +111,14 @@ void DMTestStat::calculateNewCL() {
   
   // Calculate observed qmu: 
   double muHatObs = 0.0;
-  double nllMu1Obs = getFitNLL(m_dataForObs, 1.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL(m_dataForObs, 1.0, false, muHatObs);
+  double nllMu1Obs = getFitNLL(m_dataForObsQMu, 1.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(m_dataForObsQMu, 1.0, false, muHatObs);
   double obsQMu = getQMuFromNLL(nllMu1Obs, nllMuHatObs, muHatObs, 1);
   
   // Calculate expected qmu:
   double muHatExp = 0.0;
-  double nllMu1Exp = getFitNLL(m_dataForExp, 1.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL(m_dataForExp, 0.0, false, muHatExp);
+  double nllMu1Exp = getFitNLL(m_dataForExpQMu, 1.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(m_dataForExpQMu, 0.0, false, muHatExp);
   double expQMu = getQMuFromNLL(nllMu1Exp, nllMuHatExp, muHatExp, 1);
   
   // Calculate CL:
@@ -174,14 +176,14 @@ void DMTestStat::calculateNewP0() {
   
   // Calculate observed q0: 
   double muHatObs = 0.0;
-  double nllMu0Obs = getFitNLL(m_dataForObs, 0.0, true, muHatObs);
-  double nllMuHatObs = getFitNLL(m_dataForObs, 0.0, false, muHatObs);
+  double nllMu0Obs = getFitNLL(m_dataForObsQ0, 0.0, true, muHatObs);
+  double nllMuHatObs = getFitNLL(m_dataForObsQ0, 0.0, false, muHatObs);
   double obsQ0 = getQ0FromNLL(nllMu0Obs, nllMuHatObs, muHatObs);
   
   // Calculate expected q0:
   double muHatExp = 0.0;
-  double nllMu0Exp = getFitNLL(m_dataForExp, 0.0, true, muHatExp);
-  double nllMuHatExp = getFitNLL(m_dataForExp, 0.0, false, muHatExp);
+  double nllMu0Exp = getFitNLL(m_dataForExpQ0, 0.0, true, muHatExp);
+  double nllMuHatExp = getFitNLL(m_dataForExpQ0, 0.0, false, muHatExp);
   double expQ0 = getQ0FromNLL(nllMu0Exp, nllMuHatExp, muHatExp);
   
   // Calculate p0 from q0:
@@ -248,52 +250,76 @@ void DMTestStat::clearFitParamSettings() {
    @param cateWS - the current category workspace.
    @param valMuDM - the value of the dark matter signal strength to use.
    @param valMuSM - the value of the SM Higgs signal strength to use.
-   @returns - A RooDataSet with Asimov data, also imports in workspace. 
-*/
-RooDataSet* DMTestStat::createAsimovData(int valMuDM, int valMuSM) {
+
+void DMTestStat::createAsimovData(int valMuDM, int valMuSM) {
   std::cout << "DHWorkspace: Creating Asimov data, mu_DM = " << valMuDM
 	    << " and mu_SM = " << valMuSM << std::endl;
   
   // Set mu_DH and mu_SH to the specified values:
-  RooRealVar *poi = m_workspace->var("mu_DM");
-  double initialMuDM = poi->getVal();
+  double initialMuDM = m_workspace->var("mu_DM")->getVal();
   double initialMuSM = m_workspace->var("mu_SM")->getVal();
-  poi->setVal(valMuDM);
-  poi->setConstant(true);
+  bool initialMuDMConst = m_workspace->var("mu_DM")->isConstant();
+  bool initialMuSMConst = m_workspace->var("mu_SM")->isConstant();
+  m_workspace->var("mu_DM")->setVal(valMuDM);
+  m_workspace->var("mu_DM")->setConstant(true);
   m_workspace->var("mu_SM")->setVal(valMuSM);
   m_workspace->var("mu_SM")->setConstant(true);
-    
-  //RooDataSet *asimovData = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_workspace->pdf("combinedPdf"), *m_workspace->set("observables"));
-  RooDataSet *asimovData = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_mc->GetPdf(), *m_mc->GetObservables());
   
-  TString asimovName = Form("asimovDataMu%d_%s", valMuDM, m_DMSignal.Data());
-  asimovData->SetNameTitle(asimovName, asimovName);
+  // Dataset map for combined dataset creation:
+  RooCategory *categories = (RooCategory*)m_workspace->obj("categories");
+  map<string,RooDataSet*> asimovDataMap; asimovDataMap.clear();
+  RooArgSet *allObs = new RooArgSet();
+  
+  // Loop over categories, create Asimov dataset in each.
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
+    std::cout << "Check0" << std::endl;
+    m_workspace->pdf(Form("model_%s",currCateName.Data()))->Print("v");
+    std::cout << "Check0.1" << std::endl;
+    m_workspace->set("observables")->Print("v");
+    std::cout << "Check0.2" << std::endl;
+    //RooDataSet *data = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_workspace->pdf(Form("model_%s",currCateName.Data())), *m_workspace->set(Form("observables_%s",currCateName.Data())));
+    RooDataSet *data = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*m_workspace->pdf(Form("model_%s",currCateName.Data())), *m_workspace->pdf(Form("model_%s",currCateName.Data()))->getObservables(*m_workspace->set("observables")));
+    std::cout << "Check1" << std::endl;
+    data->SetNameTitle(Form("asimovDataMu%d_%s",valMuDM,currCateName.Data()),
+		       Form("asimovDataMu%d_%s",valMuDM,currCateName.Data()));
+    m_workspace->import(*data);
+    asimovDataMap[(std::string)currCateName] = data;
+    //allObs->add(*m_workspace->set(Form("observables_%s",currCateName.Data())));
+  }
+  
+  // Import the new data into the workspace:
+  TString asimovName = Form("asimovDataMu%d", valMuDM);
+  RooDataSet* asimovData
+    = new RooDataSet(asimovName, asimovName, 
+		     *m_workspace->set(Form("observables")),
+		     RooFit::Index(*categories), RooFit::Import(asimovDataMap));
   
   m_workspace->import(*asimovData);
   m_workspace->var("mu_DM")->setVal(initialMuDM);
   m_workspace->var("mu_SM")->setVal(initialMuSM);
-  m_workspace->var("mu_DM")->setConstant(false);
-  m_workspace->var("mu_SM")->setConstant(true);
-  std::cout << "DMWorkspace: Asimov data has " << asimovData->sumEntries() 
+  m_workspace->var("mu_DM")->setConstant(initialMuDMConst);
+  m_workspace->var("mu_SM")->setConstant(initialMuSMConst);
+  std::cout << "DMTestStat: Asimov data has " << asimovData->sumEntries() 
 	    << " entries" << std::endl;
-  return asimovData;
 }
 
-/**
+
    -----------------------------------------------------------------------------
    Create an Asimov dataset using the name.
    @param datasetName - the name of the Asimov data set.
    @returns - A RooDataSet with Asimov data, also imports in workspace.
-*/
-RooDataSet* DMTestStat::createAsimovData(TString datasetName) {
-  if (datasetName.Contains("Mu1")) return createAsimovData(1, 1);
-  else if (datasetName.Contains("Mu0")) return createAsimovData(0, 1);
+
+void DMTestStat::createAsimovData(TString datasetName) {
+  if (datasetName.Contains("Mu1")) createAsimovData(1, 1);
+  else if (datasetName.Contains("Mu0")) createAsimovData(0, 1);
   else {
     std::cout << "DMTestStat: Asimov data creation error for " << datasetName
 	      << std::endl;
-    return NULL;
+    exit(0);
   }
 }
+*/
 
 /**
    -----------------------------------------------------------------------------
@@ -355,7 +381,7 @@ RooDataSet* DMTestStat::createPseudoData(int seed, int valMuDM, int valMuSM,
   }
   
   // Iterate over the categories:
-  while ((cateType=(RooCatType*) cateIter->Next())) {
+  while ((cateType = (RooCatType*)cateIter->Next())) {
     RooAbsPdf *currPDF = combPdf->getPdf(cateType->GetName());
     RooArgSet *currObs = currPDF->getObservables(observables);
     RooArgSet *currGlobs = currPDF->getObservables(globalObservables);
@@ -517,25 +543,23 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   RooArgSet* origValNP = (RooArgSet*)m_workspace->getSnapshot("paramsOrigin");
   RooArgSet* poi = (RooArgSet*)m_mc->GetParametersOfInterest();
   RooRealVar* firstpoi = (RooRealVar*)poi->first();
-   RooArgSet* poiAndNuis = new RooArgSet();
+  RooArgSet* poiAndNuis = new RooArgSet();
   poiAndNuis->add(*nuisanceParameters);
   poiAndNuis->add(*poi);
     
   // Look for dataset, and create if non-existent and Asimov. 
-  RooAbsData *data = NULL;
-  if (m_workspace->data(datasetName)) data = m_workspace->data(datasetName);
-  else if (datasetName.Contains("asimovData")) {
-    data = createAsimovData(datasetName);
-  }
-  else {
+  if (!m_workspace->data(datasetName)) {
+    //if (datasetName.Contains("asimovData")) createAsimovData(datasetName);
+    //else {
     std::cout << "DMTestStat: Error! Requested data not available: " 
 	      << datasetName << std::endl;
     exit(0);
+    //}
   }
   
-  // release nuisance parameters after fit and recovery the default values
-  statistics::constSet(nuisanceParameters, false, origValNP);
-  // the global observables should be fixed to the nominal values...
+  // Free nuisance parameters before fit:
+  statistics::constSet(nuisanceParameters, false);//, origValNP);
+  // Fix the global observables before the fit:
   statistics::constSet(globalObservables, true);
   
   firstpoi->setVal(muVal);
@@ -559,18 +583,20 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
     currMuConst->setConstant(true);
   }
   
-  int status = 0; 
-  RooNLLVar* varNLL = (RooNLLVar*)combPdf->createNLL(*data, Constrain(*nuisanceParameters), Extended(combPdf->canBeExtended()));
-  statistics::minimize(status, varNLL, "", NULL, false);
-  if (status != 0) m_allGoodFits = false;
-  
+  // The actual fit command:
+  RooNLLVar* varNLL = (RooNLLVar*)combPdf
+    ->createNLL(*m_workspace->data(datasetName), Constrain(*nuisanceParameters),
+  		Extended(combPdf->canBeExtended()));
+  RooFitResult *fitResult = statistics::minimize(varNLL, "", NULL, true);
+  if (fitResult->status() != 0) m_allGoodFits = false;
+
   // Save a snapshot if requested:
   if (m_doSaveSnapshot) {
     TString muDMValue = fixMu ? (Form("%d",(int)muVal)) : "Free";
     m_workspace->saveSnapshot(Form("paramsProfileMu%s", muDMValue.Data()),
 			      *poiAndNuis);
   }
-  
+
   // Plot the fit result if the user has set an output directory for plots:
   if (m_doPlot) {
     if (fixMu && ((int)muVal) == 1) plotFits("Mu1", datasetName);
@@ -819,23 +845,24 @@ void DMTestStat::loadStatsFromFile() {
    @param datasetName - the name of the profiled dataset.
 */
 void DMTestStat::plotFits(TString fitType, TString datasetName) {
-  
+  std::cout << "DMTestStat: Plot fit " << fitType << ", " << datasetName
+	    << std::endl;
   TCanvas *can = new TCanvas("can", "can", 800, 800);
   
   // loop over categories:
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
     RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
-    m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data()))
-      ->plotOn(frame);
+    (*m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data())))
+      .plotOn(frame);
     (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame, Components((*m_workspace->pdf("sigPdfDM_"+currCateName))), 
+      .plotOn(frame,Components((*m_workspace->pdf("sigPdfDM_"+currCateName))), 
 	      LineColor(6));
     (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame, Components((*m_workspace->pdf("sigPdfSM_"+currCateName))), 
+      .plotOn(frame,Components((*m_workspace->pdf("sigPdfSM_"+currCateName))), 
 	      LineColor(3));
     (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame, Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
+      .plotOn(frame,Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
 	      LineColor(4));
     (*m_workspace->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
     
@@ -869,91 +896,6 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
   }
   delete can;
 }
-
-/*
-   -----------------------------------------------------------------------------
-   Plot the fits produced by the specified model.
-   @param fitType - the type of fit.
-   @param datasetName - the name of the dataset to plot.
-void DMTestStat::plotFits(TString fitType, TString datasetName) {
-  std::cout << "DMTestStat: Plot final fits for " << fitType << std::endl;
-  std::cout << "DEBUG1" << std::endl;
-  TCanvas *can = new TCanvas("can", "can", 800, 800);
-  // loop over categories:
-  int nCategories = DMAnalysis::getNumCategories(m_cateScheme, m_anaType);
-  for (int i_c = 0; i_c < nCategories; i_c++) {
-    can->Clear();
-    std::cout << "DEBUG2" << std::endl;
-    TString currCateName
-      = DMAnalysis::cateIndexToName(m_cateScheme, m_anaType, i_c);
-    TString obsName = m_anaType.EqualTo("NonRes") ? 
-      Form("m_yy_%s", currCateName.Data()) : 
-      Form("m_bbyy_%s", currCateName.Data());
-    RooPlot* frame =  (*m_workspace->var(obsName)).frame(50);
-    TString cutName = Form("categories_%s==categories_%s::%s", m_anaType.Data(),
-			   m_anaType.Data(), currCateName.Data());
-    std::cout << "DEBUG3" << std::endl;
-    RooDataSet *currData
-      =(RooDataSet*)(m_workspace->data(Form("%s", datasetName.Data())));
-    std::cout << "DEBUG3.1" << std::endl;
-    //currData->plotOn(frame, RooFit::Cut(cutName));
-    
-    // Everything below here was commented out for debugging.
-    //RooCategory *categories
-    //=(RooCategory*)(m_workspace->var(Form("categories_%s",m_anaType.Data())));
-    m_workspace->Print("v");
-    std::cout << "DEBUG3.2" << std::endl;
-    RooArgSet tempSet = m_workspace->allCats();
-    tempSet.Print("v");
-    std::cout << "DEBUG3.3" << std::endl;
-    RooCategory *categories
-      =(RooCategory*)(m_workspace->cat(Form("categories_%s",m_anaType.Data())));
-
-    std::cout << "DEBUG4" << std::endl;
-    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
-      .plotOn(frame, Components((*m_workspace->pdf("sigPdfDH_"+currCateName))),
-	      LineColor(6));
-    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
-      .plotOn(frame, Components((*m_workspace->pdf("sigPdfSH_"+currCateName))),
-	      LineColor(3));
-    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
-      .plotOn(frame, Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
-	      LineColor(4));
-    (*m_workspace->pdf(Form("model_%s",m_anaType.Data())))
-      .plotOn(frame, LineColor(2));
-    
-    std::cout << "DEBUG5" << std::endl;
-    //double chi2 = frame->chiSquare();
-    frame->SetYTitle("Events / GeV");
-    frame->SetXTitle("M_{#gamma#gamma} [GeV]");
-    frame->Draw();
-    
-    TLatex text; text.SetNDC(); text.SetTextColor(1);
-    text.DrawLatex(0.2, 0.81, currCateName);
-    TH1F *histDH = new TH1F("histDH", "histDH", 1, 0, 1);
-    TH1F *histSH = new TH1F("histSH", "histSH", 1, 0, 1);
-    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
-    TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
-    histDH->SetLineColor(6);
-    histSH->SetLineColor(3);
-    histBkg->SetLineColor(4);
-    histSig->SetLineColor(2);
-    TLegend leg(0.61, 0.63, 0.89, 0.77);
-    leg.SetFillColor(0);
-    leg.SetTextSize(0.04);
-    leg.SetBorderSize(0);
-    leg.AddEntry(histDH, "Di-Higgs", "l");
-    leg.AddEntry(histSH, "Single Higgs", "l");
-    leg.AddEntry(histBkg, "Non-resonant", "l");
-    leg.AddEntry(histSig, "Sum", "l");
-    leg.Draw("SAME");
-    can->Print(Form("%s/fitPlot_%s_%s_%s.eps", m_plotDir.Data(),
-		    m_DHSignal.Data(), fitType.Data(), currCateName.Data()));
-    
-  }
-  delete can;
-}
-*/
 
 /**
    -----------------------------------------------------------------------------

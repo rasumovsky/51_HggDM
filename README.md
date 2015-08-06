@@ -7,13 +7,11 @@ decay is identified by a diphoton resonance, while the dark matter particle
 would manifest as missing transverse energy in the detector.
 
 The code has been structured so that all of the general analysis settings are 
-stored in the DMAnalysis namespace. *A typical user should only need to adjust
-the settings in DMAnalysis.* Changes to the cutflow are an exception, and should
-be added to the DMEvtSelect class. The code is designed to be as automatic as
-possible. Each class looks to see if all of the necessary inputs have been 
-produced previously before generating them from scratch. You can force the 
-program to produce inputs from scratch either by using a new job name or with 
-the option "FromScratch".
+stored in the configuration file in the data/ directory. *A typical user should 
+only need to adjust the config file. Changes to cutflows are temporary 
+exceptions, and should be added to the DMEvtSelect class. The code is designed 
+to be as automatic as possible. Each class looks to see if all of the necessary 
+inputs have been produced previously before generating them from scratch.
 
 ### General analysis strategy:
 1)  mini-MxAODs from xAODs using the tools provided by Hgamma WG.
@@ -26,17 +24,19 @@ the option "FromScratch".
 
 ### Package contents:
 
+##### settingsHDM.cfg
+  Luminosity, higgs mass, m_yy range, file names, script locations, production 
+  mode information should all go here.
+
 ##### DMAnalysis
-  This namespace should store all important analysis information. The idea is to
-  avoid hard-coding anything in the supporting classes. Luminosity, higgs mass,
-  m_yy range, file names, script locations, produciton modes should all go here.
-  Functions that are used to access these global parameters are also included.
+  This namespace should store all general analysis methods. The idea is to
+  avoid hard-coding anything in the supporting classes. 
 
 ##### DMMaster
   This is the master 'wrapper' class for the analysis. Using this class, all the
   analysis tools can be run. The file organization is automated, using a 
   directory structure based on the 'masterInput' and 'masterOutput' strings in 
-  DMAnalysis, as well as the masterJobName.
+  settingsHDM, as well as the masterJobName.
 
 ##### DMMassPoints
  This program uses a TTree of data events to produce a series of mass points
@@ -103,9 +103,9 @@ the option "FromScratch".
 ### Setting up the package. 
 
 ##### User modifications
-New users will need to modify src/DMAnalysis.h and possibly the makefile in 
+New users will need to modify data/settingsHDM.cfg and possibly the makefile in 
 order to run the code. All input and output file locations for the programs
-are built around the locations provided in DMAnalysis.h (masterInput, 
+are built around the locations provided in the settings (masterInput, 
 masterOutput, packageLocation, clusterFileLocation, and fileName*). Sub-
 directories will be created as necessary by the program.
 
@@ -120,15 +120,24 @@ First compile the master program, which executes the analysis code:
 
 Then to run,
 
-     ./bin/DMMaster <JobName> <Program> <Categorization>
+     ./bin/DMMaster <Program> <SettingsFile>
 
-The job name can be whatever you want. The program can be any of the following
-options: MassPoints, SigParam, Workspace. The code will automatically run any
-required upstream programs in order to ensure that it has all required inputs.
-For instance, if you want to create a workspace from scratch, using two ETMiss 
-categories, just run,
+The program can be any of the following options: 
+- MassPoints
+- SigParam
+- Workspace
+- ResubmitWorkspace
+- TossPseudoExp
+- PlotPseudoExp
+- TestStat
+- ResubmitTestStat
+- MuLimit
 
-     ./bin/DMMaster WSJob Workspace splitETMiss
+The code will automatically run any required upstream programs in order to 
+ensure that it has all required inputs. For instance, if you want to create a 
+workspace from scratch, just run,
+
+     ./bin/DMMaster Workspace data/settingsHDM.cfg
 
 Make sure that you are running in a directory from which EOS is accesssible. 
 

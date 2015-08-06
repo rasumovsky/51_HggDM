@@ -42,7 +42,6 @@ class DMWorkspace {
   void loadWSFromFile();
   void createNewWS();
   RooWorkspace* createNewCategoryWS();
-  //void createAsimovData(RooWorkspace *cateWS, int valueMuDM, int valueMuSM);
   double spuriousSignal();// eliminate this as soon as possible
   void makeNP(TString varName, double setup[4], RooArgSet *&nuisParams,
 	      RooArgSet *&constraints, RooArgSet *&globalObs,
@@ -50,11 +49,7 @@ class DMWorkspace {
   void makeShapeNP(TString varnameNP, TString process, double setup[4],
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
-  //void plotSingleCateFit(RooWorkspace *cateWS, TString dataset);
-  //void plotFinalFits(RooWorkspace *combWS, TString fitType);
-  //void plotNuisParams(RooArgSet nuisParams, TString type);
-  //void profileAndSnapshot(TString muDMValue, double &nllValue,
-  //			  double &profiledMu);
+  void createAsimovData(RooWorkspace* cateWS, int valMuDM, int valMuSM);
 
   // Member variables:
   TString m_configFile;

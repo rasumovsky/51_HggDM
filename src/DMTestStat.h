@@ -34,8 +34,8 @@ class DMTestStat {
   void calculateNewP0();
   void clearData();
   void clearFitParamSettings();
-  RooDataSet* createAsimovData(int valMuDH, int valMuSH);
-  RooDataSet* createAsimovData(TString datasetName);
+  //void createAsimovData(int valMuDH, int valMuSH);
+  //void createAsimovData(TString datasetName);
   RooDataSet* createPseudoData(int seed, int valMuDM, int valMuSM, bool fixMu);
   bool fitsAllConverged();
   double functionQMu(double x);
@@ -77,8 +77,11 @@ class DMTestStat {
   TString m_options;    // Job options.
   TString m_outputDir;  // The output directory for statistics.
   
-  TString m_dataForObs; // The dataset for observed results.
-  TString m_dataForExp; // The dataset for expected results.
+  TString m_dataForObsQMu; // The dataset for observed QMu results.
+  TString m_dataForExpQMu; // The dataset for expected QMu results.
+  TString m_dataForObsQ0;  // The dataset for observed Q0 results.
+  TString m_dataForExpQ0;  // The dataset for expected Q0 results.
+
   TString m_plotDir;    // The output directory for plots (not set by default).
   bool m_doSaveSnapshot;// Option to save snapshots of PoI and nuisance params.
   bool m_doPlot;        // Sets whether or not to plot fit results.

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ $# -lt 6 ]]; then
-    echo "USAGE: CL_jobfile.sh <jobname> <configfile> <input_file> <exe_name> <signal> <joboption>"
+    echo "USAGE: jobFileMuLimit.sh <jobname> <configfile> <input_file> <exe_name> <signal> <joboption>"
     
 else
     jobname=$1

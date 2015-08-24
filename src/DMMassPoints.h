@@ -51,8 +51,10 @@ class DMMassPoints {
   TString getMassPointsFileName(int cateIndex);
   
   // Mutators:
+  TString createLocalFilesAndList(TString originListName);
   void setMassObservable(RooRealVar *newObservable);
-   
+  void removeLocalFilesAndList(TString listName);
+  
  private:
   
   // Member methods:
@@ -63,8 +65,10 @@ class DMMassPoints {
   TString m_sampleName;
   TString m_outputDir;
   bool m_isWeighted;
+  TString m_options;
   
   Config *m_config;
+  TString m_configFileName;
   
   RooDataSet *m_cateData[20];
   RooRealVar *m_yy;

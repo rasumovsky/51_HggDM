@@ -14,12 +14,13 @@
 #ifndef DMTestStat_h
 #define DMTestStat_h
 
+// Package libaries:
 #include "CommonHead.h"
 #include "CommonFunc.h"
 #include "Config.h"
+#include "DMWorkspace.h"
 #include "RooFitHead.h"
 #include "statistics.h"
-#include "DMWorkspace.h"
 
 class DMTestStat {
   

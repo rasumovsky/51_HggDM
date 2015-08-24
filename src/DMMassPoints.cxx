@@ -22,6 +22,7 @@
 #include "DMMassPoints.h"
 
 /**
+   -----------------------------------------------------------------------------
    Initialize the DMMassPoint class and make a new RooCategory.
    @param newConfigFile - The name of the config file.
    @param newSampleName - The name of the data/MC sample.
@@ -38,9 +39,11 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
   
   // Assign member variables:
   m_sampleName = newSampleName;
-  
+  m_configFileName = newConfigFile;
+  m_options = newOptions;
+
   // Load the config file:
-  m_config = new Config(newConfigFile);
+  m_config = new Config(m_configFileName);
   
   // Assign the observable based on inputs:
   if (newObservable == NULL) {
@@ -61,7 +64,7 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
   m_isWeighted = DMAnalysis::isWeightedSample(m_config, m_sampleName);
   
   // Either load the masspoints from file or create new ones:
-  if (newOptions.Contains("FromFile")) loadMassPointsFromFile();
+  if (m_options.Contains("FromFile")) loadMassPointsFromFile();
   else createNewMassPoints();
   
   std::cout << "DMMassPoints: Successfully initialized!" << std::endl;
@@ -69,6 +72,33 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
 }
 
 /**
+   -----------------------------------------------------------------------------
+   Create local copies of files and a new file list.
+   @param originListName - The name of the original file list.
+   @returns - The name of the new file list.
+*/
+TString DMMassPoints::createLocalFilesAndList(TString originListName) {
+  int fileIndex = 0;
+  TString outputListName = "temporaryList.txt";
+  TString currFile;
+  ifstream originFile(originListName);
+  ofstream outputFile(outputListName);
+  while (!originFile.eof()) {
+    originFile >> currFile;
+    if (currFile.Contains("eos/atlas")) outputFile << currFile << std::endl;
+    else {
+      system(Form("cp %s file%d.root", currFile.Data(), fileIndex));
+      outputFile << Form("file%d.root", fileIndex) << std::endl;
+    }
+    fileIndex++;
+  }
+  originFile.close();
+  outputFile.close();
+  return outputListName;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Create a RooDataSet containing the mass points in a given category.
    @param cateIndex - The index of the category for which we want the .txt name.
    @returns The RooDataSet of the data in the specified category.
@@ -79,6 +109,7 @@ RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Returns a pointer to the mass observable used in the dataset.
    @returns pointer to the observable (m_yy).
 */
@@ -87,6 +118,7 @@ RooRealVar* DMMassPoints::getMassObservable() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the name of the output textfile for the given category index.
    @param cateIndex - The index of the category for which we want the .txt name.
    @returns The full path of the mass points text file.
@@ -99,6 +131,7 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Set the pointer to the observable. 
    @param newObservable - The new RooRealVar observable to use for datasets. 
    @returns void.
@@ -108,6 +141,7 @@ void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Create new mass points by looping over the TTree.
    @returns void.
 */
@@ -116,11 +150,15 @@ void DMMassPoints::createNewMassPoints() {
   
   // Alternative: use file list:
   TString listName = DMAnalysis::nameToFileList(m_config, m_sampleName);
+  // If option says copy files, make local file copies and then run:
+  if (m_options.Contains("CopyFile")) {
+    listName = createLocalFilesAndList(listName);
+  }
   TChain *chain = CommonFunc::MakeChain("CollectionTree", listName, "badfile");
   DMTree *dmt = new DMTree(chain);
   
   // Tool to implement the cutflow, categorization, and counting. 
-  DMEvtSelect *selector = new DMEvtSelect(dmt);
+  DMEvtSelect *selector = new DMEvtSelect(dmt, m_configFileName);
   
   // Tool to get the total number of events at the generator level.
   DMxAODCutflow *dmx
@@ -178,8 +216,9 @@ void DMMassPoints::createNewMassPoints() {
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.0;
     if (m_isWeighted) {
+      double pileupWeight = 1.0;//dmt->EventInfoAuxDyn_PileupWeight;
       evtWeight *= (m_config->getNum("analysisLuminosity") * 
-	dmt->EventInfoAuxDyn_PileupWeight / nGeneratedEvt);
+		    pileupWeight / nGeneratedEvt);
       
       // Multiply by the appropriate luminosity, xsection & branching ratio.
       if (DMAnalysis::isSMSample(m_config, m_sampleName)) {
@@ -220,17 +259,18 @@ void DMMassPoints::createNewMassPoints() {
 					       evtWeight);
     if (currCate >= 0) {
       
-      m_yy->setVal(dmt->EventInfoAuxDyn_m_yy);
+      m_yy->setVal(dmt->HGamEventInfoAuxDyn_HighMet_yy_m);
       
       if (m_isWeighted) {
 	wt.setVal(evtWeight);
 	m_cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
-	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << " " << evtWeight
-			    << std::endl;
+	massFiles[currCate] << dmt->HGamEventInfoAuxDyn_HighMet_yy_m << " " 
+			    << evtWeight << std::endl;
       }
       else {
 	m_cateData[currCate]->add(*m_yy);
-	massFiles[currCate] << dmt->EventInfoAuxDyn_m_yy << std::endl;
+	massFiles[currCate] << dmt->HGamEventInfoAuxDyn_HighMet_yy_m
+			    << std::endl;
       }
     }
   }
@@ -251,10 +291,15 @@ void DMMassPoints::createNewMassPoints() {
     massFiles[i_f].close();
   }
   
+  // If options said to run locally, remove the files.
+  if (m_options.Contains("CopyFile")) {
+    removeLocalFilesAndList(listName);
+  }
   std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
 }
 
 /**
+   -----------------------------------------------------------------------------
    Load the mass points from text files that have already been produced. This is
    much faster than producing mass points from scratch, and is preferred. 
    @returns void.
@@ -321,4 +366,20 @@ void DMMassPoints::loadMassPointsFromFile() {
 	      << std::endl;
   }
   std::cout << "DMMassPoints: Finished loading data set. " << std::endl;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Remove the local files and file list.
+   @param listName - The name of the local file list.
+*/
+void DMMassPoints::removeLocalFilesAndList(TString listName) {
+  TString currFile;
+  ifstream localFile(listName);
+  while (!localFile.eof()) {
+    localFile >> currFile;
+    if (!currFile.Contains("eos/atlas")) system(Form("rm %s", currFile.Data()));
+  }
+  localFile.close();
+  system(Form("rm %s", listName.Data()));
 }

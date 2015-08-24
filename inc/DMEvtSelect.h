@@ -25,6 +25,7 @@
 #include "TString.h"
 
 // Package includes:
+#include "Config.h"
 #include "DMTree.h"
 
 using std::vector;
@@ -35,13 +36,13 @@ class DMEvtSelect
  public:
   
   //DMEvtSelect();
-  DMEvtSelect(DMTree *newTree);
+  DMEvtSelect(DMTree *newTree, TString newConfigFile);
   virtual ~DMEvtSelect() {};
   
   // Accessors:
   int getEventsPerCate(TString cateScheme, int cate);
   double getEventsPerCateWt(TString cateScheme, int cate);
-  int getNCategories(TString cateScheme);
+  //int getNCategories(TString cateScheme);
   int getPassingEvents(TString cutName);
   double getPassingEventsWt(TString cutName);
   int getTotalEvents(TString cutName);
@@ -66,6 +67,7 @@ class DMEvtSelect
   bool cateExists(TString cateScheme);
 
   // Member objects:
+  Config *m_config;
   DMTree *evtTree;
   std::vector<TString> cutList;
   

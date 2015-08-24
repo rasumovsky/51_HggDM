@@ -43,7 +43,8 @@ DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
   
   m_combinedWS = NULL;
   m_modelConfig = NULL;
-  
+    
+  // Print workspace inputs:
   std::cout << "\nDMWorkspace: Initializing..."
 	    << "\n\tconfigFile = " << m_configFile
 	    << "\n\tsignal = " << m_DMSignal
@@ -52,6 +53,10 @@ DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
   // Load the analysis configuration file:
   m_config = new Config(m_configFile);
   
+  m_muNominalSM = 1;
+  m_dataToPlot = (m_config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
+  //m_dataToPlot = (m_config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
+
   // Assign output directory, and make sure it exists:
   m_outputDir = Form("%s/%s/DMWorkspace", 
 		     (m_config->getStr("masterOutput")).Data(),
@@ -64,9 +69,6 @@ DMWorkspace::DMWorkspace(TString newConfigFile, TString newDMSignal,
   // Set style for plots:
   CommonFunc::SetAtlasStyle();
     
-  m_muNominalSM = 1;
-  m_dataToPlot = (m_config->getBool("doBlind")) ? "asimovDataMu1" : "obsData";
-  
   // Make new or load old workspace:
   if (m_options.Contains("FromFile")) loadWSFromFile();
   else createNewWS();
@@ -114,7 +116,7 @@ void DMWorkspace::loadWSFromFile() {
   TFile inputFile(Form("%s/rootfiles/workspaceDM_%s.root", m_outputDir.Data(),
 		       m_DMSignal.Data()), "read");
   if (inputFile.IsOpen()) {
-    std::cout << "DMWorkspace: Loading workspace from file..."<< std::endl;
+    std::cout << "DMWorkspace: Loading workspace from file..." << std::endl;
     m_combinedWS = (RooWorkspace*)inputFile.Get("combinedWS");
     m_modelConfig = (ModelConfig*)m_combinedWS->obj("modelConfig");
   }
@@ -139,11 +141,9 @@ void DMWorkspace::createNewWS() {
   std::cout << "  Number of categories = " << m_nCategories << std::endl;
   
   vector<TString> cateNames; cateNames.clear();
-  vector<string> cateNamesS; cateNamesS.clear();
   for (int i_c = 0; i_c < m_nCategories; i_c++) {
     m_currCateName = Form("%s_%d",(m_config->getStr("cateScheme")).Data(),i_c);
     cateNames.push_back(m_currCateName);
-    cateNamesS.push_back((string)m_currCateName);
     std::cout << "  \t" << m_currCateName << std::endl;
   }
   std::cout << "Luminosity at 13 TeV: " 
@@ -183,41 +183,42 @@ void DMWorkspace::createNewWS() {
   
   //--------------------------------------//
   // Loop over channels:
-  std::cout << "DMWorkspace: Loop over categories to define WS" << std::endl;
-  for (int i_c = 0; i_c < m_nCategories; i_c++) {
+  std::cout << "DMWorkspace: Loop over categories to define workspace" 
+	    << std::endl;
+  for (m_currCateIndex = 0; m_currCateIndex < m_nCategories;
+       m_currCateIndex++) {
     
-    m_currCateIndex = i_c;
-    m_currCateName = cateNames[i_c];
-
+    m_currCateName = cateNames[m_currCateIndex];
+    
     // Create the workspace for a single category:
-    cateWS[i_c] = createNewCategoryWS();
-    categories->defineType(cateNames[i_c]);
+    cateWS[m_currCateIndex] = createNewCategoryWS();
+    categories->defineType(m_currCateName);
     
-    // Add category PDF to combined PDF:
-    TString namePdf = Form("model_%s",cateNames[i_c].Data());
-    combinedPdf->addPdf(*cateWS[i_c]->pdf(namePdf), cateNames[i_c]);
-    
-    // Add parameter sets to combined workspace:
-    TString nameNP = Form("nuisanceParameters_%s",cateNames[i_c].Data());
-    TString nameGlob = Form("globalObservables_%s",cateNames[i_c].Data());
-    TString nameMuC = Form("muConstants_%s",cateNames[i_c].Data());
-    TString nameObs = Form("observables_%s",cateNames[i_c].Data());
-    nuisanceParameters->add(*cateWS[i_c]->set(nameNP));
-    globalObservables->add(*cateWS[i_c]->set(nameGlob));
-    muSMConstants->add(*cateWS[i_c]->set(nameMuC));
-    nuisanceParameters->add(*cateWS[i_c]->set(nameMuC));//Added to NP as well.
-    observables->add(*cateWS[i_c]->set(nameObs));
+    // Add PDFs and parameters:
+    TString namePdf = Form("model_%s",m_currCateName.Data());
+    TString nameNP = Form("nuisanceParameters_%s", m_currCateName.Data());
+    TString nameGlob = Form("globalObservables_%s", m_currCateName.Data());
+    TString nameMuC = Form("muConstants_%s",m_currCateName.Data());
+    TString nameObs = Form("observables_%s",m_currCateName.Data());
+    combinedPdf->addPdf(*cateWS[m_currCateIndex]->pdf(namePdf), m_currCateName);
+    nuisanceParameters->add(*cateWS[m_currCateIndex]->set(nameNP));
+    globalObservables->add(*cateWS[m_currCateIndex]->set(nameGlob));
+    muSMConstants->add(*cateWS[m_currCateIndex]->set(nameMuC));
+    nuisanceParameters->add(*cateWS[m_currCateIndex]->set(nameMuC));
+    observables->add(*cateWS[m_currCateIndex]->set(nameObs));
     
     // Add category datasets to combined workspace and combined datasets:
-    TString nameOD = Form("obsData_%s",cateNames[i_c].Data());
-    TString nameAD0 = Form("asimovDataMu0_%s",cateNames[i_c].Data());
-    TString nameAD1 = Form("asimovDataMu1_%s",cateNames[i_c].Data());
-    m_combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameOD));
-    m_combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameAD0));
-    m_combinedWS->import(*(RooDataSet*)cateWS[i_c]->data(nameAD1));
-    dm[cateNamesS[i_c]] = (RooDataSet*)m_combinedWS->data(nameOD);
-    dmAsimovMu0[cateNamesS[i_c]] = (RooDataSet*)m_combinedWS->data(nameAD0);
-    dmAsimovMu1[cateNamesS[i_c]] = (RooDataSet*)m_combinedWS->data(nameAD1);
+    TString nameOD = Form("obsData_%s",m_currCateName.Data());
+    TString nameAD0 = Form("asimovDataMu0_%s", m_currCateName.Data());
+    TString nameAD1 = Form("asimovDataMu1_%s", m_currCateName.Data());
+    m_combinedWS->import(*(RooDataSet*)cateWS[m_currCateIndex]->data(nameOD));
+    m_combinedWS->import(*(RooDataSet*)cateWS[m_currCateIndex]->data(nameAD0));
+    m_combinedWS->import(*(RooDataSet*)cateWS[m_currCateIndex]->data(nameAD1));
+    dm[(string)m_currCateName] = (RooDataSet*)m_combinedWS->data(nameOD);
+    dmAsimovMu0[(string)m_currCateName]
+      = (RooDataSet*)m_combinedWS->data(nameAD0);
+    dmAsimovMu1[(string)m_currCateName] 
+      = (RooDataSet*)m_combinedWS->data(nameAD1);
   }
   std::cout << "DMWorkspace: Beginning to combine all categories." << std::endl;
     
@@ -249,7 +250,7 @@ void DMWorkspace::createNewWS() {
   m_combinedWS->import(*asimovDataMu1);
   
   // Define the ModelConfig:
-  m_modelConfig = new ModelConfig("modelConfig",m_combinedWS);
+  m_modelConfig = new ModelConfig("modelConfig", m_combinedWS);
   m_modelConfig->SetPdf((*m_combinedWS->pdf("combinedPdf")));
   m_modelConfig->SetObservables((*m_combinedWS->set("observables")));
   m_modelConfig->SetParametersOfInterest((*m_combinedWS->set("poi")));
@@ -270,16 +271,6 @@ void DMWorkspace::createNewWS() {
   
   // Start profiling the data:
   std::cout << "DMWorkspace: Start profiling data" << std::endl;
-  
-  /*
-  // Profile and save snapshots of the data:
-  double nllMu0, nllMu1, nllMuFree, profiledMuValue;
-  profileAndSnapshot("0", nllMu0, profiledMuValue);
-  profileAndSnapshot("1", nllMu1, profiledMuValue);
-  profileAndSnapshot("Free", nllMuFree, profiledMuValue);
-  */
-  
-
   
   DMTestStat *dmts = new DMTestStat(m_configFile, m_DMSignal, "FromFile",
 				    m_combinedWS);
@@ -330,7 +321,7 @@ void DMWorkspace::createNewWS() {
 RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // The bools that control the systematic uncertainties:
-  bool inclusive = m_currCateName == "inclusive";
+  bool inclusive = (m_currCateName == "inclusive");
   bool channel_constraints_attached = (m_currCateIndex == 0);
   bool switch_norm = !m_options.Contains("nonorm");
   bool switch_pes = !m_options.Contains("nopes");
@@ -353,7 +344,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // Create the individual channel workspace:
-  RooWorkspace *tempWS = new RooWorkspace(Form("tmpWS_%s",m_currCateName.Data()));
+  RooWorkspace *tempWS 
+    = new RooWorkspace(Form("tempWS_%s", m_currCateName.Data()));
   
   // nuispara:
   RooArgSet *nuisParams = new RooArgSet();
@@ -746,12 +738,13 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   }
   
   // Adding unconstrained NPs from the background pdf:
-  RooArgSet* nuisBkgCateWS = new RooArgSet();
+  //RooArgSet* nuisBkgCateWS = new RooArgSet();
   TIterator *iterNuisBkg = nuisParamsBkg->createIterator();
   RooRealVar* currNuisBkg;
   while ((currNuisBkg = (RooRealVar*)iterNuisBkg->Next())) {
     TString parName = currNuisBkg->GetName()+(TString)"_"+m_currCateName;
-    nuisBkgCateWS->add(*categoryWS->var(parName));
+    //nuisBkgCateWS->add(*categoryWS->var(parName));
+    nuisCateWS->add(*categoryWS->var(parName));
   }
   
   /*
@@ -767,22 +760,26 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   RooRealVar *currGlobs;
   while ((currGlobs = (RooRealVar*)iterGlobs->Next())) {
     TString globName = currGlobs->GetName()+(TString)"_"+m_currCateName;
-    if ((bool)categoryWS->obj(globName)) {
+    if (categoryWS->obj(globName)) {
       globsCateWS->add(*(RooRealVar*)categoryWS->obj(globName));
       categoryWS->var(globName)->setConstant();
     }
-    else if ((bool)categoryWS->obj(currGlobs->GetName())) {
+    else if (categoryWS->obj(currGlobs->GetName())) {
       globsCateWS->add(*(RooRealVar*)categoryWS->obj(currGlobs->GetName()));
       categoryWS->var(currGlobs->GetName())->setConstant();
     }
   }
-  
+
+  /*
+    Observables:
+    Iterate over the observables in this category and add them to the new set.
+  */
   RooArgSet *obsCateWS = new RooArgSet();
   TIterator *iterObs = tempWS->set("obsprelim")->createIterator();
   RooRealVar *currObs;
   while ((currObs = (RooRealVar*)iterObs->Next())) {
     TString obsName = currObs->GetName()+(TString)"_"+m_currCateName;
-    if ((bool)categoryWS->obj(obsName)) {
+    if (categoryWS->obj(obsName)) {
       obsCateWS->add(*(RooRealVar*)categoryWS->obj(obsName));
     }
     else {
@@ -790,7 +787,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     }
   }
   
-  // Set some of the mu values constant:
+  // Set the SM mu parameters to 1 and constant:
   std::cout << "DMWorkspace: Setting SM signals constant." << std::endl;
   RooArgSet* muConstCateWS = new RooArgSet();
   muConstCateWS->add(*categoryWS->var("mu_SM"));
@@ -828,30 +825,28 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     currMassPoints = new DMMassPoints(m_configFile, "data", "FromFile",
 				      categoryWS->var("m_yy_"+m_currCateName));
   }
-  
   RooDataSet *obsData = currMassPoints->getCateDataSet(m_currCateIndex);
   TString obsDataName = Form("obsData_%s",m_currCateName.Data());
   obsData->SetNameTitle(obsDataName, obsDataName);
-  
-  // Set the background normalization parameter:
-  std::cout << "DMWorkspace: Fitting bkg. in " << m_currCateName << std::endl;
-  (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
-  (*categoryWS->pdf("bkgPdf_"+m_currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)), SumW2Error(kTRUE));//should be false?
-  (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
-  
   categoryWS->import(*obsData);
   
+  // Fit background shape and set normalization:
+  std::cout << "DMWorkspace: Fitting bkg. in " << m_currCateName << std::endl;
+  (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
+  //(*categoryWS->pdf("bkgPdf_"+m_currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)), SumW2Error(kTRUE));
+  (*categoryWS->pdf("bkgPdf_"+m_currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisCateWS)), SumW2Error(kTRUE));
+  (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
+  
+  
+  
+  // Create Asimov data the old-fashioned way:
   createAsimovData(categoryWS, 0, m_muNominalSM);
   createAsimovData(categoryWS, 1, m_muNominalSM);
   
-  // Plot the single-channel fit:
-  //plotSingleCateFit(categoryWS, Form("obsData_%s", m_currCateName.Data()));
-  //plotSingleCateFit(categoryWS, Form("asimovDataMu1_%s",m_currCateName.Data()));
-  
+  // Print and return category workspace:
   std::cout << "DMWorkspace: Printing workspace for category: "
 	    << m_currCateName << std::endl;
   categoryWS->Print("v");
-  
   return categoryWS;
 }
 
@@ -1028,7 +1023,7 @@ void DMWorkspace::makeShapeNP(TString varNameNP, TString process,
   expected->add(*workspace->function(Form("expected_%s",varName.Data())));
 }
 
-/*
+/**
    -----------------------------------------------------------------------------
    Create Asimov data for the statistical model, using a fit to observed data
    for the shape and normalizaiton of the background.
@@ -1043,13 +1038,13 @@ void DMWorkspace::createAsimovData(RooWorkspace* cateWS, int valMuDM,
   // Set mu_DM and mu_SM to the specified values:
   RooRealVar *poi = cateWS->var("mu_DM");
   double initialMuDM = poi->getVal();
-  double initialMuSM = cateWS->var("mu_DM")->getVal();
+  double initialMuSM = cateWS->var("mu_SM")->getVal();
   poi->setVal(valMuDM);
   poi->setConstant(true);
-  cateWS->var("mu_DM")->setVal(valMuSM);
-  cateWS->var("mu_DM")->setConstant(true);
+  cateWS->var("mu_SM")->setVal(valMuSM);
+  cateWS->var("mu_SM")->setConstant(true);
   
-  RooDataSet *asimov = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*cateWS->pdf(Form("model_%s",m_currCateName.Data())), *cateWS->set(Form("observables_%s",m_currCateName.Data())));
+  RooDataSet *asimov = (RooDataSet*)AsymptoticCalculator::GenerateAsimovData(*cateWS->pdf(Form("model_%s", m_currCateName.Data())), *cateWS->set(Form("observables_%s", m_currCateName.Data())));
   asimov->SetNameTitle(Form("asimovDataMu%d_%s",valMuDM,m_currCateName.Data()),
 		       Form("asimovDataMu%d_%s",valMuDM,m_currCateName.Data()));
   cateWS->import(*asimov);

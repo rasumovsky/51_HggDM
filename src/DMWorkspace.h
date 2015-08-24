@@ -11,6 +11,7 @@
 #ifndef DMWorkspace_h
 #define DMWorkspace_h
 
+// Package libraries:
 #include "BkgModel.h"
 #include "CommonHead.h"
 #include "CommonFunc.h"
@@ -49,7 +50,7 @@ class DMWorkspace {
   void makeShapeNP(TString varnameNP, TString process, double setup[4],
 		   RooArgSet *&nuisParams, RooArgSet *&constraints,
 		   RooArgSet *&globalObs, RooArgSet *&expected);
-  void createAsimovData(RooWorkspace* cateWS, int valMuDM, int valMuSM);
+  void createAsimovData(RooWorkspace *cateWS, int valMuDM, int valMuSM);
 
   // Member variables:
   TString m_configFile;
@@ -64,7 +65,7 @@ class DMWorkspace {
   // Helper classes:
   Config *m_config;
   PESReader *m_pes;
-  PERReader* m_per;
+  PERReader *m_per;
   SigParamInterface *m_spi;
 
   // Updated for each call to createNewCategoryWS():

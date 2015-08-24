@@ -72,7 +72,7 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
   m_calculatedValues.clear();
   
   // Create output directories:
-  m_outputDir = Form("%s/%s/TestStat/", 
+  m_outputDir = Form("%s/%s/DMTestStat/", 
 		     (m_config->getStr("masterOutput")).Data(), 
 		     m_jobName.Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
@@ -558,7 +558,7 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   }
   
   // Free nuisance parameters before fit:
-  statistics::constSet(nuisanceParameters, false);//, origValNP);
+  statistics::constSet(nuisanceParameters, false, origValNP);
   // Fix the global observables before the fit:
   statistics::constSet(globalObservables, true);
   
@@ -849,8 +849,10 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
 	    << std::endl;
   TCanvas *can = new TCanvas("can", "can", 800, 800);
   
-  // loop over categories:
+  // Loop over categories:
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    can->cd();
+    can->Clear();
     TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
     RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
     (*m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data())))
@@ -866,7 +868,6 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
 	      LineColor(4));
     (*m_workspace->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
     
-    //double chi2 = frame->chiSquare();
     frame->SetYTitle("Events / GeV");
     frame->SetXTitle("M_{#gamma#gamma} [GeV]");
     frame->Draw();

@@ -40,8 +40,11 @@
    Initializes the tool and loads XS, BR values from files. 
    @param newTree - the TTree which contains the sample.
 */
-DMEvtSelect::DMEvtSelect(DMTree* newTree) {
+DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   std::cout << "DMEvtSelect: Initializing DMEvtSelect" << std::endl;
+  
+  // Load the config file:
+  m_config = new Config(newConfigFile);
   
   // ADD CUT HERE
   cutList.clear();
@@ -57,8 +60,10 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree) {
   
   // ADD CATE HERE ([name] = # categories):
   cateSchemesAndSizes.clear();
-  cateSchemesAndSizes["inclusive"] = 1;
-  cateSchemesAndSizes["splitETMiss"] = 2;
+  //cateSchemesAndSizes["inclusive"] = 1;
+  //cateSchemesAndSizes["splitETMiss"] = 2;
+  cateSchemesAndSizes[m_config->getStr("cateScheme")]
+    = m_config->getInt("nCategories");
   
   evtTree = newTree;
   selectionUsed = "";
@@ -94,15 +99,15 @@ double DMEvtSelect::getEventsPerCateWt(TString cateScheme, int cate) {
   else return -1;
 }
 
-/**
+/** DEPRECATED
    Get the number of categories in the named categorization scheme.
    @param cateScheme - the name of the categorization.
    @returns - the number of categories in the categorization scheme.
-*/
 int DMEvtSelect::getNCategories(TString cateScheme) {
   if (cateExists(cateScheme)) return cateSchemesAndSizes[cateScheme];
   else return -1;
 }
+*/
 
 /**
    Get the (integer) number of events passing the specified cut.
@@ -305,12 +310,24 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   // Split MET - low and high MET categories.
   else if (cateScheme.EqualTo("splitETMiss")) {
     categoryUsed = "splitETMiss";
-    if (evtTree->EventInfoAuxDyn_metref_final > 140.0) currCate = 1;
+    if (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 > 100.0) currCate = 1;
     else currCate = 0;
   }
-  else {
-    std::cout << "DMEvtSelect: Categorization not defined: "
-	      << cateScheme << std::endl;
+  // Ratio ETMiss/pT categorization:
+  else if (cateScheme.EqualTo("RatioEtmPt")) {
+    double ratioCut1 = m_config->getNum("RatioCut1");
+    double ratioCut2 = m_config->getNum("RatioCut2");
+    double currRatio = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 / 
+			evtTree->HGamEventInfoAuxDyn_HighMet_yy_pt);
+    if (currRatio < ratioCut1) currCate = 0;
+    else if (currRatio >= ratioCut1 && currRatio < ratioCut2) currCate = 1; 
+    else if (currRatio >= ratioCut2) currCate = 2;
+  }
+  
+  if (currCate == -1) {
+    std::cout << "DMEvtSelect: Categorization error for " << cateScheme
+	      << std::endl;
+    exit(0);
   }
   
     // Add to category counters:
@@ -345,42 +362,48 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   bool passes = true;
   // Cut on photon transverse momenta / diphoton mass:
   if (cutName.EqualTo("photonPt")) {
-    passes = ((evtTree->EventInfoAuxDyn_y1_pt /
-	       evtTree->EventInfoAuxDyn_m_yy > 0.35) &&
-	      (evtTree->EventInfoAuxDyn_y2_pt /
-	       evtTree->EventInfoAuxDyn_m_yy > 0.25));
+    passes = ((evtTree->HGamEventInfoAuxDyn_HighMet_y1_pt /
+	       evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 0.35) &&
+	      (evtTree->HGamEventInfoAuxDyn_HighMet_y2_pt /
+	       evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 0.25));
   }
   // Cut on the photon pseudorapidities:
   else if (cutName.EqualTo("photonEta")) {
-    passes = (evtTree->EventInfoAuxDyn_y1_eta < 2.37 && 
-	      !(evtTree->EventInfoAuxDyn_y1_eta > 1.37 &&
-		evtTree->EventInfoAuxDyn_y1_eta < 1.56) &&
-	      evtTree->EventInfoAuxDyn_y2_eta < 2.37 && 
-	      !(evtTree->EventInfoAuxDyn_y2_eta > 1.37 &&
-		evtTree->EventInfoAuxDyn_y2_eta < 1.56));
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta < 2.37 && 
+	      !(evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta > 1.37 &&
+		evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta < 1.56) &&
+	      evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta < 2.37 && 
+	      !(evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta > 1.37 &&
+		evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta < 1.56));
   }
   // Cut on the calo/track isolation of the photons.
   else if (cutName.EqualTo("photonIso")) {
-    passes = (evtTree->EventInfoAuxDyn_y1_track_iso < 2.6 && 
-	      evtTree->EventInfoAuxDyn_y2_track_iso < 2.6);
+    //passes = (evtTree->HGamEventInfoAuxDyn_HighMet_y1_track_iso < 2.6 && 
+    //	      evtTree->HGamEventInfoAuxDyn_HighMet_y2_track_iso < 2.6);
+    passes = true;
   }
   // Cut on the ID variable of the photons.
   else if (cutName.EqualTo("photonID")) {
-    passes = (evtTree->EventInfoAuxDyn_y1_ID == 2 &&
-	      evtTree->EventInfoAuxDyn_y2_ID == 2);
+    //passes = (evtTree->HGamEventInfoAuxDyn_HighMet_y1_ID == 2 &&
+    //	      evtTree->HGamEventInfoAuxDyn_HighMet_y2_ID == 2);
+    passes = true;
   }
   // Cut on the diphoton invariant mass:
   else if (cutName.EqualTo("diphotonMass")) {
-    passes = (evtTree->EventInfoAuxDyn_m_yy > 105.0 && 
-	      evtTree->EventInfoAuxDyn_m_yy < 160.0);
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 
+	      m_config->getNum("DMMyyRangeLo") &&
+	      evtTree->HGamEventInfoAuxDyn_HighMet_yy_m < 
+	      m_config->getNum("DMMyyRangeHi"));
   }
   // Cut on the diphoton transverse momentum:
   else if (cutName.EqualTo("diphotonPt")) {
-    passes = (evtTree->EventInfoAuxDyn_pt_yy > 120.0);
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_yy_pt > 
+	      m_config->getNum("AnaCutDiphotonPt"));
   }
   // Cut on the event missing transverse energy:
   else if (cutName.EqualTo("diphotonETMiss")) {
-    passes = (evtTree->EventInfoAuxDyn_metref_final > 120.0);
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 > 
+	      m_config->getNum("AnaCutETMiss"));
   }
   // Check whether event passes all of the cuts above:
   else if (cutName.EqualTo("allCuts")) {

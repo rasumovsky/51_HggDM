@@ -17,7 +17,7 @@ else
     echo $jobname $configfile $input_file $exe_name $signal $options
     
     out="${jobname}_${signal}"
-    output_dir="/afs/cern.ch/user/a/ahard/work_directory/files_NPP/FullAnalysis/${jobname}/TestStat"
+    output_dir="/afs/cern.ch/user/a/ahard/work_directory/files_HggDM/FullAnalysis/${jobname}/DMTestStat"
     
     # setup ROOT:
     source /afs/cern.ch/sw/lcg/contrib/gcc/4.6/x86_64-slc6/setup.sh 

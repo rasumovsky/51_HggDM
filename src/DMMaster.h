@@ -8,18 +8,24 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
+// C++ libraries:
+#include <time.h>
+
+// Package libraries:
+#include "BkgModel.h"
 #include "Config.h"
 #include "DMAnalysis.h"
-#include "BkgModel.h"
 #include "DMCheckJobs.h"
 #include "DMMassPoints.h"
 #include "DMTestStat.h"
 #include "DMToyAnalysis.h"
 #include "SigParamInterface.h"
 
-bool isFirstJob;
+bool m_isFirstJob;
 
-Config *config;
+Config *m_config;
+
+void submitToOptimize(TString exeConfigOrigin, TString exeOption);
 
 void submitWSViaBsub(TString exeConfigFile, TString exeOption,
 		     TString exeSignal);

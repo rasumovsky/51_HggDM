@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ $# -lt 8 ]]; then
-    echo "USAGE: toy_jobfile.sh <jobname> <configfile> <input_file> <exe_name> <signal> <option> <seed> <toysperjob>"
+    echo "USAGE: jobFilePseudoExp.sh <jobname> <configfile> <input_file> <exe_name> <signal> <option> <seed> <toysperjob>"
     
 else
     jobname=$1

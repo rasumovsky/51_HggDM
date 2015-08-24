@@ -23,15 +23,160 @@
 //    - TestStat                                                              //
 //    - ResubmitTestStat                                                      //
 //    - MuLimit                                                               //
+//    - Optimizer                                                             //
 //                                                                            //
 //  Need to rethink the DMSigParam handling of the RooDataSet. Maybe we       //
 //  should just hand it a RooDataSet?                                         //
 //                                                                            //
-//  NOTE: REPLACE JOBNAME WITH CONFIG FILE LOCATION                           //
-//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMaster.h"
+
+/**
+   -----------------------------------------------------------------------------
+   Submit the DMMainMethod to run remotely on lxbatch.
+   @param exeConfigOrigin - The original config file for batch jobs.
+   @param exeOption - The option for the executable...
+*/
+void submitToOptimize(TString exeConfigOrigin, TString exeOption) {
+  std::cout << "DMMaster: Preparing to run myself remotely for optimization!"
+	    << std::endl;
+  
+  int jobIndex = 0;
+  
+  // An output file to track job indices and cuts:
+  ofstream headFile;
+  headFile.open(Form("%s/%s/DMMaster/jobSummary.txt", 
+		     (m_config->getStr("masterOutput")).Data(), 
+		     (m_config->getStr("jobName")).Data()));
+  
+  // Loop over first cut value:
+  double increment = ((TMath::Pi()/2.0) / m_config->getNum("nPointsPerVar"));
+  double theta2 = increment;
+  for (double theta2 = 2*increment; theta2 <= (TMath::Pi()/2.0); 
+       theta2 += increment) {
+    // Loop over second cut value:
+    for (double theta1 = increment; theta1 < theta2; theta1 += increment) {
+      
+      // Convert thetas to ratio:
+      double currCut2 = TMath::ATan(theta2);
+      double currCut1 = TMath::ATan(theta1);
+      
+      // First copy the config file (special config file) and make changes:
+      //  - change cut values.
+      //  - change output directory.
+      ifstream inputConfig;
+      inputConfig.open(exeConfigOrigin);
+      TString exeConfigNew = Form("exeConfig%d.cfg", jobIndex);
+      ofstream outputConfig;
+      outputConfig.open(exeConfigNew);
+      //string key;// need to pipe whole line into key
+      char key[256];// need to pipe whole line into key
+      while (!inputConfig.eof()) {
+	inputConfig.getline(key,256);
+	TString currLine = TString(key);
+	// Change the category 0/1 division:
+	if (currLine.Contains("RatioCut1:") && !currLine.Contains("#")) {
+	  outputConfig << "RatioCut1: \t" << currCut1 << std::endl;
+	}
+	// Change the category 1/2 division:
+	else if (currLine.Contains("RatioCut2:") && !currLine.Contains("#")) {
+	  outputConfig << "RatioCut2: \t" << currCut2 << std::endl;
+	}
+	// Make the output local (on lxbatch as opposed to afs):
+	else if (currLine.Contains("masterOutput:") && !currLine.Contains("#")){
+	  outputConfig << "masterOutput: \t" << "." << std::endl;
+	}
+	else if (currLine.Contains("NoSMProdModes:")&&!currLine.Contains("#")) {
+	  outputConfig << "NoSMProdModes: \t" << "NO" << std::endl;
+	}
+	// Tell DMMassPoints to copy MxAODs before running off of afs or eos:
+	//else if (currLine.Contains("massPointOptions:")) {
+	//outputConfig << "massPointOptions: \t" << "NewCopyFiles" << std::endl;
+	//}
+	// Just copy the configuration otherwise:
+	else {
+	  outputConfig << currLine << std::endl;
+	}
+      }
+      inputConfig.close();
+      outputConfig.close();
+            
+      ////////////////////////////////////////
+      // Begin job submission section:
+
+      // Make directories for job info:
+      TString dir = Form("%s/%s_DMMaster",
+			 (m_config->getStr("clusterFileLocation")).Data(),
+			 (m_config->getStr("jobName")).Data());
+      TString out = Form("%s/out", dir.Data());
+      TString err = Form("%s/err", dir.Data());
+      TString exe = Form("%s/exe", dir.Data());
+      system(Form("mkdir -vp %s", out.Data()));
+      system(Form("mkdir -vp %s", err.Data()));
+      system(Form("mkdir -vp %s", exe.Data()));
+      
+      // Create .tar file with everything needed to run remotely:
+      TString tempDir = Form("KillMe%d", jobIndex);
+      TString tarFile = Form("Cocoon%d.tar", jobIndex);
+      system(Form("mkdir -vp %s", tempDir.Data()));
+      system(Form("cp %s/bin/%s %s/", 
+		  (m_config->getStr("packageLocation")).Data(), 
+		  (m_config->getStr("exeMaster")).Data(), tempDir.Data()));
+      system(Form("mv %s %s/", exeConfigNew.Data(), tempDir.Data()));
+      system(Form("cp %s/%s %s/",
+		  (m_config->getStr("packageLocation")).Data(),
+		  (m_config->getStr("jobScriptMaster")).Data(), 
+		  tempDir.Data()));
+      //system(Form("tar zcf %s %s/*", tarFile.Data(), tempDir.Data()));
+      //system(Form("mv %s %s/", tarFile.Data(), exe.Data()));
+      system(Form("mv %s %s/", tempDir.Data(), exe.Data()));
+      
+      // Is this necessary? Probably...
+      system(Form("cp -f %s/%s %s/jobFileWorkspace.sh", 
+		  (m_config->getStr("packageLocation")).Data(), 
+		  (m_config->getStr("jobScriptMaster")).Data(), exe.Data()));
+      
+      //TString inputFile = Form("%s/%s", exe.Data(), tarFile.Data());
+      TString inputFile = Form("%s/%s", exe.Data(), tempDir.Data());
+      TString nameOutFile = Form("%s/out/%s_%d.out", dir.Data(), 
+				 (m_config->getStr("jobName")).Data(),jobIndex);
+      TString nameErrFile = Form("%s/err/%s_%d.err", dir.Data(), 
+				 (m_config->getStr("jobName")).Data(),jobIndex);
+      
+      // Define the arguments for the job script:
+      TString nameJScript = Form("%s/jobFileWorkspace.sh %s %s %s %s %s %d",
+				 exe.Data(),
+				 (m_config->getStr("jobName")).Data(),
+				 exeConfigNew.Data(),
+				 inputFile.Data(),
+				 exeOption.Data(),
+				 (m_config->getStr("exeMaster")).Data(),
+				 jobIndex);
+      // Submit the job:
+      system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
+		  nameErrFile.Data(), nameJScript.Data()));
+      
+      // End job submission section!
+      ////////////////////////////////////////
+      
+      // Note: job script should copy output files to a new output directory.
+      system(Form("rm -rf %s", tempDir.Data()));
+      
+      headFile << jobIndex << " " << currCut1 << " " << currCut2 << std::endl;
+      jobIndex++;
+      
+      if (m_config->getBool("doTestMode")) break;
+    }// End of theta1 loop
+    if (m_config->getBool("doTestMode")) break;
+  }// End of theta2 loop
+
+  // Close the file that records job indices and cuts:
+  headFile.close();
+  
+  std::cout << "DMMaster: Submitted " << jobIndex << " self-optimizing jobs."
+	    << std::endl;
+}
 
 /**
    -----------------------------------------------------------------------------
@@ -44,8 +189,8 @@ void submitWSViaBsub(TString exeConfigFile, TString exeOption,
 		     TString exeSignal) {
   // Make directories for job info:
   TString dir = Form("%s/%s_DMWorkspace",
-		     (config->getStr("clusterFileLocation")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("clusterFileLocation")).Data(),
+		     (m_config->getStr("jobName")).Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
   TString exe = Form("%s/exe", dir.Data());
@@ -54,31 +199,31 @@ void submitWSViaBsub(TString exeConfigFile, TString exeOption,
   system(Form("mkdir -vp %s", exe.Data()));
   
   // create .tar file with everything:
-  if (isFirstJob) {
+  if (m_isFirstJob) {
     system(Form("tar zcf Cocoon.tar bin/%s", 
-		(config->getStr("exeWorkspace")).Data()));
-    system(Form("chmod +x %s/%s", (config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptWorkspace")).Data()));
+		(m_config->getStr("exeWorkspace")).Data()));
+    system(Form("chmod +x %s/%s", (m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptWorkspace")).Data()));
     system(Form("cp -f %s/%s %s/jobFileWorkspace.sh", 
-		(config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptWorkspace")).Data(), exe.Data()));
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptWorkspace")).Data(), exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
   }
   
   TString inputFile = Form("%s/Cocoon.tar", exe.Data());
   TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(), 
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data());
   TString nameErrFile = Form("%s/err/%s_%s.err", dir.Data(), 
-			     (config->getStr("jobName")).Data(), 
+			     (m_config->getStr("jobName")).Data(), 
 			     exeSignal.Data());
   
   // Define the arguments for the job script:
   TString nameJScript = Form("%s/jobFileWorkspace.sh %s %s %s %s %s %s",
-			     exe.Data(), (config->getStr("jobName")).Data(),
+			     exe.Data(), (m_config->getStr("jobName")).Data(),
 			     exeConfigFile.Data(), inputFile.Data(),
 			     exeOption.Data(),
-			     (config->getStr("exeWorkspace")).Data(),
+			     (m_config->getStr("exeWorkspace")).Data(),
 			     exeSignal.Data());
   // Submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
@@ -96,8 +241,8 @@ void submitTSViaBsub(TString exeConfigFile, TString exeOption,
 		     TString exeSignal) {  
   // Make directories for job info:
   TString dir = Form("%s/%s_DMTestStat", 
-		     (config->getStr("clusterFileLocation")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("clusterFileLocation")).Data(),
+		     (m_config->getStr("jobName")).Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
   TString exe = Form("%s/exe", dir.Data());
@@ -106,33 +251,33 @@ void submitTSViaBsub(TString exeConfigFile, TString exeOption,
   system(Form("mkdir -vp %s", exe.Data()));
   
   // create .tar file with everything:
-  if (isFirstJob) {
+  if (m_isFirstJob) {
     system(Form("tar zcf Cocoon.tar bin/%s", 
-		(config->getStr("exeTestStat")).Data()));
-    system(Form("chmod +x %s/%s", (config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptTestStat")).Data()));
+		(m_config->getStr("exeTestStat")).Data()));
+    system(Form("chmod +x %s/%s", (m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptTestStat")).Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
-		(config->getStr("masterOutput")).Data(), 
-		(config->getStr("jobName")).Data(), exeSignal.Data()));
+		(m_config->getStr("masterOutput")).Data(), 
+		(m_config->getStr("jobName")).Data(), exeSignal.Data()));
     system(Form("cp -f %s/%s %s/jobFileTestStat.sh",
-		(config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptTestStat")).Data(), exe.Data()));
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptTestStat")).Data(), exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
   }
   
   TString inputFile = Form("%s/Cocoon.tar", exe.Data());
   TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(),
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data());
   TString nameErrFile = Form("%s/err/%s_%s.err", dir.Data(), 
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data());
   
   // Here you define the arguments for the job script:
   TString nameJScript = Form("%s/jobFileTestStat.sh %s %s %s %s %s %s", 
-			     exe.Data(), (config->getStr("jobName")).Data(),
+			     exe.Data(), (m_config->getStr("jobName")).Data(),
 			     exeConfigFile.Data(), inputFile.Data(),
-			     (config->getStr("exeTestStat")).Data(),
+			     (m_config->getStr("exeTestStat")).Data(),
 			     exeSignal.Data(), exeOption.Data());
   // submit the job:
   system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(),
@@ -151,8 +296,8 @@ void SubmitMuLimitViaBsub(TString exeConfigFile, TString exeOption,
   
   // Make directories for job info:
   TString dir = Form("%s/%s_DMMuLimit", 
-		     (config->getStr("clusterFileLocation")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("clusterFileLocation")).Data(),
+		     (m_config->getStr("jobName")).Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
   TString exe = Form("%s/exe", dir.Data());
@@ -161,32 +306,32 @@ void SubmitMuLimitViaBsub(TString exeConfigFile, TString exeOption,
   system(Form("mkdir -vp %s", exe.Data()));
   
   // create .tar file with everything:
-  if (isFirstJob) {
+  if (m_isFirstJob) {
     system(Form("tar zcf Cocoon.tar bin/%s", 
-		(config->getStr("exeMuLimit")).Data()));
-    system(Form("chmod +x %s", (config->getStr("jobScriptMuLimit")).Data()));
+		(m_config->getStr("exeMuLimit")).Data()));
+    system(Form("chmod +x %s", (m_config->getStr("jobScriptMuLimit")).Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
-		(config->getStr("masterOutput")).Data(), 
-		(config->getStr("jobName")).Data(), exeSignal.Data()));
+		(m_config->getStr("masterOutput")).Data(), 
+		(m_config->getStr("jobName")).Data(), exeSignal.Data()));
     system(Form("cp -f %s/%s %s/jobFileMuLimit.sh", 
-		(config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptMuLimit")).Data(), exe.Data()));
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptMuLimit")).Data(), exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
   }
   
   TString inputFile = Form("%s/Cocoon.tar", exe.Data());
   TString nameOutFile = Form("%s/out/%s_%s.out", dir.Data(), 
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data());
   TString nameErrFile = Form("%s/err/%s_%s.err", dir.Data(), 
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data());
   
   // Here you define the arguments for the job script:
   TString nameJScript = Form("%s/jobFileMuLimit.sh %s %s %s %s %s %s", 
-			     exe.Data(), (config->getStr("jobName")).Data(),
+			     exe.Data(), (m_config->getStr("jobName")).Data(),
 			     exeConfigFile.Data(), inputFile.Data(),
-			     (config->getStr("exeMuLimit")).Data(),
+			     (m_config->getStr("exeMuLimit")).Data(),
 			     exeSignal.Data(), exeOption.Data());
   
   // submit the job:
@@ -208,8 +353,8 @@ void submitPEViaBsub(TString exeConfigFile, TString exeOption,
   
   // Make directories for job info:
   TString dir = Form("%s/%s_PseudoExp",
-		     (config->getStr("clusterFileLocation")).Data(),
-		     (config->getStr("jobName")).Data());
+		     (m_config->getStr("clusterFileLocation")).Data(),
+		     (m_config->getStr("jobName")).Data());
   TString out = Form("%s/out", dir.Data());
   TString err = Form("%s/err", dir.Data());
   TString exe = Form("%s/exe", dir.Data());
@@ -218,33 +363,33 @@ void submitPEViaBsub(TString exeConfigFile, TString exeOption,
   system(Form("mkdir -vp %s", exe.Data()));
   
   // create .tar file with everything:
-  if (isFirstJob) {
+  if (m_isFirstJob) {
     system(Form("tar zcf Cocoon.tar bin/%s", 
-		(config->getStr("exePseudoExp")).Data()));
-    system(Form("chmod +x %s", (config->getStr("jobScriptPseudoExp")).Data()));
+		(m_config->getStr("exePseudoExp")).Data()));
+    system(Form("chmod +x %s", (m_config->getStr("jobScriptPseudoExp")).Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
-		(config->getStr("masterOutput")).Data(), 
-		(config->getStr("jobName")).Data(), exeSignal.Data()));
+		(m_config->getStr("masterOutput")).Data(), 
+		(m_config->getStr("jobName")).Data(), exeSignal.Data()));
     system(Form("cp -f %s/%s %s/jobFilePseudoExp.sh", 
-		(config->getStr("packageLocation")).Data(), 
-		(config->getStr("jobScriptPseudoExp")).Data(), exe.Data()));
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptPseudoExp")).Data(), exe.Data()));
     system(Form("chmod +x %s/jobFilePseudoExp.sh", exe.Data()));
     system(Form("mv Cocoon.tar %s", exe.Data()));
   }
   
   TString inputFile = Form("%s/Cocoon.tar", exe.Data());
   TString nameOutFile = Form("%s/out/%s_%s_%d.out", dir.Data(),
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data(), exeSeed);
   TString nameErrFile = Form("%s/err/%s_%s_%d.err", dir.Data(),
-			     (config->getStr("jobName")).Data(),
+			     (m_config->getStr("jobName")).Data(),
 			     exeSignal.Data(), exeSeed);
   
   // Here you define the arguments for the job script:
   TString nameJScript = Form("%s/jobFilePseudoExp.sh %s %s %s %s %s %s %d %d", 
-			     exe.Data(), (config->getStr("jobName")).Data(),
+			     exe.Data(), (m_config->getStr("jobName")).Data(),
 			     exeConfigFile.Data(), inputFile.Data(),
-			     (config->getStr("exePseudoExp")).Data(),
+			     (m_config->getStr("exePseudoExp")).Data(),
 			     exeSignal.Data(), exeOption.Data(), exeSeed,
 			     exeToysPerJob);
   
@@ -264,28 +409,35 @@ int main (int argc, char **argv) {
     exit(0);
   }
   
+  // Clock the program:
+  clock_t time;
+  time = clock();
+
   // The job name and options (which analysis steps to perform):
   TString masterOption = argv[1];
   TString configFileName = argv[2];
   
   // Submit jobs to bsub or grid, etc.:
   bool runInParallel = false;
-  isFirstJob = true;
-  
-  // Options for each step:
-  TString massPointOptions = "New";//"FromFile";
-  TString sigParamOptions  = "New";//"FromFile";
-  TString bkgModelOptions  = "New";//"FromFile";
-  TString workspaceOptions = "New_nosys";//"FromFile_nosys";
-  TString pseudoExpOptions = "FixMu";
-  TString toyPlotOptions   = "null";
-  TString testStatOptions  = "New";//"FromFile";
-  TString muLimitOptions   = "null";
-  
+  m_isFirstJob = true;
+    
   // Load the config class and file:
   std::cout << "DMMaster: Loading the global config file." << std::endl;
-  config = new Config(configFileName);
-  config->printDB();
+  m_config = new Config(configFileName);
+  m_config->printDB();
+  TString fullConfigPath = Form("%s/%s",
+				(m_config->getStr("packageLocation")).Data(),
+				configFileName.Data());
+  
+  // Options for each analysis step:
+  TString massPointOptions = m_config->getStr("massPointOptions");
+  TString sigParamOptions  = m_config->getStr("sigParamOptions");
+  TString bkgModelOptions  = m_config->getStr("bkgModelOptions");
+  TString workspaceOptions = m_config->getStr("workspaceOptions");
+  TString pseudoExpOptions = m_config->getStr("pseudoExpOptions");
+  TString toyPlotOptions   = m_config->getStr("toyPlotOptions");
+  TString testStatOptions  = m_config->getStr("testStatOptions");
+  TString muLimitOptions   = m_config->getStr("muLimitOptions");
   
   //--------------------------------------//
   // Step 1: Make or load mass points:
@@ -293,17 +445,17 @@ int main (int argc, char **argv) {
     cout << "DMMaster: Step 1 - Make mass points." << endl;
     
     // Loop over SM, DM, MC samples:
-    std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
+    std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
     for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigSMModes[i_SM],
 					  massPointOptions, NULL);
     }
-    std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+    std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigDMModes[i_DM],
 					  massPointOptions, NULL);
     }
-    std::vector<TString> MCProcesses = config->getStrV("MCProcesses");
+    std::vector<TString> MCProcesses = m_config->getStrV("MCProcesses");
     for (int i_MC = 0; i_MC < (int)MCProcesses.size(); i_MC++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, MCProcesses[i_MC],
 					  massPointOptions, NULL);
@@ -334,13 +486,13 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 4.1 - Making the workspaces." << std::endl;
     
     int jobCounterWS = 0;
-    std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+    std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       TString currSignal = sigDMModes[i_DM];
       if (runInParallel) {
-	submitWSViaBsub(configFileName, workspaceOptions, currSignal);
+	submitWSViaBsub(fullConfigPath, workspaceOptions, currSignal);
 	jobCounterWS++;
-	isFirstJob = false;
+	m_isFirstJob = false;
       }
       else {
 	DMWorkspace *dmw = new DMWorkspace(configFileName, currSignal,
@@ -373,9 +525,9 @@ int main (int argc, char **argv) {
       TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitWSViaBsub(configFileName, workspaceOptions, currSignal);
+	submitWSViaBsub(fullConfigPath, workspaceOptions, currSignal);
 	jobCounterWS++;
-	isFirstJob = false;
+	m_isFirstJob = false;
       }
       else {
 	DMWorkspace *dmw = new DMWorkspace(configFileName, currSignal,
@@ -392,21 +544,21 @@ int main (int argc, char **argv) {
   
   //--------------------------------------//
   // Step 5.1: Create pseudoexperiment ensemble:
-  TString currSignal = config->getStr("exampleSignal");
+  TString currToySignal = m_config->getStr("exampleSignal");
   if (masterOption.Contains("TossPseudoExp")) {
     cout << "DMMaster: Step 5.1 - Creating pseudoexperiments for signal "
-	 << currSignal << std::endl;
+	 << currToySignal << std::endl;
     
-    int toySeed = 1987;
-    int nToysTotal = 10000;
-    int nToysPerJob = 50;
+    int toySeed = m_config->getInt("toySeed");
+    int nToysTotal = m_config->getInt("nToysTotal");
+    int nToysPerJob = m_config->getInt("nToysPerJob");
     int increment = nToysPerJob;
     int highestSeed = toySeed + nToysTotal;
     
     for (int i_s = toySeed; i_s < highestSeed; i_s += increment) {
-      submitPEViaBsub(configFileName, pseudoExpOptions, currSignal, i_s,
+      submitPEViaBsub(fullConfigPath, pseudoExpOptions, currToySignal, i_s,
 		      nToysPerJob);
-      isFirstJob = false;
+      m_isFirstJob = false;
     }
     std::cout << "DMMaster: Submitted " << (int)(nToysTotal/nToysPerJob) 
 	      << " total pseudo-experiments." << std::endl;
@@ -416,8 +568,8 @@ int main (int argc, char **argv) {
   // Step 5.2: Plot pseudo-experiment ensemble results:
   if (masterOption.Contains("PlotPseudoExp")) {
     std::cout << "DMMaster: Step 5.2 - Plot pseudoexperiment results for "
-	      << currSignal << std::endl;    
-    DMToyAnalysis *dmta = new DMToyAnalysis(configFileName, currSignal);
+	      << currToySignal << std::endl;    
+    DMToyAnalysis *dmta = new DMToyAnalysis(configFileName, currToySignal);
   }
   
   //--------------------------------------//
@@ -427,14 +579,14 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 6.1 - Calculating CL and p0." << std::endl;
 
     int jobCounterTS = 0;
-    std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+    std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       TString currSignal = sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitTSViaBsub(configFileName, testStatOptions, currSignal);
+	submitTSViaBsub(fullConfigPath, testStatOptions, currSignal);
 	jobCounterTS++;
-	isFirstJob = false;
+	m_isFirstJob = false;
       }
       else {
 	DMTestStat *dmts = new DMTestStat(configFileName, currSignal, 
@@ -464,14 +616,14 @@ int main (int argc, char **argv) {
     
     // Then resubmit as necessary:
     std::cout << "Resubmitting " << (int)resubmitSignals.size()
-	      << " workspace jobs." << std::endl;
+	      << " test statistic jobs." << std::endl;
     for (int i_DM = 0; i_DM < (int)resubmitSignals.size(); i_DM++) {
       TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitTSViaBsub(configFileName, testStatOptions, currSignal);
+	submitTSViaBsub(fullConfigPath, testStatOptions, currSignal);
       	jobCounterTS++;
-	isFirstJob = false;
+	m_isFirstJob = false;
       }
       else {
 	DMTestStat *dmts = new DMTestStat(configFileName, currSignal,
@@ -495,19 +647,19 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 7.1 - Calculate 95%CL mu value." << std::endl;
 
     int jobCounterML = 0;
-    std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
+    std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       TString currSignal = sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(configFileName, muLimitOptions, currSignal);
-	isFirstJob = false;
+	submitMLViaBsub(fullConfigPath, muLimitOptions, currSignal);
+	m_isFirstJob = false;
       }
       else {
 	TString muCommand = Form(".%s/bin/%s %s %s %s", 
-				 (config->getStr("packageLocation")).Data(), 
-				 (config->getStr("exeMuLimit")).Data(),
-				 configFileName.Data(), currSignal.Data(), 
+				 (m_config->getStr("packageLocation")).Data(), 
+				 (m_config->getStr("exeMuLimit")).Data(),
+				 fullConfigPath.Data(), currSignal.Data(), 
 				 muLimitOptions.Data());
 	std::cout << "Executing following system command: \n\t"
 		  << muCommand << std::endl;
@@ -536,19 +688,34 @@ int main (int argc, char **argv) {
       TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(configFileName, muLimitOptions, currSignal);
-	isFirstJob = false;
+	submitMLViaBsub(fullConfigPath, muLimitOptions, currSignal);
+	m_isFirstJob = false;
       }
       else {
 	system(Form(".%s/bin/%s %s %s %s", 
-		    (config->getStr("packageLocation")).Data(), 
-		    (config->getStr("exeMuLimit")).Data(),configFileName.Data(),
-		    currSignal.Data(), muLimitOptions.Data()));
+		    (m_config->getStr("packageLocation")).Data(), 
+		    (m_config->getStr("exeMuLimit")).Data(),
+		    fullConfigPath.Data(), currSignal.Data(),
+		    muLimitOptions.Data()));
       }
       jobCounterML++;
     }
     std::cout << "Resubmitted " << jobCounterML << " jobs" << std::endl;
   }
   
+  //--------------------------------------//
+  // Step 8: Optimize the analysis!
+  if (masterOption.Contains("Optimizer")) {
+    submitToOptimize(configFileName, m_config->getStr("masterJobOptions"));
+  }
+  
+  //--------------------------------------//
+  // Terminate successfully:
+  std::cout << "DMMaster: All requested processes have completed." <<std::endl;
+  // Clock the program:
+  time = clock() - time;
+  printf("\tRunning required %d clock cycles (%f seconds).\n\n",
+	 (int)time, ((float)time/CLOCKS_PER_SEC));
   return 0;
 }
+

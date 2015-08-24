@@ -16,6 +16,7 @@
 
 /** 
     Convert the sample name to the corresponding file list.
+    @param config - The config file for the analysis settings.
     @param name - the name of the sample.
     @returns - the file list location.
 */
@@ -30,6 +31,7 @@ TString DMAnalysis::nameToFileList(Config *config, TString name) {
 
 /**
    Converts the sample name to the corresponding cutflow histogram.
+   @param config - The config file for the analysis settings.
    @param name - the name of the sample.
    @returns - the file list location.
 */
@@ -89,9 +91,10 @@ int DMAnalysis::getDarkMatterMass(TString modeName) {
 }
 
 /**
-   Check if the sample is among those listed as a SM or DM signal. 
+   Check if the sample is among those listed as a SM signal. 
+   @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.
-   @returns - true iff the sample is a signal sample.
+   @returns - true iff the sample is a SM signal sample.
 */
 bool DMAnalysis::isSMSample(Config *config, TString sampleName) {
   std::vector<TString> sigSMModes = config->getStrV("sigSMModes");
@@ -101,6 +104,12 @@ bool DMAnalysis::isSMSample(Config *config, TString sampleName) {
   return false;
 }
 
+/**
+   Check if the sample is among those listed as a DM signal. 
+   @param config - The config file for the analysis settings.
+   @param sampleName - the name of the sample being used.
+   @returns - true iff the sample is a DM signal sample.
+*/
 bool DMAnalysis::isDMSample(Config *config, TString sampleName) {
   std::vector<TString> sigDMModes = config->getStrV("sigDMModes");
   for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
@@ -109,12 +118,19 @@ bool DMAnalysis::isDMSample(Config *config, TString sampleName) {
   return false;
 }
 
+/**
+   Check if the sample is among those listed as a DM or SM signal. 
+   @param config - The config file for the analysis settings.
+   @param sampleName - the name of the sample being used.
+   @returns - true iff the sample is a DM or SM signal sample.
+*/
 bool DMAnalysis::isSignalSample(Config *config, TString sampleName) {
   return (isSMSample(config, sampleName) || isDMSample(config, sampleName));
 }
 
 /**
    Check whether a sample should be weighted.
+   @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.
    @returns - true iff the sample has associated event weights.
 */

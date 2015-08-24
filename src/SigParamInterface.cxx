@@ -45,14 +45,16 @@ SigParamInterface::SigParamInterface(TString newConfigFile, TString newOptions){
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   
   // Load the SM signal parameterization from file or start from scratch:
-  std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
-  for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
-    if ((newOptions.Contains("FromFile") && loadFile(sigSMModes[i_SM]))
-	|| createNew(sigSMModes[i_SM])) {
-      std::cout << "SigParamInterface: " << sigSMModes[i_SM] << " ready!"
-		<< std::endl;
+  if (m_config->getBool("SplitSMProdModes")) {
+    std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
+    for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
+      if ((newOptions.Contains("FromFile") && loadFile(sigSMModes[i_SM]))
+	  || createNew(sigSMModes[i_SM])) {
+	std::cout << "SigParamInterface: " << sigSMModes[i_SM] << " ready!"
+		  << std::endl;
+      }
+      else m_signalsOK = false;
     }
-    else m_signalsOK = false;
   }
   
   // Load the DM signal parameterization from file or start from scratch:

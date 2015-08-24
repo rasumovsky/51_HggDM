@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 	      << " <configFile> <DMSignal> <options>" << std::endl;
     exit(0);
   }
-  TString configFile= argv[1];
+  TString configFile = argv[1];
   TString DMSignal = argv[2];
   TString options = argv[3];
   
@@ -32,10 +32,10 @@ int main(int argc, char **argv) {
   
   // Define the input file, then make a local copy (for remote jobs):
   TString originFile = Form("%s/%s/workspaces/rootfiles/workspaceDM_%s.root",
-			    masterOutput.Data(), jobName.Data(), 
-			    DMSignal.Data());
-  TString copiedFile = Form("workspaceDM_%s.root",DMSignal.Data());
-  system(Form("cp %s %s",originFile.Data(),copiedFile.Data()));
+			    (config->getStr("masterOutput")).Data(),
+			    jobName.Data(), DMSignal.Data());
+  TString copiedFile = Form("workspaceDM_%s.root", DMSignal.Data());
+  system(Form("cp %s %s", originFile.Data(), copiedFile.Data()));
     
   // Load the RooWorkspace and ModelConfig:
   TFile inputFile(copiedFile, "read");

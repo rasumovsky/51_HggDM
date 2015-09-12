@@ -16,6 +16,7 @@
 #include "CommonHead.h"
 #include "CommonFunc.h"
 #include "Config.h"
+#include "DMAnalysis.h"
 
 class DMOptAnalysis {
 
@@ -29,41 +30,43 @@ class DMOptAnalysis {
   struct AnalysisAttributes {
     int index; // Job index.
     bool isGood; // Data loaded successfully?
-    std::map<TString,double> cutNameAndVal; // Cut names and their values.
+    std::map<TString,double> cutValues; // Cut names and their values.
     std::vector<TString> signals; // A list of signal names
-    std::map<TString,double> valuesExpCLN2; // Map of signal to exp CL (-2sigma)
-    std::map<TString,double> valuesExpCLN1; // Map of signal to exp CL (-1sigma)
-    std::map<TString,double> valuesExpCL;   // Map of signal to exp CL (nom)
-    std::map<TString,double> valuesExpCLP1; // Map of signal to exp CL (+1sigma)
-    std::map<TString,double> valuesExpCLP2; // Map of signal to exp CL (+2sigma)
-    std::map<TString,double> valuesObsCL;   // Map of signal to obs CL
-    std::map<TString,double> valuesExpP0;   // Map of signal to exp p0
-    std::map<TString,double> valuesObsP0;   // Map of signal to obs p0
+    std::map<TString,double> statValues; // statistics for ALL signals.
   };
   
   // Public accessors:
   std::vector<TString> listDirectoryContents(TString directory);
+  void plot2DScatter(TString quantity1, TString quantity2);
+  void plotCutsAndStat(TString signal, TString cutNameX, TString cutNameY,
+		       TString statistic, bool minimize);
+  void plotOptimizationPoints(TString cutName1, TString cutName2);
   
   // Public mutators:
-  void plotOptimizationPoints(TString cutName1, TString cutName2);
+  void loadOptimizationData(TString directory);
   
  private:
   
   // Private accessors:
-  TString getPrintName(TString originName);
+  std::vector<double> checkDoubleList(std::vector<double> currList,
+				      double newDouble);
+  void getHistBinsAndRange(TString cutName, int &bins, double &min,
+			   double &max);
+  int getOptAnaIndex(TString signal, TString statistic, bool minimize);
+  TString mapKey(TString signal, TString statistic);
+  double maxEntry(std::vector<double> currList);
+  double minEntry(std::vector<double> currList);
   
   // Private mutators:
-  void loadOptimizationData(TString directory);
+  
   
 
   // Private member variables:
   TString m_outputDir;
   Config *m_config;
   
-  std::vector<AnalysisAttributes*> analysisList;
+  std::vector<AnalysisAttributes*> m_analysisList;
   
-  std::map<TString,std::vector<double> > cutValues;
-
 };
 
 #endif

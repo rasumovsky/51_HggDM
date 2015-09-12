@@ -17,6 +17,7 @@
 #include "DMAnalysis.h"
 #include "DMCheckJobs.h"
 #include "DMMassPoints.h"
+#include "DMOptAnalysis.h"
 #include "DMTestStat.h"
 #include "DMToyAnalysis.h"
 #include "SigParamInterface.h"

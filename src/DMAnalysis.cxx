@@ -15,6 +15,7 @@
 #include "DMAnalysis.h"
 
 /** 
+   -----------------------------------------------------------------------------
     Convert the sample name to the corresponding file list.
     @param config - The config file for the analysis settings.
     @param name - the name of the sample.
@@ -30,6 +31,7 @@ TString DMAnalysis::nameToFileList(Config *config, TString name) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Converts the sample name to the corresponding cutflow histogram.
    @param config - The config file for the analysis settings.
    @param name - the name of the sample.
@@ -45,6 +47,7 @@ TString DMAnalysis::nameToxAODCutFile(Config *config, TString name) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Convert the DM sample name into a process name, a subset of the full name.
    @param modeName - the name of the DM production mode.
    @param processName - the name of the process.
@@ -52,6 +55,7 @@ TString DMAnalysis::nameToxAODCutFile(Config *config, TString name) {
 TString DMAnalysis::getMediatorName(TString modeName) {
   if (modeName.Contains("shxx_gg")) return "shxx_gg";
   else if (modeName.Contains("zphxx_gg")) return "zphxx_gg";
+  else if (modeName.Contains("zp2hdmxx_gg")) return "zp2hdmxx_gg";
   else {
     std::cout << "Analysis Error: no matching mediator name: " 
 	      << modeName << std::endl;
@@ -60,30 +64,119 @@ TString DMAnalysis::getMediatorName(TString modeName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
+   Convert the DM sample name into a process name, a subset of the full name.
+   @param modeName - the name of the DM production mode.
+   @param processName - the name of the process.
+*/
+TString DMAnalysis::getPrintMediatorName(TString modeName) {
+  if (modeName.Contains("shxx_gg")) return "Scalar";
+  else if (modeName.Contains("zphxx_gg")) return "Z'";
+  else if (modeName.Contains("zp2hdmxx_gg")) return "Z_{2HDM}'";
+  else {
+    std::cout << "Analysis Error: no matching mediator name: " 
+	      << modeName << std::endl;
+    exit(0);
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get a pretty LaTex formatted name for a variable.
+   @param sampleName - The name of the sample.
+   @returns - A LaTex formatted TString.
+*/
+TString DMAnalysis::getPrintSampleName(Config *config, TString sampleName) {
+  if (sampleName.EqualTo("gg")) return "#gamma#gamma";
+  else if (sampleName.EqualTo("gjet")) return "#gamma+jet";
+  else if (sampleName.EqualTo("SMHiggs")) return "SM H#rightarrow#gamma#gamma";
+  else if (DMAnalysis::isDMSample(config, sampleName)) {
+    TString mediatorName = DMAnalysis::getMediatorName(sampleName);
+    int mediatorMass = DMAnalysis::getMediatorMass(config, sampleName);
+    TString medMassForm;
+    if (mediatorName.EqualTo("shxx_gg")) {
+      medMassForm = Form("m_{S}=%dGeV", mediatorMass);
+    }
+    else if (mediatorName.EqualTo("zphxx_gg")) {
+      medMassForm = Form("m_{Z'}=%dGeV", mediatorMass);
+    }
+    else if (mediatorName.EqualTo("zp2hdmxx_gg")) {
+      medMassForm = Form("m_{Z'}=%dGeV", mediatorMass);
+    }
+    
+    int darkMatterMass = DMAnalysis::getDarkMatterMass(config, sampleName);
+    TString darkMassForm;
+    if (mediatorName.EqualTo("shxx_gg")) {
+      darkMassForm = Form("m_{#chi}=%dGeV", darkMatterMass);
+    }
+    else if (mediatorName.EqualTo("zphxx_gg")) {
+      darkMassForm = Form("m_{#chi}=%dGeV", darkMatterMass);
+    }
+    else if (mediatorName.EqualTo("zp2hdmxx_gg")) {
+      darkMassForm = Form("m_{A}=%dGeV", darkMatterMass);
+    }
+    //(DMAnalysis::getPrintMediatorName(sampleName)).Data(),
+    TString newName = Form("%s %s", medMassForm.Data(), darkMassForm.Data());
+    return newName;
+  }
+  else return sampleName;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get a pretty LaTex formatted name for a variable.
+   @param varName - The name of the variable in the file.
+   @returns - A LaTex formatted TString.
+*/
+TString DMAnalysis::getPrintVarName(TString varName) {
+  varName.ToLower();
+  if (varName.EqualTo("ptyy")) return "p_{T}^{#gamma#gamma} [GeV]";
+  else if (varName.EqualTo("etmiss")) return "#slash{E}_{T} [GeV]";
+  else if (varName.EqualTo("ratioetmissptyy")) {
+    return "#slash{E}_{T}/p_{T}^{#gamma#gamma}";
+  }
+  else if (varName.EqualTo("myy")) return "M_{#gamma#gamma} [GeV]";
+  else if (varName.Contains("atanratio")) {
+    return "tan^{-1}(#slash{E}_{T}/p_{T}^{#gamma#gamma})";
+  }
+  else if (varName.EqualTo("sumsqrtetmissptyy")) {
+    return "#sqrt{(p_{T}^{#gamma#gamma})^{2} + (#slash{E}_{T})^{2}} [GeV]";
+  }
+  else return varName;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Convert the DM sample name into a mediator mass.
    @param modeName - the name of the DM production mode.
    @returns - the mass of the mediator particle.
 */
-int DMAnalysis::getMediatorMass(TString modeName) {
-  for (int currMass = 100; currMass < 1000; currMass += 100) {
-    if (modeName.Contains(Form("ms%d",currMass)) || 
-	modeName.Contains(Form("mzp%d",currMass))) {
-      return currMass;
+int DMAnalysis::getMediatorMass(Config *config, TString modeName) {
+  std::vector<double> massList = config->getNumV("DMMediatorMasses");
+  for (int i_m = (int)massList.size()-1; i_m >= 0; i_m--) {
+    if (modeName.Contains(Form("ms%d",((int)massList[i_m]))) || 
+	modeName.Contains(Form("mzp%d",((int)massList[i_m])))) {
+      return ((int)massList[i_m]);
     }
   }
-  std::cout << "Analysis Error: no matching mediator mass"
+  std::cout << "Analysis Error: no matching mediator mass "
 	    << modeName << std::endl;
   exit(0);
 }
 
 /**
+   -----------------------------------------------------------------------------
    Convert the DM sample name into a dark matter particle mass.
    @param modeName - the name of the DM production mode.
    @returns - the mass of the DM particle.
 */
-int DMAnalysis::getDarkMatterMass(TString modeName) {
-  for (int currMass = 100; currMass < 1000; currMass += 100) {
-    if (modeName.Contains(Form("mx%d",currMass))) return currMass;
+int DMAnalysis::getDarkMatterMass(Config *config, TString modeName) {
+  std::vector<double> massList = config->getNumV("DMParticleMasses");
+  for (int i_m = (int)massList.size()-1; i_m >= 0; i_m--) {
+    if (modeName.Contains(Form("mx%d",((int)massList[i_m]))) || 
+	modeName.Contains(Form("mA%d",((int)massList[i_m])))) {
+      return ((int)massList[i_m]);
+    }
   }
   std::cout << "Analysis Error: no matching DM mass" 
 	    << modeName << std::endl;
@@ -91,6 +184,7 @@ int DMAnalysis::getDarkMatterMass(TString modeName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check if the sample is among those listed as a SM signal. 
    @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.
@@ -105,6 +199,7 @@ bool DMAnalysis::isSMSample(Config *config, TString sampleName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check if the sample is among those listed as a DM signal. 
    @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.
@@ -119,6 +214,7 @@ bool DMAnalysis::isDMSample(Config *config, TString sampleName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check if the sample is among those listed as a DM or SM signal. 
    @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.
@@ -129,6 +225,7 @@ bool DMAnalysis::isSignalSample(Config *config, TString sampleName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check whether a sample should be weighted.
    @param config - The config file for the analysis settings.
    @param sampleName - the name of the sample being used.

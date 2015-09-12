@@ -29,14 +29,7 @@
 #include "DMEvtSelect.h"
 
 /**
-   Initializes the tool and loads XS, BR values from files. The input Tree is 
-   set to NULL, and would have to be set later if used. 
-*/
-//DMEvtSelect::DMEvtSelect() {
-//DMEvtSelect(NULL);
-//}
-
-/**
+   -----------------------------------------------------------------------------
    Initializes the tool and loads XS, BR values from files. 
    @param newTree - the TTree which contains the sample.
 */
@@ -53,6 +46,9 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   cutList.push_back("photonIso");
   cutList.push_back("photonID");
   cutList.push_back("diphotonMass");
+  if (m_config->getBool("LeptonVeto")) {
+    cutList.push_back("leptonVeto");
+  }
   cutList.push_back("diphotonPt");
   cutList.push_back("diphotonETMiss");
   cutList.push_back("looseCuts");//same as allCuts but no photonID or photonIso
@@ -60,8 +56,6 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   
   // ADD CATE HERE ([name] = # categories):
   cateSchemesAndSizes.clear();
-  //cateSchemesAndSizes["inclusive"] = 1;
-  //cateSchemesAndSizes["splitETMiss"] = 2;
   cateSchemesAndSizes[m_config->getStr("cateScheme")]
     = m_config->getInt("nCategories");
   
@@ -75,6 +69,7 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the (integer) number of events in the specified category.
    @param cateScheme - the name of the categorization.
    @param cate - the category number. 
@@ -87,6 +82,7 @@ int DMEvtSelect::getEventsPerCate(TString cateScheme, int cate) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the weighted number of events in the specified category.
    @param cateScheme - the name of the categorization.
    @param cate - the category number.
@@ -110,6 +106,7 @@ int DMEvtSelect::getNCategories(TString cateScheme) {
 */
 
 /**
+   -----------------------------------------------------------------------------
    Get the (integer) number of events passing the specified cut.
    @param cutName - the name of the cut.
    @returns - the integer number of events passing the cut.
@@ -120,6 +117,7 @@ int DMEvtSelect::getPassingEvents(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the weighted number of events passing the specified cut.
    @param cutName - the name of the cut.
    @returns - the weighted number of events passing the cut.
@@ -130,6 +128,7 @@ double DMEvtSelect::getPassingEventsWt(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the (integer) number of events tested at the specified cut.
    @param cutName - the name of the cut.
    @returns - the integer number of events tested at the cut.
@@ -140,6 +139,7 @@ int DMEvtSelect::getTotalEvents(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the weighted number of events tested at the specified cut.
    @param cutName - the name of the cut.
    @returns - the weighted number of events tested at the cut.
@@ -150,6 +150,7 @@ double DMEvtSelect::getTotalEventsWt(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Print the cutflow.
    @param weighted - true iff the event counts should be weighted.
 */
@@ -177,6 +178,7 @@ void DMEvtSelect::printCutflow(bool weighted) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Print the categories.
    @param weighted - true iff the event counts should be weighted.
 */
@@ -199,6 +201,7 @@ void DMEvtSelect::printCategorization(bool weighted) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Save the cutflow.
    @param fileName - the output filename for the cutflow.
    @param weighted - true iff the event counts should be weighted.
@@ -228,6 +231,7 @@ void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Save the categories.
    @param fileName - the output filename for the category yields.
    @param weighted - true iff the event counts should be weighted.
@@ -252,6 +256,7 @@ void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Clear the event counters.
 */
 void DMEvtSelect::clearCounters() {
@@ -281,6 +286,7 @@ void DMEvtSelect::clearCounters() {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Find the category in which this event belongs. 
    @param cateScheme - the name of the categorization.
    @returns - the category number for the event.
@@ -290,6 +296,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Find the category in which this weighted event belongs. 
    @param cateScheme - the name of the categorization.
    @param weight - the event weight.
@@ -298,7 +305,11 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme) {
 int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   
   // check that the category is defined first. 
-  if (!cateExists(cateScheme)) return -1;
+  if (!cateExists(cateScheme)) {
+    std::cout << "DMEvtSelect: Categorization not defined: " << cateScheme 
+	      << " " << weight << std::endl;
+    exit(0);
+  }
   
   // ADD CATE HERE:
   int currCate = -1;
@@ -310,14 +321,14 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   // Split MET - low and high MET categories.
   else if (cateScheme.EqualTo("splitETMiss")) {
     categoryUsed = "splitETMiss";
-    if (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 > 100.0) currCate = 1;
+    if (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST > 140.0) currCate = 1;
     else currCate = 0;
   }
   // Ratio ETMiss/pT categorization:
   else if (cateScheme.EqualTo("RatioEtmPt")) {
     double ratioCut1 = m_config->getNum("RatioCut1");
     double ratioCut2 = m_config->getNum("RatioCut2");
-    double currRatio = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 / 
+    double currRatio = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST / 
 			evtTree->HGamEventInfoAuxDyn_HighMet_yy_pt);
     if (currRatio < ratioCut1) currCate = 0;
     else if (currRatio >= ratioCut1 && currRatio < ratioCut2) currCate = 1; 
@@ -337,6 +348,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check whether an event passes the specified cut.
    @param cutName - the name of the cut.
    @returns - true iff the event passes the cut.
@@ -346,6 +358,7 @@ bool DMEvtSelect::passesCut(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Check whether a weighted event passes the specified cut. Adds to the 
    selection counters automatically. WARNING! Calling "allCuts" or "looseCuts" 
    in conjunction with the other counters will lead to duplication.
@@ -358,23 +371,24 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   // check that map exists first.
   if (!cutExists(cutName)) return false;
   
+  // The mass parameter:
+  double invariantMass = evtTree->HGamEventInfoAuxDyn_HighMet_yy_m;
+    
   // ADD CUT HERE:
   bool passes = true;
   // Cut on photon transverse momenta / diphoton mass:
   if (cutName.EqualTo("photonPt")) {
-    passes = ((evtTree->HGamEventInfoAuxDyn_HighMet_y1_pt /
-	       evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 0.35) &&
-	      (evtTree->HGamEventInfoAuxDyn_HighMet_y2_pt /
-	       evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 0.25));
+    passes = ((evtTree->HGamEventInfoAuxDyn_HighMet_y1_pt/invariantMass>0.35) &&
+	      (evtTree->HGamEventInfoAuxDyn_HighMet_y2_pt/invariantMass>0.25));
   }
   // Cut on the photon pseudorapidities:
   else if (cutName.EqualTo("photonEta")) {
     passes = (evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta < 2.37 && 
 	      !(evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta > 1.37 &&
-		evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta < 1.56) &&
+		evtTree->HGamEventInfoAuxDyn_HighMet_y1_eta < 1.52) &&
 	      evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta < 2.37 && 
 	      !(evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta > 1.37 &&
-		evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta < 1.56));
+		evtTree->HGamEventInfoAuxDyn_HighMet_y2_eta < 1.52));
   }
   // Cut on the calo/track isolation of the photons.
   else if (cutName.EqualTo("photonIso")) {
@@ -390,10 +404,11 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Cut on the diphoton invariant mass:
   else if (cutName.EqualTo("diphotonMass")) {
-    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_yy_m > 
-	      m_config->getNum("DMMyyRangeLo") &&
-	      evtTree->HGamEventInfoAuxDyn_HighMet_yy_m < 
-	      m_config->getNum("DMMyyRangeHi"));
+    passes = (invariantMass > m_config->getNum("DMMyyRangeLo") &&
+	      invariantMass < m_config->getNum("DMMyyRangeHi"));
+  }
+  else if (cutName.EqualTo("leptonVeto") && m_config->getBool("LeptonVeto")) {
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_lep_n2 == 0);
   }
   // Cut on the diphoton transverse momentum:
   else if (cutName.EqualTo("diphotonPt")) {
@@ -402,7 +417,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Cut on the event missing transverse energy:
   else if (cutName.EqualTo("diphotonETMiss")) {
-    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST1 > 
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST > 
 	      m_config->getNum("AnaCutETMiss"));
   }
   // Check whether event passes all of the cuts above:
@@ -446,6 +461,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Give the selector class a new TTree to handle.
    @param newTree - the TTree on which the cuts shall be tested.
 */
@@ -455,6 +471,7 @@ void DMEvtSelect::setTree(DMTree *newTree) {
 }
 
 /** 
+   -----------------------------------------------------------------------------
    Check whether the specified cut has been defined.
    @param cutName - the name of the cut whose existence shall be questioned.
    @returns - true iff the cut exists.
@@ -469,6 +486,7 @@ bool DMEvtSelect::cutExists(TString cutName) {
 }
 
 /** 
+   -----------------------------------------------------------------------------
     Check whether the specified category has been defined.
     @param cateScheme - the name of the categorization.
     @returns - true iff the categorization has been defined. 

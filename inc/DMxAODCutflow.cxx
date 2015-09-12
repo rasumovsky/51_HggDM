@@ -14,6 +14,7 @@
 #include "DMxAODCutflow.h"
 
 /**
+   -----------------------------------------------------------------------------
    Initializes the tool from file.
    Initializes the tool and loads XS, BR values from files. 
    @param newTree - the TTree which contains the sample.
@@ -23,16 +24,18 @@ DMxAODCutflow::DMxAODCutflow(TString fileName) {
   std::cout << "\tfrom file: " << fileName << std::endl;
   
   TFile *inputFile = new TFile(fileName);
-  TH1F *histCuts = (TH1F*)inputFile->Get("cut_flow");
+  TH1F *histCuts = (TH1F*)inputFile->Get("HighMet_EventCutFlow");
   
   if (!histCuts) {
-    std::cout << "DMxAODCutflow: Error loading file!" << std::endl;
+    std::cout << "DMxAODCutflow: Error loading file: " << fileName << std::endl;
     exit(0);
   }
   
+  // Reset event counters and initialize values to zero:
   cutList.clear();
   passCounter.clear();
-    
+  
+  // Then fill with histogram contents:
   for (int i_b = 1; i_b < (int)histCuts->GetNbinsX(); i_b++) {
     TString currName = (TString)histCuts->GetXaxis()->GetBinLabel(i_b);
     double currValue = histCuts->GetBinContent(i_b);
@@ -42,13 +45,33 @@ DMxAODCutflow::DMxAODCutflow(TString fileName) {
       nCuts++;
     }
   }
+  delete histCuts;
+  delete inputFile;
   
-  // Reset event counters and initialize values to zero:
-  std::cout << "DMxAODCutflow: Successfully initialized!" << std::endl;
+  // Print the MxAOD cutflow.
   printxAODCutflow();
+  
+  std::cout << "DMxAODCutflow: Successfully initialized!" << std::endl;
 }
 
 /**
+   -----------------------------------------------------------------------------
+   Check whether the specified cut has been defined.
+   @param cutName - the name of the cut whose existence shall be questioned.
+   @returns - true iff the cut exists.
+*/
+bool DMxAODCutflow::cutExists(TString cutName) {
+  // Checks if there is a key corresponding to cutName in the map: 
+  bool nonExistent = (passCounter.find(cutName) == passCounter.end());
+  if (nonExistent) {
+    std::cout << "DMxAODCutflow: Cut " << cutName << " not defined!"
+	      << std::endl;
+  }
+  return !nonExistent;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Get the name of a cut based on its order in the xAOD cutflow, starting at 1.
    @param order - the order of the cut in the xAOD cutflow.
    @returns - the name of the cut.
@@ -64,6 +87,7 @@ TString DMxAODCutflow::getCutNameByOrder(int order) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the order of a cut based on its name.
    @param cutName - the name of the cut.
    @returns - the order of the cut in the xAOD cutflow.
@@ -80,6 +104,7 @@ int DMxAODCutflow::getCutOrderByName(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
    @param cutName - the name of the cut.
    @returns the number of passing events.
@@ -89,6 +114,7 @@ double DMxAODCutflow::getEventsPassingCut(int order) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
    @param cutName - the name of the cut.
    @returns the number of passing events.
@@ -97,10 +123,14 @@ double DMxAODCutflow::getEventsPassingCut(TString cutName) {
   if (cutExists(cutName)) {
     return passCounter[cutName];
   }
-  return 0.0;
+  else {
+    exit(0);
+  }
+  //return 0.0;
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the percentage of events passing the named cut.
    @param cutName - the name of the cut.
    @returns - the percentage of events passing just this cut.
@@ -117,18 +147,23 @@ double DMxAODCutflow::getPercentPassingCut(TString cutName) {
 }
 
 /**
+   -----------------------------------------------------------------------------
    Get the acceptance X efficiency of the analysis up to this point.
    @param cutName - the name of the cut.
    @returns - the percentage acceptance times efficiency total.
 */
 double DMxAODCutflow::getAccXEffAtCut(TString cutName) {
   // Divide current passing events by the initial events:
-  double result = 100.0 * (getEventsPassingCut(cutName) /
-			   getEventsPassingCut(getCutNameByOrder(1)));
+  double result = 0.0;
+  if (getEventsPassingCut(getCutNameByOrder(1)) > 0.0) {
+    result = 100.0 * (getEventsPassingCut(cutName) /
+		      getEventsPassingCut(getCutNameByOrder(1)));
+  }
   return result;
 }
 
 /**
+   -----------------------------------------------------------------------------
    Print the stored cuts and the event values.
 */
 void DMxAODCutflow::printxAODCutflow() {
@@ -137,20 +172,4 @@ void DMxAODCutflow::printxAODCutflow() {
     std::cout << "\t" << cutList[i_c] << "\t" << passCounter[cutList[i_c]] 
 	      << "\t" << getAccXEffAtCut(cutList[i_c]) << "%." << std::endl;
   }
-}
-
-
-/** 
-   Check whether the specified cut has been defined.
-   @param cutName - the name of the cut whose existence shall be questioned.
-   @returns - true iff the cut exists.
-*/
-bool DMxAODCutflow::cutExists(TString cutName) {
-  // Checks if there is a key corresponding to cutName in the map: 
-  bool nonExistent = (passCounter.find(cutName) == passCounter.end());
-  if (nonExistent) {
-    std::cout << "DMxAODCutflow: Cut " << cutName << " not defined!"
-	      << std::endl;
-  }
-  return !nonExistent;
 }

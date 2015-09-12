@@ -49,17 +49,24 @@ class DMMassPoints {
   RooDataSet* getCateDataSet(int cateIndex);
   RooRealVar* getMassObservable();
   TString getMassPointsFileName(int cateIndex);
+  TString getMassPointsFileName(int cateIndex, TString sampleName);
   
   // Mutators:
   TString createLocalFilesAndList(TString originListName);
+  void mergeMassPoints(TString newSampleName, DMMassPoints *inputMassPoints,
+		       bool saveMassPoints);
   void setMassObservable(RooRealVar *newObservable);
   void removeLocalFilesAndList(TString listName);
-  
+
  private:
   
   // Member methods:
   void createNewMassPoints();
+  void fillHist1D(TString varName, bool allEvents, double xVal, double xWeight,
+		  int cateIndex);
   void loadMassPointsFromFile();
+  void newHist1D(TString varName, int nBins, double xMin, double xMax);
+  void saveHists();
   
   // Member variables:
   TString m_sampleName;
@@ -72,7 +79,10 @@ class DMMassPoints {
   
   RooDataSet *m_cateData[20];
   RooRealVar *m_yy;
-
+  
+  // Plotting information:
+  std::map<TString,TH1F*> m_hists;
+  
 };
 
 #endif

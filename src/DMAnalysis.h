@@ -30,8 +30,11 @@ namespace DMAnalysis {
   TString nameToFileList(Config *config, TString name);
   TString nameToxAODCutFile(Config *config, TString name);
   TString getMediatorName(TString modeName);
-  int getMediatorMass(TString modeName);
-  int getDarkMatterMass(TString modeName);
+  TString getPrintMediatorName(TString modeName);
+  TString getPrintSampleName(Config *config, TString sampleName);
+  TString getPrintVarName(TString varName);
+  int getMediatorMass(Config *config, TString modeName);
+  int getDarkMatterMass(Config *config, TString modeName);
   bool isSMSample(Config *config, TString sampleName);
   bool isDMSample(Config *config, TString sampleName);
   bool isSignalSample(Config *config, TString sampleName);

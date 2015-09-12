@@ -20,14 +20,15 @@ int main(int argc, char **argv) {
 	      << " <configFile> <DMSignal> <options>" << std::endl;
     exit(0);
   }
-  
   TString configFile = argv[1];
   TString DMSignal = argv[2];
   TString options = argv[3];
   
+  // Load the workspace tool:
   DMWorkspace *dmw = new DMWorkspace(configFile, DMSignal, options);
   if (dmw->fitsAllConverged()) {
     std::cout << "DMWorkspaceWrapper: All OK!" << std::endl;
   }
+  delete dmw;
   return 0;
 }

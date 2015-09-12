@@ -13,10 +13,6 @@
 //  mass points from a previously generated text file, using newOptions =     //
 //  "FromFile" or "New".                                                      //
 //                                                                            //
-//  Currently, gg_gjet sample has a 'loose selection' applied. Also, the      //
-//  normalization should be hard-coded as an extrapolation of the 8TeV        //
-//  analysis background.                                                      //
-//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMassPoints.h"
@@ -41,7 +37,8 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
   m_sampleName = newSampleName;
   m_configFileName = newConfigFile;
   m_options = newOptions;
-
+  m_hists.clear();
+  
   // Load the config file:
   m_config = new Config(m_configFileName);
   
@@ -99,6 +96,28 @@ TString DMMassPoints::createLocalFilesAndList(TString originListName) {
 
 /**
    -----------------------------------------------------------------------------
+   Fill a stored 1D histogram.
+   @param varName - The name of the quantity in the plot.
+   @param allEvents - True iff all events included.
+   @param xVal - The x-axis value for histogram filling.
+   @param xWeight - The weight value for histogram filling.
+   @param cateIndex - The analysis category for the event.
+*/
+void DMMassPoints::fillHist1D(TString varName, bool allEvents, double xVal,
+			      double xWeight, int cateIndex) {
+  if (allEvents) {
+    m_hists[Form("%s_ALL",varName.Data())]->Fill(xVal, xWeight);
+  }
+  else {
+    m_hists[Form("%s_PASS",varName.Data())]->Fill(xVal, xWeight);
+    if (cateIndex >= 0) {
+      m_hists[Form("%s_c%d_PASS",varName.Data(),cateIndex)]->Fill(xVal,xWeight);
+    }
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
    Create a RooDataSet containing the mass points in a given category.
    @param cateIndex - The index of the category for which we want the .txt name.
    @returns The RooDataSet of the data in the specified category.
@@ -124,10 +143,120 @@ RooRealVar* DMMassPoints::getMassObservable() {
    @returns The full path of the mass points text file.
 */
 TString DMMassPoints::getMassPointsFileName(int cateIndex) {
+  return getMassPointsFileName(cateIndex, m_sampleName);
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get the name of the output textfile for the given category index.
+   @param cateIndex - The index of the category for which we want the .txt name.
+   @param newSampleName - The name of the data/MC sample.
+   @returns The full path of the mass points text file.
+*/
+TString DMMassPoints::getMassPointsFileName(int cateIndex, TString sampleName) {
   TString name = Form("%s/%s_%d_%s.txt", m_outputDir.Data(), 
 		      (m_config->getStr("cateScheme")).Data(),
-		      cateIndex, m_sampleName.Data());
+		      cateIndex, sampleName.Data());
   return name;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Merge two DMMassPoint objects, essentially combining the datasets. The 
+   global settings will be preserved, except for the sample name, which will
+   be reset. Note: Should only be used for datasets with the same number of 
+   categories, the same observables, and both using weighted data.
+   @param newSampleName - The name of the data/MC sample.
+   @param inputMassPoints - The MassPoints object to merge into this one.
+   @param saveMassPoints - True iff. you want to immediately save to text file.
+                           Preferrable to save until last merge is complete.
+*/
+void DMMassPoints::mergeMassPoints(TString newSampleName, 
+				   DMMassPoints *inputMassPoints,
+				   bool saveMassPoints) {
+
+  
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    // First rename the datasets in this object:
+    m_cateData[i_c]
+      ->SetNameTitle(Form("%s_%s_%d", newSampleName.Data(),
+			  (m_config->getStr("cateScheme")).Data(), i_c),
+		     Form("%s_%s_%d", newSampleName.Data(),
+			  (m_config->getStr("cateScheme")).Data(), i_c));
+    
+    // Then add the input datasets:
+    m_cateData[i_c]->append(*(inputMassPoints->getCateDataSet(i_c)));
+    
+    // Open input and output files:
+    ifstream inputFile1;
+    inputFile1.open(getMassPointsFileName(i_c));
+    ifstream inputFile2;
+    inputFile2.open(inputMassPoints->getMassPointsFileName(i_c));
+    
+    ofstream outputFile;
+    outputFile.open(getMassPointsFileName(i_c, newSampleName));
+    
+    // Then save the output, if requested:
+    if (saveMassPoints) {
+      double currMass; double currWeight;
+      while (!inputFile1.eof()) {
+	inputFile1 >> currMass >> currWeight;
+	outputFile << currMass << " " << currWeight << std::endl;
+      }
+      
+      while (!inputFile2.eof()) {
+	inputFile2 >> currMass >> currWeight;
+	outputFile << currMass << " " << currWeight << std::endl;
+      }
+    }  
+    // Close input and output files:
+    inputFile1.close();
+    inputFile2.close();
+    outputFile.close();
+  }
+  m_sampleName = newSampleName;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Create a new 1D histogram.
+   @param varName - The name of the quantity in the plot.
+   @param nBins - The number of bins.
+   @param xMin - The minimum value of the histogram.
+   @param xMax - The maximum value of the histogram.
+*/
+void DMMassPoints::newHist1D(TString varName, int nBins, double xMin,
+			     double xMax) {
+  // Inclusive histograms:
+  m_hists[Form("%s_ALL",varName.Data())]
+    = new TH1F(Form("%s_ALL",varName.Data()), Form("%s_ALL",varName.Data()),
+	       nBins, xMin, xMax);
+  m_hists[Form("%s_PASS",varName.Data())]
+    = new TH1F(Form("%s_PASS",varName.Data()), Form("%s_PASS",varName.Data()),
+	       nBins, xMin, xMax);
+  
+  // Categorized histograms:
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    m_hists[Form("%s_c%d_PASS",varName.Data(),i_c)]
+      = new TH1F(Form("%s_c%d_PASS",varName.Data(),i_c),
+		 Form("%s_c%d_PASS",varName.Data(),i_c),nBins,xMin,xMax);
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
+*/
+void DMMassPoints::saveHists() {
+  TFile *outputFile = new TFile(Form("%s/hists_%s.root", m_outputDir.Data(),
+				     m_sampleName.Data()), "RECREATE");
+  // Loop over the saved histograms:
+  std::map<TString,TH1F*>::iterator histIter;
+  for (histIter = m_hists.begin(); histIter != m_hists.end(); histIter++) {
+    histIter->second->Write();
+  }
+  
+  outputFile->Close();
+  delete outputFile;
 }
 
 /**
@@ -166,9 +295,7 @@ void DMMassPoints::createNewMassPoints() {
   double nGeneratedEvt = dmx->getEventsPassingCut(1);
   
   // Tool to load cross sections and branching ratios:
-  BRXSReader *brxs
-    = new BRXSReader(Form("%s/XSBRInputs/",
-			  (m_config->getStr("masterInput")).Data()));
+  BRXSReader *brxs = new BRXSReader(m_configFileName);
   
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
@@ -177,9 +304,16 @@ void DMMassPoints::createNewMassPoints() {
   RooArgSet *args = new RooArgSet();
   args->add(*m_yy);
   
-  ofstream massFiles[20];
+  // Define histograms to save:
+  newHist1D("pTyy", 40, 0.0, 600.0);
+  newHist1D("ETMiss", 40, 0.0, 600.0);
+  newHist1D("ratioETMisspTyy", 40, 0.0, 4.0);
+  newHist1D("aTanRatio", 40, 0.0, TMath::Pi()/2.0);
+  newHist1D("myy", 40, 105.0, 160.0);
+  newHist1D("sumSqrtETMisspTyy", 40, 0.0, 600);
   
-  // Loop over categories to define datasets and mass files:
+  // Define datasets and mass files in loop over categories:
+  ofstream massFiles[20];
   std::cout << "DMMassPoints: Define datasets & files." << std::endl;
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     
@@ -228,51 +362,88 @@ void DMMassPoints::createNewMassPoints() {
 				     m_sampleName, "XS")));
       }
       // Dark matter XSBR includes cross-section and branching ratio.
-      // WARNING!!! GETTING RID OF XSBR
       else if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
-	/*
-	  evtWeight *= 10000 * ((brxs->getDMXSBR(getMediatorMass(m_sampleName),
-	  getDarkMatterMass(m_sampleName),
-	  getMediatorName(m_sampleName),
-	  "XS")));
-	*/
-	evtWeight *= 0.006566;// cross-section for mX=1GeV,mZ'=100GeV
+	// Multiply by cross-section in pb:
+	evtWeight *=brxs->getDMXSBR(DMAnalysis::getMediatorMass(m_config,
+								m_sampleName),
+				    DMAnalysis::getDarkMatterMass(m_config,
+								  m_sampleName),
+				    DMAnalysis::getMediatorName(m_sampleName),
+				    "XS");
+	evtWeight *=brxs->getDMXSBR(DMAnalysis::getMediatorMass(m_config,
+								m_sampleName),
+				    DMAnalysis::getDarkMatterMass(m_config,
+								  m_sampleName),
+				    DMAnalysis::getMediatorName(m_sampleName),
+				    "FEFF");
       }
-      else if (m_sampleName.EqualTo("gg_gjet")) {
-	evtWeight *= 57.24;//xsection*filter-eff for Sherpa gg+gj
-	evtWeight *= 0.2729;// To scale to the expected bkg per fb-1
+      else if (DMAnalysis::isWeightedSample(m_config, m_sampleName)) {
+	evtWeight *= brxs->getMCXS(m_sampleName, "XS");
+	evtWeight *= brxs->getMCXS(m_sampleName, "FEFF");
+      }
+      else {
+	std::cout << "DMMassPoint: Error! No weighting procedure defined!"
+		  << std::endl;
+	exit(0);
       }
     }
     
-    // Check the cutflow (loose for background sample):
-    if (m_sampleName.EqualTo("gg_gjet") && 
-	!selector->passesCut("looseCuts",evtWeight)) {
-      continue;
+    // The mass parameter:
+    double invariantMass = dmt->HGamEventInfoAuxDyn_HighMet_yy_m;
+    if (m_config->getBool("RescaleAFII") && 
+	DMAnalysis::isDMSample(m_config, m_sampleName)) {
+      invariantMass += 1.0;
     }
-    else if (!m_sampleName.EqualTo("gg_gjet") && 
-	     !selector->passesCut("allCuts",evtWeight)) {
-      continue;
-    }
+    // Then commence plotting for ALL events:
+    fillHist1D("pTyy", true, dmt->HGamEventInfoAuxDyn_HighMet_yy_pt,
+	       evtWeight, -1);
+    fillHist1D("ETMiss", true, dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST,
+	       evtWeight, -1);
+    fillHist1D("ratioETMisspTyy", true, 
+	       (dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
+		dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+	       evtWeight, -1);
+    fillHist1D("sumSqrtETMisspTyy", true, sqrt(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST*dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST + dmt->HGamEventInfoAuxDyn_HighMet_yy_pt*dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+	       evtWeight, -1);
+    fillHist1D("aTanRatio", true, 
+	       TMath::ATan(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
+			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+	       evtWeight, -1);
+    fillHist1D("myy", true, invariantMass, evtWeight, -1);
+    
+    // Make sure events pass the selection:
+    if (!selector->passesCut("allCuts", evtWeight)) continue;
     
     // Save the categories:
     int currCate = selector->getCategoryNumber(m_config->getStr("cateScheme"),
 					       evtWeight);
-    if (currCate >= 0) {
-      
-      m_yy->setVal(dmt->HGamEventInfoAuxDyn_HighMet_yy_m);
-      
-      if (m_isWeighted) {
-	wt.setVal(evtWeight);
-	m_cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
-	massFiles[currCate] << dmt->HGamEventInfoAuxDyn_HighMet_yy_m << " " 
-			    << evtWeight << std::endl;
-      }
-      else {
-	m_cateData[currCate]->add(*m_yy);
-	massFiles[currCate] << dmt->HGamEventInfoAuxDyn_HighMet_yy_m
-			    << std::endl;
-      }
+    
+    // Fill the datasets:
+    m_yy->setVal(invariantMass);
+    if (m_isWeighted) {
+      wt.setVal(evtWeight);
+      m_cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
     }
+    else {
+      m_cateData[currCate]->add(*m_yy);
+    }
+    massFiles[currCate] << invariantMass << " " << evtWeight << std::endl;
+    
+    // Then commence plotting for PASSING events:
+    fillHist1D("pTyy", false, dmt->HGamEventInfoAuxDyn_HighMet_yy_pt,
+	       evtWeight, currCate);
+    fillHist1D("ETMiss", false, dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST,
+	       evtWeight, currCate);
+    fillHist1D("ratioETMisspTyy", false, 
+	       (dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
+		dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+	       evtWeight, currCate);
+    fillHist1D("sumSqrtETMisspTyy", false, sqrt(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST*dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST + dmt->HGamEventInfoAuxDyn_HighMet_yy_pt*dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), evtWeight, currCate);
+    fillHist1D("aTanRatio", false, 
+	       TMath::ATan(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
+			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+	       evtWeight, currCate);
+    fillHist1D("myy", false, invariantMass, evtWeight, currCate);
   }
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
   
@@ -295,6 +466,10 @@ void DMMassPoints::createNewMassPoints() {
   if (m_options.Contains("CopyFile")) {
     removeLocalFilesAndList(listName);
   }
+
+  // Finally, save the histograms to file:
+  saveHists();
+  
   std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
 }
 
@@ -346,19 +521,17 @@ void DMMassPoints::loadMassPointsFromFile() {
       createNewMassPoints();
       return;
     }
-    if (m_isWeighted) {
-      while (massFile >> readMass >> readWeight) {
+    while (massFile >> readMass >> readWeight) {
+      m_yy->setVal(readMass);
+      if (m_isWeighted) {
 	wt.setVal(readWeight);
-	m_yy->setVal(readMass);
 	m_cateData[i_c]->add(RooArgSet(*m_yy, wt), readWeight);
       }
-    }
-    else {
-      while (massFile >> readMass) {
-	m_yy->setVal(readMass);
+      else {
 	m_cateData[i_c]->add(*m_yy);
       }
     }
+    
     // Add the category dataset to the dataset map:
     dataMap[Form("%s_%d", (m_config->getStr("cateScheme")).Data(),i_c)]
       = m_cateData[i_c];

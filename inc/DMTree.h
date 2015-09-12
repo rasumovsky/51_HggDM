@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Mon Aug 24 13:38:52 2015 by ROOT version 5.34/09
+// Tue Sep  1 14:59:51 2015 by ROOT version 5.34/09
 // from TTree CollectionTree/xAOD event tree
 // found on file: sample.root
 //////////////////////////////////////////////////////////
@@ -19,7 +19,6 @@ using std::vector;
 // Header file for the classes stored in the TTree if any.
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
-const Int_t kMaxMET_MyRefFinalAux = 1;
 const Int_t kMaxHGamEventInfoAux = 1;
 
 class DMTree {
@@ -28,19 +27,11 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
 
    // Declaration of leaf types
- //xAOD::MissingETAuxContainer_v1 *MET_MyRefFinalAux_;
- //xAOD::MissingETAuxContainer_v1 *MET_MyRefFinalAux_xAOD__AuxContainerBase;
-   vector<double>  MET_MyRefFinalAux_mpx;
-   vector<double>  MET_MyRefFinalAux_mpy;
-   vector<double>  MET_MyRefFinalAux_sumet;
-   vector<string>  MET_MyRefFinalAux_name;
- //vector<ULong64_t> MET_MyRefFinalAux_source;
-   //xAOD::MissingETContainer_v1 *MET_MyRefFinal;
    //xAOD::EventInfo_v1 *HGamEventInfo;
    //xAOD::AuxInfoBase *HGamEventInfoAux_;
+   Float_t         HGamEventInfoAuxDyn_weightInitial;
    Float_t         HGamEventInfoAuxDyn_HighMet_yy_m;
    Float_t         HGamEventInfoAuxDyn_HighMet_yy_pt;
-   Float_t         HGamEventInfoAuxDyn_weightInitial;
    Float_t         HGamEventInfoAuxDyn_HighMet_y1_pt;
    Float_t         HGamEventInfoAuxDyn_HighMet_y2_pt;
    Float_t         HGamEventInfoAuxDyn_HighMet_y1_eta;
@@ -49,23 +40,17 @@ public :
    Float_t         HGamEventInfoAuxDyn_HighMet_yy_deltaR;
    Float_t         HGamEventInfoAuxDyn_HighMet_yy_deltaPhi;
    Float_t         HGamEventInfoAuxDyn_HighMet_yy_deltaEta;
-   Double_t        HGamEventInfoAuxDyn_HighMet_MET_reb_CST1;
-   Double_t        HGamEventInfoAuxDyn_HighMet_MET_reb_TST1;// use this ETMiss
-   Float_t         HGamEventInfoAuxDyn_HighMet_dPhi_yy_MET;
+   Double_t        HGamEventInfoAuxDyn_HighMet_MET_reb_TST;
+   Float_t         HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi;
    Int_t           HGamEventInfoAuxDyn_HighMet_lep_n2;
    Int_t           HGamEventInfoAuxDyn_HighMet_jet_n;
 
    // List of branches
-   TBranch        *b_MET_MyRefFinalAux_mpx;   //!
-   TBranch        *b_MET_MyRefFinalAux_mpy;   //!
-   TBranch        *b_MET_MyRefFinalAux_sumet;   //!
-   TBranch        *b_MET_MyRefFinalAux_name;   //!
-   TBranch        *b_MET_MyRefFinal;   //!
-   TBranch        *b_HGamEventInfo;   //!
-   TBranch        *b_HGamEventInfoAux_;   //!
+   //TBranch        *b_HGamEventInfo;   //!
+   //TBranch        *b_HGamEventInfoAux_;   //!
+   TBranch        *b_HGamEventInfoAuxDyn_weightInitial;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_m;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_pt;   //!
-   TBranch        *b_HGamEventInfoAuxDyn_weightInitial;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_y1_pt;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_y2_pt;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_y1_eta;   //!
@@ -74,9 +59,8 @@ public :
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_deltaR;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_deltaPhi;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_deltaEta;   //!
-   TBranch        *b_HGamEventInfoAuxDyn_HighMet_MET_reb_CST1;   //!
-   TBranch        *b_HGamEventInfoAuxDyn_HighMet_MET_reb_TST1;   //!
-   TBranch        *b_HGamEventInfoAuxDyn_HighMet_dPhi_yy_MET;   //!
+   TBranch        *b_HGamEventInfoAuxDyn_HighMet_MET_reb_TST;   //!
+   TBranch        *b_HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_lep_n2;   //!
    TBranch        *b_HGamEventInfoAuxDyn_HighMet_jet_n;   //!
 
@@ -145,7 +129,6 @@ void DMTree::Init(TTree *tree)
    // (once per file to be processed).
 
    // Set object pointer
-   //MET_MyRefFinal = 0;
    //HGamEventInfo = 0;
    //HGamEventInfoAux_ = 0;
    // Set branch addresses and branch pointers
@@ -154,16 +137,11 @@ void DMTree::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
-   fChain->SetBranchAddress("MET_MyRefFinalAux.mpx", &MET_MyRefFinalAux_mpx, &b_MET_MyRefFinalAux_mpx);
-   fChain->SetBranchAddress("MET_MyRefFinalAux.mpy", &MET_MyRefFinalAux_mpy, &b_MET_MyRefFinalAux_mpy);
-   fChain->SetBranchAddress("MET_MyRefFinalAux.sumet", &MET_MyRefFinalAux_sumet, &b_MET_MyRefFinalAux_sumet);
-   fChain->SetBranchAddress("MET_MyRefFinalAux.name", &MET_MyRefFinalAux_name, &b_MET_MyRefFinalAux_name);
-   //fChain->SetBranchAddress("MET_MyRefFinal", &MET_MyRefFinal, &b_MET_MyRefFinal);
    //fChain->SetBranchAddress("HGamEventInfo", &HGamEventInfo, &b_HGamEventInfo);
    //fChain->SetBranchAddress("HGamEventInfoAux.", &HGamEventInfoAux_, &b_HGamEventInfoAux_);
+   fChain->SetBranchAddress("HGamEventInfoAuxDyn.weightInitial", &HGamEventInfoAuxDyn_weightInitial, &b_HGamEventInfoAuxDyn_weightInitial);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_m", &HGamEventInfoAuxDyn_HighMet_yy_m, &b_HGamEventInfoAuxDyn_HighMet_yy_m);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_pt", &HGamEventInfoAuxDyn_HighMet_yy_pt, &b_HGamEventInfoAuxDyn_HighMet_yy_pt);
-   fChain->SetBranchAddress("HGamEventInfoAuxDyn.weightInitial", &HGamEventInfoAuxDyn_weightInitial, &b_HGamEventInfoAuxDyn_weightInitial);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_y1_pt", &HGamEventInfoAuxDyn_HighMet_y1_pt, &b_HGamEventInfoAuxDyn_HighMet_y1_pt);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_y2_pt", &HGamEventInfoAuxDyn_HighMet_y2_pt, &b_HGamEventInfoAuxDyn_HighMet_y2_pt);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_y1_eta", &HGamEventInfoAuxDyn_HighMet_y1_eta, &b_HGamEventInfoAuxDyn_HighMet_y1_eta);
@@ -172,9 +150,8 @@ void DMTree::Init(TTree *tree)
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_deltaR", &HGamEventInfoAuxDyn_HighMet_yy_deltaR, &b_HGamEventInfoAuxDyn_HighMet_yy_deltaR);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_deltaPhi", &HGamEventInfoAuxDyn_HighMet_yy_deltaPhi, &b_HGamEventInfoAuxDyn_HighMet_yy_deltaPhi);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_deltaEta", &HGamEventInfoAuxDyn_HighMet_yy_deltaEta, &b_HGamEventInfoAuxDyn_HighMet_yy_deltaEta);
-   fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_MET_reb_CST1", &HGamEventInfoAuxDyn_HighMet_MET_reb_CST1, &b_HGamEventInfoAuxDyn_HighMet_MET_reb_CST1);
-   fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_MET_reb_TST1", &HGamEventInfoAuxDyn_HighMet_MET_reb_TST1, &b_HGamEventInfoAuxDyn_HighMet_MET_reb_TST1);
-   fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_dPhi_yy_MET", &HGamEventInfoAuxDyn_HighMet_dPhi_yy_MET, &b_HGamEventInfoAuxDyn_HighMet_dPhi_yy_MET);
+   fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_MET_reb_TST", &HGamEventInfoAuxDyn_HighMet_MET_reb_TST, &b_HGamEventInfoAuxDyn_HighMet_MET_reb_TST);
+   fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_yy_met_deltaPhi", &HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi, &b_HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_lep_n2", &HGamEventInfoAuxDyn_HighMet_lep_n2, &b_HGamEventInfoAuxDyn_HighMet_lep_n2);
    fChain->SetBranchAddress("HGamEventInfoAuxDyn.HighMet_jet_n", &HGamEventInfoAuxDyn_HighMet_jet_n, &b_HGamEventInfoAuxDyn_HighMet_jet_n);
    Notify();

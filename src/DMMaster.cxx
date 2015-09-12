@@ -24,6 +24,7 @@
 //    - ResubmitTestStat                                                      //
 //    - MuLimit                                                               //
 //    - Optimizer                                                             //
+//    - OptAnalysis                                                           //
 //                                                                            //
 //  Need to rethink the DMSigParam handling of the RooDataSet. Maybe we       //
 //  should just hand it a RooDataSet?                                         //
@@ -449,16 +450,19 @@ int main (int argc, char **argv) {
     for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigSMModes[i_SM],
 					  massPointOptions, NULL);
+      delete mp;
     }
     std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigDMModes[i_DM],
 					  massPointOptions, NULL);
+      delete mp;
     }
     std::vector<TString> MCProcesses = m_config->getStrV("MCProcesses");
     for (int i_MC = 0; i_MC < (int)MCProcesses.size(); i_MC++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, MCProcesses[i_MC],
 					  massPointOptions, NULL);
+      delete mp;
     }
   }
   
@@ -468,6 +472,7 @@ int main (int argc, char **argv) {
     cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
     SigParamInterface *spi = new SigParamInterface(configFileName,
 						   sigParamOptions);
+    delete spi;
   }
   
   //--------------------------------------//
@@ -502,6 +507,7 @@ int main (int argc, char **argv) {
 	  std::cout << "DMMaster: Problem with workspace fit!" << std::endl;
 	  exit(0);
 	}
+	delete dmw;
       }
     }
     std::cout << "Submitted/completed " << jobCounterWS << " jobs" << std::endl;
@@ -537,8 +543,10 @@ int main (int argc, char **argv) {
 	  std::cout << "DMMaster: Problem with workspace fit!" << std::endl;
 	  exit(0);
 	}
+	delete dmw;
       }
     }
+    delete dmc;
     std::cout << "Resubmitted " << jobCounterWS << " jobs" << std::endl;
   }
   
@@ -570,6 +578,7 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 5.2 - Plot pseudoexperiment results for "
 	      << currToySignal << std::endl;    
     DMToyAnalysis *dmta = new DMToyAnalysis(configFileName, currToySignal);
+    delete dmta;
   }
   
   //--------------------------------------//
@@ -598,6 +607,7 @@ int main (int argc, char **argv) {
 	  std::cout << "DMMaster: Problem with test-stat fit!" << std::endl;
 	  exit(0);
 	}
+	delete dmts;
       }
     }
     std::cout << "Submitted/completed " << jobCounterTS << " jobs" << std::endl;
@@ -635,8 +645,10 @@ int main (int argc, char **argv) {
 	  std::cout << "DMMaster: Problem with test-stat fit!" << std::endl;
 	  exit(0);
 	}
+	delete dmts;
       }
     }
+    delete dmc;
     std::cout << "Resubmitted " << jobCounterTS << " jobs" << std::endl;
   }
   
@@ -700,6 +712,7 @@ int main (int argc, char **argv) {
       }
       jobCounterML++;
     }
+    delete dmc;
     std::cout << "Resubmitted " << jobCounterML << " jobs" << std::endl;
   }
   
@@ -708,6 +721,15 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("Optimizer")) {
     submitToOptimize(configFileName, m_config->getStr("masterJobOptions"));
   }
+  
+  //--------------------------------------//
+  // Step 9: Plot the results of the optimization
+  if (masterOption.Contains("OptAnalysis")) {
+    DMOptAnalysis *dmoa = new DMOptAnalysis(configFileName);
+    
+    delete dmoa;
+  }
+  
   
   //--------------------------------------//
   // Terminate successfully:

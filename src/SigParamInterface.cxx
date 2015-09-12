@@ -122,6 +122,7 @@ bool SigParamInterface::createNew(TString signalType) {
       m_failedSigParam += signalType + ", ";
     }
   }
+  delete sp;
   return signalConverged;
 }
 

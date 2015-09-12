@@ -571,6 +571,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 	std::cout << "DMWorkspace: Error importing " << currSig << " signal." 
 		  << std::endl;
       }
+      delete sp;
     }
   }
   
@@ -586,7 +587,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     tempWS->factory("prod::nSigSM(nSM,expectationCommon,expectationSM)");
   }
   else std::cout << "DMWorkspace: Error importing SM signal." << std::endl;
-  
+    
   // Load DM signal from file, then add to workspace:
   std::cout << "Check0" << std::endl;
   SigParam *spDM = m_spi->getSigParam(m_DMSignal);
@@ -818,8 +819,30 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   // Import the observed data set:
   DMMassPoints *currMassPoints = NULL;
   if (m_config->getBool("doBlind")) {
-    currMassPoints = new DMMassPoints(m_configFile, "gg_gjet", "FromFile",
-				      categoryWS->var("m_yy_"+m_currCateName));
+    std::vector<TString> bkgProcesses = m_config->getStrV("BkgProcesses");
+    /*
+    // Load the first mass points into currMassPoints:
+    currMassPoints
+      = new DMMassPoints(m_configFile, bkgProcesses[0], "FromFile",
+			 categoryWS->var("m_yy_"+m_currCateName));
+    // Then loop over 
+    for (int i_b = 1; i_b < (int)bkgProcesses.size(); i_b++) {
+      DMMassPoints *currBkgMassPoints
+	= new DMMassPoints(m_configFile, bkgProcesses[i_b], "FromFile", 
+			   categoryWS->var("m_yy_"+m_currCateName));
+      if (i_b == (int)bkgProcesses.size()-1) {
+	currMassPoints->mergeMassPoints("gg_gjet", currBkgMassPoints, true);
+      }
+      else {
+	currMassPoints->mergeMassPoints("gg_gjet", currBkgMassPoints, false);
+      }
+      delete currBkgMassPoints;
+    }
+    */
+    currMassPoints
+      = new DMMassPoints(m_configFile, bkgProcesses[0], "FromFile",
+			 categoryWS->var("m_yy_"+m_currCateName));
+    
   }
   else {
     currMassPoints = new DMMassPoints(m_configFile, "data", "FromFile",
@@ -829,6 +852,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   TString obsDataName = Form("obsData_%s",m_currCateName.Data());
   obsData->SetNameTitle(obsDataName, obsDataName);
   categoryWS->import(*obsData);
+  
+ 
   
   // Fit background shape and set normalization:
   std::cout << "DMWorkspace: Fitting bkg. in " << m_currCateName << std::endl;
@@ -847,6 +872,19 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   std::cout << "DMWorkspace: Printing workspace for category: "
 	    << m_currCateName << std::endl;
   categoryWS->Print("v");
+  
+
+
+  ////////
+
+  
+  //delete currMassPoints;// memory-intensive
+  //delete obsData;// memory-intensive
+  //delete currBkgModel;// memory-intensive
+  //delete spSM;// memory-intensive
+  //delete spDM;// memory-intensive
+  //delete tempWS;// memory-intensive
+  
   return categoryWS;
 }
 

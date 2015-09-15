@@ -23,10 +23,12 @@ DMxAODCutflow::DMxAODCutflow(TString fileName) {
   std::cout << "DMxAODCutflow: Initializing DMxAODCutflow" << std::endl;
   std::cout << "\tfrom file: " << fileName << std::endl;
   
-  TFile *inputFile = new TFile(fileName);
-  TH1F *histCuts = (TH1F*)inputFile->Get("HighMet_EventCutFlow");
+  //TFile *m_inputFile = new TFile(fileName);
+  //TH1F *m_histCuts = (TH1F*)m_inputFile->Get("HighMet_EventCutFlow");
+  m_inputFile = new TFile(fileName);
+  m_histCuts = (TH1F*)m_inputFile->Get("HighMet_EventCutFlow");
   
-  if (!histCuts) {
+  if (!m_histCuts) {
     std::cout << "DMxAODCutflow: Error loading file: " << fileName << std::endl;
     exit(0);
   }
@@ -36,17 +38,18 @@ DMxAODCutflow::DMxAODCutflow(TString fileName) {
   passCounter.clear();
   
   // Then fill with histogram contents:
-  for (int i_b = 1; i_b < (int)histCuts->GetNbinsX(); i_b++) {
-    TString currName = (TString)histCuts->GetXaxis()->GetBinLabel(i_b);
-    double currValue = histCuts->GetBinContent(i_b);
+  nCuts = 0;
+  for (int i_b = 1; i_b <= (int)m_histCuts->GetNbinsX(); i_b++) {
+    TString currName = (TString)m_histCuts->GetXaxis()->GetBinLabel(i_b);
+    double currValue = m_histCuts->GetBinContent(i_b);
     if (currName.Length() > 1) {
       cutList.push_back(currName);
       passCounter[currName] = currValue;
       nCuts++;
     }
   }
-  delete histCuts;
-  delete inputFile;
+  //delete m_histCuts;
+  //delete m_inputFile;
   
   // Print the MxAOD cutflow.
   printxAODCutflow();
@@ -126,7 +129,14 @@ double DMxAODCutflow::getEventsPassingCut(TString cutName) {
   else {
     exit(0);
   }
-  //return 0.0;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get a pointer to the cutflow histogram.
+*/
+TH1F* DMxAODCutflow::getHist() {
+  return m_histCuts;
 }
 
 /**

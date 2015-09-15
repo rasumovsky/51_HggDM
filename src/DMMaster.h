@@ -22,10 +22,19 @@
 #include "DMToyAnalysis.h"
 #include "SigParamInterface.h"
 
-bool m_isFirstJob;
-
+// Analysis configuration file:
 Config *m_config;
 
+// Two items below are for recursive job submission:
+int m_jobIndex;
+ofstream m_headFile;
+
+bool m_isFirstJob;
+
+// Mutators:
+void recursiveOptimizer(TString exeConfigOrigin, TString exeOption, 
+			int cutIndex, std::vector<TString> cutN,
+			std::vector<double> cutV);
 void submitToOptimize(TString exeConfigOrigin, TString exeOption);
 
 void submitWSViaBsub(TString exeConfigFile, TString exeOption,

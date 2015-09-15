@@ -34,22 +34,39 @@ DMOptAnalysis::DMOptAnalysis(TString newConfigFile) {
   CommonFunc::SetAtlasStyle();
   
   // Load the analysis optimization overview:
+  m_anaCollection = new AnaCollection();
   loadOptimizationData(Form("%s/%s/DMMaster/",
 			    (m_config->getStr("masterOutput")).Data(), 
 			    (m_config->getStr("jobName")).Data()));
   
-  plotOptimizationPoints("ATanRatio1", "ATanRatio2");
-
+  // Plot all variable combinations:
+  for (int i_c1 = 0; i_c1 < (int)m_optimizedCutList.size(); i_c1++) {
+    for (int i_c2 = 0; i_c2 < (int)m_optimizedCutList.size(); i_c2++) {
+      if (i_c1 == i_c2) continue;
+      plotOptimizationPoints(m_optimizedCutList[i_c1],m_optimizedCutList[i_c2]);
+    }
+  }
+  
   // Create optimization plots for every signal type:
   std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
   for (int i_s = 0; i_s < (int)sigDMModes.size(); i_s++) {
     system(Form("mkdir -vp %s/%s",m_outputDir.Data(),(sigDMModes[i_s]).Data()));
-    plotCutsAndStat(sigDMModes[i_s],"ATanRatio1","ATanRatio2","ExpCL",false);
-    plotCutsAndStat(sigDMModes[i_s],"ATanRatio1","ATanRatio2","ExpP0",true);
+    plotCutsAndStat(sigDMModes[i_s], m_optimizedCutList[0], 
+      		    m_optimizedCutList[1], "ExpCL");
+    plotCutsAndStat(sigDMModes[i_s], m_optimizedCutList[0],
+		    m_optimizedCutList[1], "ExpP0");
   }
   
-  std::cout << "DMOptAnalysis: Finished!" << std::endl;
+  std::cout << "DMOptAnalysis: Finished loading!" << std::endl;
+  
+  // Find the optimal analysis for each signal:
+  for (int i_s = 0; i_s < (int)sigDMModes.size(); i_s++) {
+    AnaInfo *optimalAna
+      = m_anaCollection->getOptimalAnalysis(sigDMModes[i_s], "ExpP0");
+    optimalAna->printAna(sigDMModes[i_s]);
+  }
 }
+
 /**
    -----------------------------------------------------------------------------
    Checks whether the given double is contained in the vector, and adds it
@@ -69,14 +86,21 @@ std::vector<double> DMOptAnalysis::checkDoubleList(std::vector<double> currList,
 
 /**
    -----------------------------------------------------------------------------
+   Get the axis nBins and range information for a variable.
+   @param cutName - The name of the variable.
+   @param bins - The number of bins.
+   @param min - The minimum of the variable.
+   @param max - The maximum of the variable.
+   @returns - Updated values for bins, min, max passed by reference.
 */
 void DMOptAnalysis::getHistBinsAndRange(TString cutName, int &bins, double &min,
 					double &max) {
   std::vector<double> uniqueCutValues; uniqueCutValues.clear();
   // Loop over all analysis points:
-  for (int i_a = 1; i_a < (int)m_analysisList.size(); i_a++) {
-    AnalysisAttributes *currAna = m_analysisList[i_a];
-    double currCutValue = currAna->cutValues[cutName];
+  std::vector<AnaInfo*>::iterator iter;
+  for (iter = m_anaCollection->begin(); iter != m_anaCollection->end(); iter++){
+    AnaInfo *currAna = *iter;
+    double currCutValue = currAna->getCutVal(cutName);
     uniqueCutValues = checkDoubleList(uniqueCutValues, currCutValue);
   }
   bins = uniqueCutValues.size();
@@ -86,32 +110,6 @@ void DMOptAnalysis::getHistBinsAndRange(TString cutName, int &bins, double &min,
   // So that the histogram bins are centered. 
   min = tempMin - (0.5 * increment);
   max = tempMax + (0.5 * increment);
-}
-
-/**
-   -----------------------------------------------------------------------------
-   For a given signal, based upon a given test statistic, identify the most
-   sensitive analysis.
-   @param signal - The signal sample for plotting.
-   @param statistic - The name of the test statistic for the z-axis.
-   @param minimize - True iff the statistic should be minimized (e.g. p0).
-   @returns - The analysis index.
-*/
-int DMOptAnalysis::getOptAnaIndex(TString signal, TString statistic, 
-				  bool minimize) {
-  int optimalIndex = 0;
-  AnalysisAttributes *optimalAnalysis = m_analysisList[optimalIndex];
-  for (int i_a = 1; i_a < (int)m_analysisList.size(); i_a++) {
-    AnalysisAttributes *currAna = m_analysisList[i_a];
-    if ((currAna->statValues[mapKey(signal, statistic)] <
-	 optimalAnalysis->statValues[mapKey(signal, statistic)] && minimize) || 
-	(currAna->statValues[mapKey(signal, statistic)] >
-	 optimalAnalysis->statValues[mapKey(signal, statistic)] && !minimize)) {
-      optimalIndex = i_a;
-      optimalAnalysis = m_analysisList[optimalIndex];
-    }
-  }
-  return optimalIndex;
 }
 
 /**
@@ -140,85 +138,89 @@ std::vector<TString> DMOptAnalysis::listDirectoryContents(TString directory) {
 */
 void DMOptAnalysis::loadOptimizationData(TString directory) {
   std::cout << "DMOptAnalysis: Loading optimization data files." << std::endl;
-  
-  int jobIndex; double cut1Val; double cut2Val;
-  ifstream inputSummaryFile(Form("%s/jobSummary.txt", directory.Data()));
-  while (!inputSummaryFile.eof()) {
-    inputSummaryFile >> jobIndex >> cut1Val >> cut2Val;
-    AnalysisAttributes *currAna;
-    currAna->isGood = true;
-    currAna->index = jobIndex;
-    currAna->cutValues.clear();
-    currAna->cutValues["ATanRatio1"] = TMath::ATan(cut1Val);
-    currAna->cutValues["ATanRatio2"] = TMath::ATan(cut2Val);
     
-    // Then loop over the signals:
-    std::vector<TString> signalList = m_config->getStrV("sigDMModes");
-    for (int i_DM = 0; i_DM < (int)signalList.size(); i_DM++) {
-      currAna->signals.clear();
-      currAna->signals.push_back(signalList[i_DM]);
-      currAna->statValues.clear();
-      
-      // Load p0:
-      TString currP0FileName = Form("%s/single_files/p0_%d/p0_values_%s.txt",
-				    directory.Data(), jobIndex,
-				    signalList[i_DM].Data());
-      ifstream currP0File(currP0FileName);
-      if (!currP0File) {
-	std::cout << "Problem loading file " << currP0FileName << std::endl;
-	currAna->isGood = false;
+  bool isFirstLine = true;
+  //int jobIndex; double cut1Val; double cut2Val;
+  std::string currStrLine;
+  TString currLine;
+  ifstream inputSummaryFile(Form("%s/jobSummary.txt", directory.Data()));
+  if (!inputSummaryFile.is_open()) {
+    std::cout << "DMOptAnalysis: Failed to open jobSummary.txt" << std::endl;
+    exit(0);
+  }
+  while (getline(inputSummaryFile, currStrLine)) {
+    currLine = TString(currStrLine);
+    std::vector<TString> vectorizedLine = vectorizeTString(currLine, " ");
+    
+    // The first line of the file stores cut names:
+    if (isFirstLine) {
+      m_optimizedCutList.clear();// A list to store the cut names
+      for (int i_c = 1; i_c < (int)vectorizedLine.size(); i_c++) {
+	m_optimizedCutList.push_back(vectorizedLine[i_c]);
       }
-      else {
-	TString currP0Name; double currExpP0; double currObsP0;
-	while (!currP0File.eof()) {
-	  currP0File >> currP0Name >> currExpP0 >> currObsP0;
-	  currAna->statValues[mapKey(signalList[i_DM], "ExpP0")] = currExpP0;
-	  currAna->statValues[mapKey(signalList[i_DM], "ObsP0")] = currObsP0;
+      isFirstLine = false;
+    }
+    
+    // The remaining lines store job indices and cut values:
+    else {
+      AnaInfo *currAna = new AnaInfo((vectorizedLine[0]).Atoi());
+      for (int i_c = 1; i_c < (int)vectorizedLine.size(); i_c++) {
+	currAna->setCutVal(m_optimizedCutList[i_c-1], 
+			   (vectorizedLine[i_c]).Atof());
+      }
+      
+      // Then loop over the signals:
+      std::vector<TString> signalList = m_config->getStrV("sigDMModes");
+      for (int i_DM = 0; i_DM < (int)signalList.size(); i_DM++) {
+	
+	// Load p0:
+	TString currP0FileName = Form("%s/single_files/p0_%d/p0_values_%s.txt",
+				      directory.Data(), currAna->getIndex(),
+				      signalList[i_DM].Data());
+	ifstream currP0File(currP0FileName);
+	if (!currP0File.is_open()) currAna->setGood(false);
+	else {
+	  TString currP0Name; double currExpP0; double currObsP0;
+	  while (!currP0File.eof()) {
+	    currP0File >> currP0Name >> currExpP0 >> currObsP0;
+	    currAna->setStatVal(signalList[i_DM], "ExpP0", currExpP0);
+	    currAna->setStatVal(signalList[i_DM], "ObsP0", currObsP0);
+	  }
 	}
-      }
-      currP0File.close();
-      
-      // Load CL:
-      TString currCLFileName = Form("%s/single_files/CL_%d/CL_values_%s.txt",
-				    directory.Data(), jobIndex,
-				    signalList[i_DM].Data());
-      ifstream currCLFile(currCLFileName);
-      if (!currCLFile) {
-	std::cout << "Problem loading file " << currCLFileName << std::endl;
-	currAna->isGood = false;
-      }
-      else {
-	TString currCLName; double currObsCL; double currExpCLN2;
-	double currExpCLN1; double currExpCL; double currExpCLP1;
-	double currExpCLP2;
-	while (!currP0File.eof()) {
-	  currCLFile >> currCLName >> currObsCL >> currExpCLN2 >> currExpCLN1
-		     >> currExpCL >> currExpCLP1 >> currExpCLP2;
-	  currAna->statValues[mapKey(signalList[i_DM],"ExpCLN2")] = currExpCLN2;
-	  currAna->statValues[mapKey(signalList[i_DM],"ExpCLN1")] = currExpCLN1;
-	  currAna->statValues[mapKey(signalList[i_DM],"ExpCL")]   = currExpCL;
-	  currAna->statValues[mapKey(signalList[i_DM],"ExpCLP1")] = currExpCLP1;
-	  currAna->statValues[mapKey(signalList[i_DM],"ExpCLP2")] = currExpCLP2;
-	  currAna->statValues[mapKey(signalList[i_DM],"ObsCL")]   = currObsCL;
+	currP0File.close();
+	
+	// Load CL:
+	TString currCLFileName = Form("%s/single_files/CL_%d/CL_values_%s.txt",
+				      directory.Data(), currAna->getIndex(),
+				      signalList[i_DM].Data());
+	ifstream currCLFile(currCLFileName);
+	if (!currCLFile.is_open()) currAna->setGood(false);
+	else {
+	  TString currCLName; double currObsCL; double currExpCLN2;
+	  double currExpCLN1; double currExpCL; double currExpCLP1;
+	  double currExpCLP2;
+	  while (!currCLFile.eof()) {
+	    currCLFile >> currCLName >> currObsCL >> currExpCLN2 >> currExpCLN1
+		       >> currExpCL >> currExpCLP1 >> currExpCLP2;
+	    currAna->setStatVal(signalList[i_DM], "ExpCLN2", currExpCLN2);
+	    currAna->setStatVal(signalList[i_DM], "ExpCLN1", currExpCLN1);
+	    currAna->setStatVal(signalList[i_DM], "ExpCL", currExpCL);
+	    currAna->setStatVal(signalList[i_DM], "ExpCLP1", currExpCLP1);
+	    currAna->setStatVal(signalList[i_DM], "ExpCLP2", currExpCLP2);
+	    currAna->setStatVal(signalList[i_DM], "ObsCL", currObsCL);
+	  }
 	}
-      }
-      currCLFile.close();
-      
-      m_analysisList.push_back(currAna);
-    }// End loop over DM signals
+	currCLFile.close();
+      }// End loop over DM signals
+      // Add the current analysis to the collection:
+      m_anaCollection->addAnalysis(currAna);
+    }
   }// End loop over summary file listing analyses.
   inputSummaryFile.close();
-}
-
-/**
-   -----------------------------------------------------------------------------
-   Get the map key string for a given signal and test statistic.
-   @param signal - The signal sample for plotting.
-   @param statistic - The name of the test statistic for the z-axis.
-   @returns - The map key.
-*/
-TString DMOptAnalysis::mapKey(TString signal, TString statistic) {
-  return Form("%s_%s", signal.Data(), statistic.Data());
+  
+  std::cout << "DMOptAnalysis: Finished loading analysis data." << std::endl;
+  std::cout << "\tFailed to load " << m_anaCollection->nBadAnalyses() << " / " 
+	    << m_anaCollection->nAnalyses() << " analyses." << std::endl;
 }
 
 /**
@@ -285,39 +287,33 @@ void DMOptAnalysis::plot2DScatter(TString quantity1, TString quantity2) {
    @param minimize - True iff the statistic should be minimized (e.g. p0).
 */
 void DMOptAnalysis::plotCutsAndStat(TString signal, TString cutNameX,
-				    TString cutNameY, TString statistic,
-				    bool minimize) {
-  TCanvas *can = new TCanvas("can", "can", 800, 800);
+				    TString cutNameY, TString statistic) {
+  bool minimize = statistic.Contains("P0") ? true : false;
+  TCanvas *can = new TCanvas("can", "can", 800, 600);
   can->cd();
+  can->SetRightMargin(0.2);
   int xBins; int yBins; double xMin; double xMax; double yMin; double yMax;
   // Loop over the cuts to get the range:
   getHistBinsAndRange(cutNameX, xBins, xMin, xMax);
   getHistBinsAndRange(cutNameY, yBins, yMin, yMax);
   TH2F *hCont = new TH2F("hCont","hCont",xBins,xMin,xMax,yBins,yMin,yMax);
-  
+  hCont->GetXaxis()->SetTitle(DMAnalysis::getPrintVarName(cutNameX));
+  hCont->GetYaxis()->SetTitle(DMAnalysis::getPrintVarName(cutNameY));
+  hCont->GetZaxis()->SetTitle(DMAnalysis::getPrintVarName(statistic));
+  hCont->GetZaxis()->SetTitleOffset(1.2);
   double xOpt=-999; double yOpt=-999; double zOpt=-999; double zNonOpt=-999;
-  for (int i_a = 0; i_a < (int)m_analysisList.size(); i_a++) {
-    AnalysisAttributes *currAna = m_analysisList[i_a];
-    if (currAna->isGood) {
-      hCont->Fill(currAna->cutValues[cutNameX], 
-		  currAna->cutValues[cutNameY],
-		  currAna->statValues[statistic]);
-      if ((minimize && currAna->statValues[mapKey(signal,statistic)] < zOpt) || 
-	  (!minimize && currAna->statValues[mapKey(signal,statistic)] > zOpt)) {
-	xOpt = currAna->cutValues[cutNameX];
-	yOpt = currAna->cutValues[cutNameY];
-	zOpt = currAna->statValues[statistic];
-      }
-      else if ((minimize && 
-		currAna->statValues[mapKey(signal,statistic)] > zNonOpt) || 
-	       (!minimize && 
-		currAna->statValues[mapKey(signal,statistic)] < zNonOpt)) {
-	zNonOpt = currAna->statValues[mapKey(signal,statistic)];
-      }
+  std::vector<AnaInfo*>::iterator iter;
+  for (iter = m_anaCollection->begin(); iter != m_anaCollection->end(); iter++){
+    AnaInfo *currAna = *iter;
+    if (currAna->isGood()) {
+      hCont->Fill(currAna->getCutVal(cutNameX), currAna->getCutVal(cutNameY),
+		  currAna->getStatVal(signal, statistic));
+   
     }
   }
-  hCont->Draw("surf1");
-  
+  //hCont->Draw("surf1");
+  hCont->Draw("COLZ");
+  /*
   TPolyLine3D *pl3d1 = new TPolyLine3D(2);
   pl3d1->SetLineColor(kRed);
   pl3d1->SetLineWidth(3);
@@ -327,7 +323,7 @@ void DMOptAnalysis::plotCutsAndStat(TString signal, TString cutNameX,
   pl3d1->SetPoint(3, xOpt, yMin, zOpt);
   pl3d1->SetPoint(4, xOpt, yMin, hCont->GetZaxis()->GetXmin());
   pl3d1->Draw("SAME");
-  
+  */  
   can->Print(Form("%s/%s/%s_%s_vs_%s.eps", m_outputDir.Data(), signal.Data(), 
 		  statistic.Data(), cutNameX.Data(), cutNameY.Data()));
   can->Clear();
@@ -343,25 +339,52 @@ void DMOptAnalysis::plotCutsAndStat(TString signal, TString cutNameX,
    @param cutName2 - The name of the second cut.
 */
 void DMOptAnalysis::plotOptimizationPoints(TString cutName1, TString cutName2) {
-  TCanvas *can = new TCanvas("can", "can", 800, 800);
+  TCanvas *can = new TCanvas("can", "can", 800, 600);
   can->cd();
+  can->SetRightMargin(0.2);
+  int bins1; int bins2; double min1; double min2; double max1; double max2;
+  getHistBinsAndRange(cutName1, bins1, min1, max1);
+  getHistBinsAndRange(cutName2, bins2, min2, max2);
+  
   TH2F *hPoints = new TH2F("hPoints", "hPoints",
-			   11, 0, (TMath::Pi()/2.0), 11, 0, (TMath::Pi()/2));
-  for (int i_a = 0; i_a < (int)m_analysisList.size(); i_a++) {
-    if (m_analysisList[i_a]->isGood) {
-      hPoints->Fill(m_analysisList[i_a]->cutValues[cutName1], 
-		    m_analysisList[i_a]->cutValues[cutName2], -1.0);
+			   bins1, min1, max1, bins2, min2, max2);
+  std::vector<AnaInfo*>::iterator iter;
+  for (iter = m_anaCollection->begin(); iter != m_anaCollection->end(); iter++){
+    AnaInfo *currAna = *iter;
+    if (currAna->isGood()) {
+      hPoints->Fill(currAna->getCutVal(cutName1), currAna->getCutVal(cutName2),
+		    1.0);
     }
     else {
-      hPoints->Fill(m_analysisList[i_a]->cutValues[cutName1],
-		    m_analysisList[i_a]->cutValues[cutName1], +1.0);
+      //hPoints->Fill(currAna->getCutVal(cutName1),currAna->getCutVal(cutName1),
+      //		    2.0);
     }
   }
   hPoints->GetXaxis()->SetTitle(DMAnalysis::getPrintVarName(cutName1));
   hPoints->GetYaxis()->SetTitle(DMAnalysis::getPrintVarName(cutName2));
+  hPoints->GetZaxis()->SetTitle("fit status (0=bad)");
   hPoints->Draw("COLZ");
-  can->Print(Form("%s/plot_optimization_points.eps", m_outputDir.Data()));
+  can->Print(Form("%s/plot_points_%s_%s.eps", m_outputDir.Data(), 
+		  cutName1.Data(), cutName2.Data()));
   can->Clear();
   delete can;
   delete hPoints;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Turn a list of strings into a vector.
+*/
+std::vector<TString> DMOptAnalysis::vectorizeTString(TString originString,
+						     TString delim) {
+  std::vector<TString> result; result.clear();
+  TObjArray *tokenizedLine = originString.Tokenize(" ");
+  for (int i_e = 0; i_e < tokenizedLine->GetEntries(); i_e++) {
+    TObjString *obj = (TObjString*)tokenizedLine->At(i_e);
+    TString subString = obj->GetString();
+    subString.ReplaceAll("\t", "");
+    subString.ReplaceAll(" ", "");
+    result.push_back(subString);
+  }
+  return result;
 }

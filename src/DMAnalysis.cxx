@@ -130,7 +130,10 @@ TString DMAnalysis::getPrintSampleName(Config *config, TString sampleName) {
 */
 TString DMAnalysis::getPrintVarName(TString varName) {
   varName.ToLower();
-  if (varName.EqualTo("ptyy")) return "p_{T}^{#gamma#gamma} [GeV]";
+  varName = varName.ReplaceAll("anacut", "");
+  if (varName.EqualTo("ptyy") || varName.EqualTo("diphotonpt")) {
+    return "p_{T}^{#gamma#gamma} [GeV]";
+  }
   else if (varName.EqualTo("etmiss")) return "#slash{E}_{T} [GeV]";
   else if (varName.EqualTo("ratioetmissptyy")) {
     return "#slash{E}_{T}/p_{T}^{#gamma#gamma}";
@@ -141,6 +144,16 @@ TString DMAnalysis::getPrintVarName(TString varName) {
   }
   else if (varName.EqualTo("sumsqrtetmissptyy")) {
     return "#sqrt{(p_{T}^{#gamma#gamma})^{2} + (#slash{E}_{T})^{2}} [GeV]";
+  }
+  else if (varName.Contains("p0")) {
+    if (varName.Contains("exp")) return "p_{0} exp.";
+    else if (varName.Contains("obs")) return "p_{0} obs.";
+    else return "p_{0}";
+  }
+    else if (varName.Contains("cl")) {
+    if (varName.Contains("exp")) return "CL exp.";
+    else if (varName.Contains("obs")) return "CL obs.";
+    else return "CL";
   }
   else return varName;
 }

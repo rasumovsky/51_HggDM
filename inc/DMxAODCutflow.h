@@ -40,6 +40,7 @@ class DMxAODCutflow
   int getCutOrderByName(TString cutName);
   double getEventsPassingCut(int order);
   double getEventsPassingCut(TString cutName);
+  TH1F* getHist();
   double getPercentPassingCut(TString cutName);
   double getAccXEffAtCut(TString cutName);
   void printxAODCutflow();
@@ -54,6 +55,8 @@ class DMxAODCutflow
   std::vector<TString> cutList;
   std::map<TString,double> passCounter;
   
+  TFile *m_inputFile;
+  TH1F *m_histCuts;
 };
 
 #endif

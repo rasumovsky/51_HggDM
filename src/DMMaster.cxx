@@ -35,6 +35,173 @@
 
 /**
    -----------------------------------------------------------------------------
+   Recursive method to alter selection cuts and submit jobs. The recursive case
+   is when the current cut index is less than the total number of cuts to be 
+   varied. The base case is reached when the cutIndex = # cuts - 1 (all cuts 
+   have been varied). Upon reaching the base case, a job is submitted. 
+   @param exeConfigOrigin - The original analysis config file.
+   @param exeOption - The executable options for the job.
+   @param cutIndex - The index of the current cut to be modified.
+   @param cutName - A vector of cut names.
+   @param cutVal - A vector of cut values.
+*/
+void recursiveOptimizer(TString exeConfigOrigin, TString exeOption, 
+			int cutIndex, std::vector<TString> cutName,
+			std::vector<double> cutVal) {
+  
+  // Get the number of cuts:
+  int nCuts = m_config->getInt("NOptVar");
+  
+  // The recursive case:
+  if (cutIndex < nCuts) {
+    
+    // Get current cut information:
+    std::vector<double> cutPositions
+      = m_config->getNumV(Form("OptVarPos%d",cutIndex));
+    
+    // Loop over the current cut positions:
+    for (int i_c = 0; i_c < (int)cutPositions.size(); i_c++) {
+      
+      // Update the value of the cut identified by "cutIndex":
+      std::vector<TString> currCutN = cutName;
+      std::vector<double> currCutV = cutVal;
+      if ((int)cutName.size() == cutIndex) {
+	currCutN.push_back(m_config->getStr(Form("OptVar%d",cutIndex)));
+	currCutV.push_back(cutPositions[i_c]);
+      }
+      else {
+	currCutN[cutIndex] = m_config->getStr(Form("OptVar%d",cutIndex));
+	currCutV[cutIndex] = cutPositions[i_c];
+      }
+      
+      //Then call recursiveOptimizer.
+      recursiveOptimizer(exeConfigOrigin, exeOption, cutIndex+1, currCutN,
+			 currCutV);
+      
+      // Only reach one base case (submit 1 job) if in test mode:
+      if (m_config->getBool("doTestMode")) break;
+    }
+  }
+  
+  // The base case (No more cuts to change, so just submit job:
+  else {
+    // First copy the config file (special config file) and make changes:
+    //  - change cut values.
+    //  - change output directory.
+    ifstream inputConfig;
+    inputConfig.open(exeConfigOrigin);
+    TString exeConfigNew = Form("exeConfig%d.cfg", m_jobIndex);
+    ofstream outputConfig;
+    outputConfig.open(exeConfigNew);
+    char key[256];// Need to pipe whole line into key
+    // Loop over each line of the config file:
+    while (!inputConfig.eof()) {
+      inputConfig.getline(key,256);
+      TString currLine = TString(key);
+      
+      // Check if the current line specifies cut information:
+      bool lineSpecifiesCut = false; 
+      TString specifiedName = "";
+      double specifiedVal = 0.0;
+      for (int i_c = 0; i_c < (int)cutName.size(); i_c++) {
+	if (currLine.Contains(cutName[i_c]) && !currLine.Contains("#")) {
+	  lineSpecifiesCut = true;
+	  specifiedName = cutName[i_c];
+	  specifiedVal = cutVal[i_c];
+	}
+      }
+      
+      // Change the cut value, if the current line specifies cut information:
+      if (lineSpecifiesCut) {
+	outputConfig << specifiedName << ": \t" << specifiedVal << std::endl;
+      }
+      // Make the output local (on lxbatch as opposed to afs):
+      else if (currLine.Contains("masterOutput:") && !currLine.Contains("#")){
+	outputConfig << "masterOutput: \t" << "." << std::endl;
+      }
+      else if (currLine.Contains("NoSMProdModes:")&&!currLine.Contains("#")) {
+	outputConfig << "NoSMProdModes: \t" << "NO" << std::endl;
+      }
+      // Just copy the configuration otherwise:
+      else {
+	outputConfig << currLine << std::endl;
+      }
+    }
+    inputConfig.close();
+    outputConfig.close();
+    
+    // BEGIN JOB SUBMISSION SECTION!
+    
+    // Make directories for job info:
+    TString dir = Form("%s/%s_DMMaster",
+		       (m_config->getStr("clusterFileLocation")).Data(),
+		       (m_config->getStr("jobName")).Data());
+    TString out = Form("%s/out", dir.Data());
+    TString err = Form("%s/err", dir.Data());
+    TString exe = Form("%s/exe", dir.Data());
+    system(Form("mkdir -vp %s", out.Data()));
+    system(Form("mkdir -vp %s", err.Data()));
+    system(Form("mkdir -vp %s", exe.Data()));
+    
+    // Create .tar file with everything needed to run remotely:
+    TString tempDir = Form("KillMe%d", m_jobIndex);
+    TString tarFile = Form("Cocoon%d.tar", m_jobIndex);
+    system(Form("mkdir -vp %s", tempDir.Data()));
+    system(Form("cp %s/bin/%s %s/", 
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("exeMaster")).Data(), tempDir.Data()));
+    system(Form("mv %s %s/", exeConfigNew.Data(), tempDir.Data()));
+    system(Form("cp %s/%s %s/",
+		(m_config->getStr("packageLocation")).Data(),
+		(m_config->getStr("jobScriptMaster")).Data(), 
+		tempDir.Data()));
+    system(Form("mv %s %s/", tempDir.Data(), exe.Data()));
+    
+    // Is this necessary? Probably...
+    system(Form("cp -f %s/%s %s/jobFileWorkspace.sh", 
+		(m_config->getStr("packageLocation")).Data(), 
+		(m_config->getStr("jobScriptMaster")).Data(), exe.Data()));
+    
+    //TString inputFile = Form("%s/%s", exe.Data(), tarFile.Data());
+    TString inputFile = Form("%s/%s", exe.Data(), tempDir.Data());
+    TString nameOutFile = Form("%s/out/%s_%d.out", dir.Data(), 
+			       (m_config->getStr("jobName")).Data(),m_jobIndex);
+    TString nameErrFile = Form("%s/err/%s_%d.err", dir.Data(), 
+			       (m_config->getStr("jobName")).Data(),m_jobIndex);
+    
+    // Define the arguments for the job script:
+    TString nameJScript = Form("%s/jobFileWorkspace.sh %s %s %s %s %s %d",
+			       exe.Data(),
+			       (m_config->getStr("jobName")).Data(),
+			       exeConfigNew.Data(),
+			       inputFile.Data(),
+			       exeOption.Data(),
+			       (m_config->getStr("exeMaster")).Data(),
+			       m_jobIndex);
+    // Submit the job:
+    system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
+		nameErrFile.Data(), nameJScript.Data()));
+    
+    // END JOB SUBMISSION SECTION!
+    
+    // Note: job script should copy output files to a new output directory.
+    system(Form("rm -rf %s", tempDir.Data()));
+    
+    m_headFile << m_jobIndex;
+    for (int i_c = 0; i_c < (int)cutName.size(); i_c++) {
+      if (i_c == (int)cutName.size()-1) {
+	m_headFile << " " << cutVal[i_c] << std::endl;
+      }
+      else {
+	m_headFile << " " << cutVal[i_c];
+      }
+    }
+    m_jobIndex++;
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
    Submit the DMMainMethod to run remotely on lxbatch.
    @param exeConfigOrigin - The original config file for batch jobs.
    @param exeOption - The option for the executable...
@@ -43,140 +210,36 @@ void submitToOptimize(TString exeConfigOrigin, TString exeOption) {
   std::cout << "DMMaster: Preparing to run myself remotely for optimization!"
 	    << std::endl;
   
-  int jobIndex = 0;
+  // Count the jobs as they are submitted, for bookkeeping:
+  m_jobIndex = 0;
   
   // An output file to track job indices and cuts:
-  ofstream headFile;
-  headFile.open(Form("%s/%s/DMMaster/jobSummary.txt", 
-		     (m_config->getStr("masterOutput")).Data(), 
-		     (m_config->getStr("jobName")).Data()));
+  m_headFile.open(Form("%s/%s/DMMaster/jobSummary.txt", 
+		       (m_config->getStr("masterOutput")).Data(), 
+		       (m_config->getStr("jobName")).Data()));
   
-  // Loop over first cut value:
-  double increment = ((TMath::Pi()/2.0) / m_config->getNum("nPointsPerVar"));
-  double theta2 = increment;
-  for (double theta2 = 2*increment; theta2 <= (TMath::Pi()/2.0); 
-       theta2 += increment) {
-    // Loop over second cut value:
-    for (double theta1 = increment; theta1 < theta2; theta1 += increment) {
-      
-      // Convert thetas to ratio:
-      double currCut2 = TMath::ATan(theta2);
-      double currCut1 = TMath::ATan(theta1);
-      
-      // First copy the config file (special config file) and make changes:
-      //  - change cut values.
-      //  - change output directory.
-      ifstream inputConfig;
-      inputConfig.open(exeConfigOrigin);
-      TString exeConfigNew = Form("exeConfig%d.cfg", jobIndex);
-      ofstream outputConfig;
-      outputConfig.open(exeConfigNew);
-      //string key;// need to pipe whole line into key
-      char key[256];// need to pipe whole line into key
-      while (!inputConfig.eof()) {
-	inputConfig.getline(key,256);
-	TString currLine = TString(key);
-	// Change the category 0/1 division:
-	if (currLine.Contains("RatioCut1:") && !currLine.Contains("#")) {
-	  outputConfig << "RatioCut1: \t" << currCut1 << std::endl;
-	}
-	// Change the category 1/2 division:
-	else if (currLine.Contains("RatioCut2:") && !currLine.Contains("#")) {
-	  outputConfig << "RatioCut2: \t" << currCut2 << std::endl;
-	}
-	// Make the output local (on lxbatch as opposed to afs):
-	else if (currLine.Contains("masterOutput:") && !currLine.Contains("#")){
-	  outputConfig << "masterOutput: \t" << "." << std::endl;
-	}
-	else if (currLine.Contains("NoSMProdModes:")&&!currLine.Contains("#")) {
-	  outputConfig << "NoSMProdModes: \t" << "NO" << std::endl;
-	}
-	// Tell DMMassPoints to copy MxAODs before running off of afs or eos:
-	//else if (currLine.Contains("massPointOptions:")) {
-	//outputConfig << "massPointOptions: \t" << "NewCopyFiles" << std::endl;
-	//}
-	// Just copy the configuration otherwise:
-	else {
-	  outputConfig << currLine << std::endl;
-	}
-      }
-      inputConfig.close();
-      outputConfig.close();
-            
-      ////////////////////////////////////////
-      // Begin job submission section:
-
-      // Make directories for job info:
-      TString dir = Form("%s/%s_DMMaster",
-			 (m_config->getStr("clusterFileLocation")).Data(),
-			 (m_config->getStr("jobName")).Data());
-      TString out = Form("%s/out", dir.Data());
-      TString err = Form("%s/err", dir.Data());
-      TString exe = Form("%s/exe", dir.Data());
-      system(Form("mkdir -vp %s", out.Data()));
-      system(Form("mkdir -vp %s", err.Data()));
-      system(Form("mkdir -vp %s", exe.Data()));
-      
-      // Create .tar file with everything needed to run remotely:
-      TString tempDir = Form("KillMe%d", jobIndex);
-      TString tarFile = Form("Cocoon%d.tar", jobIndex);
-      system(Form("mkdir -vp %s", tempDir.Data()));
-      system(Form("cp %s/bin/%s %s/", 
-		  (m_config->getStr("packageLocation")).Data(), 
-		  (m_config->getStr("exeMaster")).Data(), tempDir.Data()));
-      system(Form("mv %s %s/", exeConfigNew.Data(), tempDir.Data()));
-      system(Form("cp %s/%s %s/",
-		  (m_config->getStr("packageLocation")).Data(),
-		  (m_config->getStr("jobScriptMaster")).Data(), 
-		  tempDir.Data()));
-      //system(Form("tar zcf %s %s/*", tarFile.Data(), tempDir.Data()));
-      //system(Form("mv %s %s/", tarFile.Data(), exe.Data()));
-      system(Form("mv %s %s/", tempDir.Data(), exe.Data()));
-      
-      // Is this necessary? Probably...
-      system(Form("cp -f %s/%s %s/jobFileWorkspace.sh", 
-		  (m_config->getStr("packageLocation")).Data(), 
-		  (m_config->getStr("jobScriptMaster")).Data(), exe.Data()));
-      
-      //TString inputFile = Form("%s/%s", exe.Data(), tarFile.Data());
-      TString inputFile = Form("%s/%s", exe.Data(), tempDir.Data());
-      TString nameOutFile = Form("%s/out/%s_%d.out", dir.Data(), 
-				 (m_config->getStr("jobName")).Data(),jobIndex);
-      TString nameErrFile = Form("%s/err/%s_%d.err", dir.Data(), 
-				 (m_config->getStr("jobName")).Data(),jobIndex);
-      
-      // Define the arguments for the job script:
-      TString nameJScript = Form("%s/jobFileWorkspace.sh %s %s %s %s %s %d",
-				 exe.Data(),
-				 (m_config->getStr("jobName")).Data(),
-				 exeConfigNew.Data(),
-				 inputFile.Data(),
-				 exeOption.Data(),
-				 (m_config->getStr("exeMaster")).Data(),
-				 jobIndex);
-      // Submit the job:
-      system(Form("bsub -q wisc -o %s -e %s %s", nameOutFile.Data(), 
-		  nameErrFile.Data(), nameJScript.Data()));
-      
-      // End job submission section!
-      ////////////////////////////////////////
-      
-      // Note: job script should copy output files to a new output directory.
-      system(Form("rm -rf %s", tempDir.Data()));
-      
-      headFile << jobIndex << " " << currCut1 << " " << currCut2 << std::endl;
-      jobIndex++;
-      
-      if (m_config->getBool("doTestMode")) break;
-    }// End of theta1 loop
-    if (m_config->getBool("doTestMode")) break;
-  }// End of theta2 loop
-
+  // The first line of the output file should just list the cut names:
+  int nCuts = m_config->getInt("NOptVar");
+  m_headFile << "Index \t";
+  for (int i_c = 0; i_c < nCuts; i_c++) {
+    if (i_c == nCuts - 1) {
+      m_headFile << m_config->getStr(Form("OptVar%d",i_c)) << std::endl;
+    }
+    else {
+      m_headFile << m_config->getStr(Form("OptVar%d",i_c)) << " \t";
+    }
+  }
+  
+  // Call the recursive function:
+  std::vector<TString> cutName; cutName.clear();
+  std::vector<double> cutVal; cutVal.clear();
+  recursiveOptimizer(exeConfigOrigin, exeOption, 0, cutName, cutVal);
+  
   // Close the file that records job indices and cuts:
-  headFile.close();
+  m_headFile.close();
   
-  std::cout << "DMMaster: Submitted " << jobIndex << " self-optimizing jobs."
-	    << std::endl;
+  std::cout << "DMMaster: Submitted " << m_jobIndex
+	    << " recursive optimization jobs." << std::endl;
 }
 
 /**
@@ -726,7 +789,6 @@ int main (int argc, char **argv) {
   // Step 9: Plot the results of the optimization
   if (masterOption.Contains("OptAnalysis")) {
     DMOptAnalysis *dmoa = new DMOptAnalysis(configFileName);
-    
     delete dmoa;
   }
   

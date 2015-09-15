@@ -326,19 +326,19 @@ int main(int argc, char **argv) {
 		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
   
-  // Loop over the samples, loading histograms:
+  // Loop over the SM samples, loading histograms:
   std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
   for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
     loadSampleHistograms(sigSMModes[i_SM], varName);
   }
   
-  // Loop over the samples, loading histograms:
+  // Loop over the DM samples, loading histograms:
   std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
   for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
     loadSampleHistograms(sigDMModes[i_DM], varName);
   }
 
-  // Loop over the samples, loading histograms:
+  // Loop over the Bkg samples, loading histograms:
   std::vector<TString> bkgProcesses = m_config->getStrV("BkgProcesses");
   for (int i_b = 0; i_b < (int)bkgProcesses.size(); i_b++) {
     if ((bkgProcesses[i_b]).Contains("gjet")) continue;

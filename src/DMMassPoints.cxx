@@ -293,6 +293,7 @@ void DMMassPoints::createNewMassPoints() {
   DMxAODCutflow *dmx
     = new DMxAODCutflow(DMAnalysis::nameToxAODCutFile(m_config, m_sampleName));
   double nGeneratedEvt = dmx->getEventsPassingCut(1);
+  delete dmx;
   
   // Tool to load cross sections and branching ratios:
   BRXSReader *brxs = new BRXSReader(m_configFileName);

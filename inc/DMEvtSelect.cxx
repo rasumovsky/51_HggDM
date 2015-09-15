@@ -46,11 +46,11 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   cutList.push_back("photonIso");
   cutList.push_back("photonID");
   cutList.push_back("diphotonMass");
+  cutList.push_back("diphotonPt");
+  cutList.push_back("diphotonETMiss");
   if (m_config->getBool("LeptonVeto")) {
     cutList.push_back("leptonVeto");
   }
-  cutList.push_back("diphotonPt");
-  cutList.push_back("diphotonETMiss");
   cutList.push_back("looseCuts");//same as allCuts but no photonID or photonIso
   cutList.push_back("allCuts");
   
@@ -407,9 +407,6 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
     passes = (invariantMass > m_config->getNum("DMMyyRangeLo") &&
 	      invariantMass < m_config->getNum("DMMyyRangeHi"));
   }
-  else if (cutName.EqualTo("leptonVeto") && m_config->getBool("LeptonVeto")) {
-    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_lep_n2 == 0);
-  }
   // Cut on the diphoton transverse momentum:
   else if (cutName.EqualTo("diphotonPt")) {
     passes = (evtTree->HGamEventInfoAuxDyn_HighMet_yy_pt > 
@@ -419,6 +416,9 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   else if (cutName.EqualTo("diphotonETMiss")) {
     passes = (evtTree->HGamEventInfoAuxDyn_HighMet_MET_reb_TST > 
 	      m_config->getNum("AnaCutETMiss"));
+  }
+  else if (cutName.EqualTo("leptonVeto") && m_config->getBool("LeptonVeto")) {
+    passes = (evtTree->HGamEventInfoAuxDyn_HighMet_lep_n2 == 0);
   }
   // Check whether event passes all of the cuts above:
   else if (cutName.EqualTo("allCuts")) {

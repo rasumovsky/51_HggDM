@@ -13,7 +13,7 @@ exceptions, and should be added to the DMEvtSelect class. The code is designed
 to be as automatic as possible. Each class looks to see if all of the necessary 
 inputs have been produced previously before generating them from scratch.
 
-### General analysis strategy:
+### General analysis outline:
 1)  mini-MxAODs from xAODs using the tools provided by Hgamma WG.
 2)  mass points for data, backgrounds, and signal.
 3)  parameterization of the SM and DM signals.
@@ -21,22 +21,25 @@ inputs have been produced previously before generating them from scratch.
 5)  workspace to store models and PDFs.
 6)  pseudoexperiment ensemble generation and analysis 
 7)  CLs and p0 calculators
+8)  optimization utility
 
 ### Package contents:
 
-##### settingsHDM.cfg
-  Luminosity, higgs mass, m_yy range, file names, script locations, production 
-  mode information should all go here.
+##### data/settingsHDM.cfg
+  Luminosity, higgs mass, cut and categorization information, file names, 
+  script locations, production mode information should all go here.
 
 ##### DMAnalysis
   This namespace should store all general analysis methods. The idea is to
-  avoid hard-coding anything in the supporting classes. 
+  avoid duplicating common functions in the supporting classes. 
 
 ##### DMMaster
-  This is the master 'wrapper' class for the analysis. Using this class, all the
-  analysis tools can be run. The file organization is automated, using a 
+  This is the master 'wrapper' main method for the analysis. Using this class, 
+  all the analysis tools can be run. The file organization is automated, using a
   directory structure based on the 'masterInput' and 'masterOutput' strings in 
-  settingsHDM, as well as the masterJobName.
+  settingsHDM, as well as the 'masterJobName'. This class also has a recursive 
+  job submission feature that can modify the config file and test new cut
+  strategies for optimization. 
 
 ##### DMMassPoints
  This program uses a TTree of data events to produce a series of mass points
@@ -65,7 +68,8 @@ inputs have been produced previously before generating them from scratch.
 
 ##### DMTestStat
  This program calculates the 95% CL, CLs, and p0 values for a given DM signal.
- It is the default fitting program. 
+ It is the default fitting program, and is used by the workspace tool, the toy
+ MC tool, and every tool requiring fits. 
 
 ##### DMPseudoExp
  This program implements the pseudo-dataset generation and fitting. It is 
@@ -74,7 +78,18 @@ inputs have been produced previously before generating them from scratch.
 ##### DMToyAnalysis
  This program has tools for analyzing toy MC data. 
 
+##### DMOptAnalysis
+ This tool analyzes the results of an optimization.
+
 ### Supporting Classes:
+
+##### AnaInfo
+ This class loads basic analysis data such as the cuts, signals considered,
+ and statistical results.
+
+##### AnaCollection
+ This class stores a collection of AnaInfo objects, for looking at large 
+ numbers of analyses. 
 
 ##### BRXSReader
  Reads tables of SM Higgs cross sections and branching ratios and provides an 

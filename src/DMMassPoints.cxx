@@ -312,6 +312,9 @@ void DMMassPoints::createNewMassPoints() {
   newHist1D("aTanRatio", 40, 0.0, TMath::Pi()/2.0);
   newHist1D("myy", 40, 105.0, 160.0);
   newHist1D("sumSqrtETMisspTyy", 40, 0.0, 600);
+  newHist1D("dPhiyyETMiss", 40, 0.0, TMath::Pi());
+  newHist1D("njets", 8, 0, 8);
+  newHist1D("nleptons", 5, 0, 5);
   
   // Define datasets and mass files in loop over categories:
   ofstream massFiles[20];
@@ -411,6 +414,12 @@ void DMMassPoints::createNewMassPoints() {
 			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
 	       evtWeight, -1);
     fillHist1D("myy", true, invariantMass, evtWeight, -1);
+    fillHist1D("dPhiyyETMiss", true, 
+	       dmt->HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi, evtWeight, -1);
+    fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_HighMet_jet_n,
+	       evtWeight, -1);
+    fillHist1D("nleptons", true, dmt->HGamEventInfoAuxDyn_HighMet_lep_n2,
+	       evtWeight, -1);
     
     // Make sure events pass the selection:
     if (!selector->passesCut("allCuts", evtWeight)) continue;
@@ -445,6 +454,13 @@ void DMMassPoints::createNewMassPoints() {
 			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
 	       evtWeight, currCate);
     fillHist1D("myy", false, invariantMass, evtWeight, currCate);
+    fillHist1D("dPhiyyETMiss", false, 
+	       dmt->HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi,
+	       evtWeight, currCate);
+    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_HighMet_jet_n,
+	       evtWeight, currCate);
+    fillHist1D("nleptons", false, dmt->HGamEventInfoAuxDyn_HighMet_lep_n2,
+	       evtWeight, -1);
   }
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
   

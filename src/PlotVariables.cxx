@@ -11,6 +11,9 @@
 //  Options: "StackPlot" to stack all backgrounds together.                   //
 //           "LogScale" to set logarithmic y-axis.                            //
 //                                                                            //
+//  Variables: "pTyy", "ETMiss", "ratioETMisspTyy", "aTanRatio", "myy",       //
+//             "sumSqrtETMisspTyy", "dPhiyyETMiss", "njets",                  //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 // C++ libraries:
@@ -232,11 +235,15 @@ void makeCombinedPlot(bool allEvents, TString varName, TString options,
     currHist->GetXaxis()->SetTitle(DMAnalysis::getPrintVarName(varName));
     currHist->GetYaxis()->SetTitle("Normalized Entries");
     if (options.Contains("LogScale")) {
-      currHist->GetYaxis()->SetRangeUser(0.001, 10.0);
+      currHist->GetYaxis()->SetRangeUser(0.00001, 10.0);
       gPad->SetLogy();
     }
     else {
       currHist->GetYaxis()->SetRangeUser(0.0, 0.3);
+    }
+    if (varName.Contains("njets") || varName.Contains("nleptons")) {
+      currHist->GetXaxis()->SetNdivisions(currHist->GetNbinsX());
+      currHist->GetXaxis()->CenterLabels();
     }
     
     // Draw the histograms:

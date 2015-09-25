@@ -156,7 +156,7 @@ class SigParam {
   void setVarParameterization(TString varName, TString function);
   void useCommonCBGAMean(bool sameCBGAMean);
   void verbosity(bool beVerbose);
-
+  
  private:
   
   //----------Private Accessors----------//
@@ -182,9 +182,9 @@ class SigParam {
   void parameterizeVar(TString varName, double mRegularized, double mResonance,
 		       int cateIndex, bool parameterized);
   TGraphErrors* plotSubtraction(RooAbsData *data, RooAbsPdf *pdf, double xMin,
-				double xMax, double xBins);
+				double xMax, double xBins, double &chi2Prob);
   TGraphErrors* plotDivision(RooAbsData *data, RooAbsPdf *pdf, double xMin,
-			     double xMax, double xBins);
+			     double xMax, double xBins, double &chi2Prob);
   double regularizedMass(double resonanceMass);
   void resonanceCreator(double resonanceMass, int cateIndex, TString function);
   void setParamsConstant(RooAbsPdf* pdf, bool isConstant);

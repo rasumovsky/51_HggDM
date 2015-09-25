@@ -1615,10 +1615,12 @@ void SigParam::parameterizeVar(TString varName, double mRegularized,
    @param xMin - The minimum value of the observable range.
    @param xMax - The maximum value of the observable range.
    @param xBins - The number of bins for the observable.
+   @param chi2Prob - The chi^2 probability of the fit at this point.
    @returns - A TGraphErrors to plot.
 */
 TGraphErrors* SigParam::plotSubtraction(RooAbsData *data, RooAbsPdf *pdf, 
-					double xMin, double xMax, double xBins){
+					double xMin, double xMax, double xBins,
+					double &chi2Prob){
   double minOrigin = m_yy->getMin();
   double maxOrigin = m_yy->getMax();
   double nEvents = data->sumEntries();
@@ -1671,10 +1673,12 @@ TGraphErrors* SigParam::plotSubtraction(RooAbsData *data, RooAbsPdf *pdf,
    @param xMin - The minimum value of the observable range.
    @param xMax - The maximum value of the observable range.
    @param xBins - The number of bins for the observable.
+   @param chi2Val - The chi^2 probability of the fit at this point only.
    @returns - A TGraphErrors to plot.
 */
 TGraphErrors* SigParam::plotDivision(RooAbsData *data, RooAbsPdf *pdf, 
-				     double xMin, double xMax, double xBins){
+				     double xMin, double xMax, double xBins,
+				     double &chi2Prob){
   double minOrigin = m_yy->getMin();
   double maxOrigin = m_yy->getMax();
   double nEvents = data->sumEntries();
@@ -1691,8 +1695,7 @@ TGraphErrors* SigParam::plotDivision(RooAbsData *data, RooAbsPdf *pdf,
 				       RooFit::NormSet(*m_yy), 
 				       RooFit::Range("fullRange"));
   double valTot = intTot->getVal();
-  
-  int pointIndex = 0;
+  int pointIndex = 0; int pointIndexNonZero = 0;
   for (double i_m = xMin; i_m < xMax; i_m += increment) {
     m_yy->setRange(Form("range%2.2f",i_m), i_m, (i_m+increment));
     RooAbsReal* intCurr
@@ -1709,11 +1712,21 @@ TGraphErrors* SigParam::plotDivision(RooAbsData *data, RooAbsPdf *pdf,
 						  (i_m+increment)));
     double currWeight = currDataWeight / currPdfWeight;
     result->SetPoint(pointIndex, currMass, currWeight);
-  
+    
     double currError = originHist->GetBinError(pointIndex+1) / currPdfWeight;
     result->SetPointError(pointIndex, 0.0, currError);
     pointIndex++;
+
+    double currChi2 = (((currDataWeight-currPdfWeight) * 
+    			(currDataWeight-currPdfWeight)) / 
+    		       ((originHist->GetBinError(pointIndex+1)) * 
+    			(originHist->GetBinError(pointIndex+1))));
+    if (std::isfinite(currChi2) && currDataWeight > 0.0001) {
+      chi2Prob += currChi2;
+      pointIndexNonZero++;
+    }
   }
+  chi2Prob = TMath::Prob(chi2Prob, pointIndexNonZero);
   m_yy->setMin(minOrigin);
   m_yy->setMax(maxOrigin);
   return result;
@@ -1793,9 +1806,10 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     
     // Switch to sub-plot:
     pad2->cd();
+    double currChi2Prob = 0.0;
     TGraphErrors* subData = (m_doRatioPlot) ? 
-      plotDivision(currData,currPdf,xMin,xMax,xBins) :
-      plotSubtraction(currData,currPdf,xMin,xMax,xBins);
+      plotDivision(currData,currPdf,xMin,xMax,xBins, currChi2Prob) :
+      plotSubtraction(currData,currPdf,xMin,xMax,xBins, currChi2Prob);
     
     if (i_m == 0) {
       subData->GetXaxis()->SetTitle("Mass [GeV]");
@@ -1831,6 +1845,7 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     }
     subData->Draw("EPSAME");
   }
+  
   can->Print(Form("%s/plot_paramResonance_c%d%s", 
 		  m_directory.Data(), cateIndex, m_fileFormat.Data()));
 }
@@ -1920,14 +1935,41 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
     gPad->SetLogy();
     frame->GetYaxis()->SetRangeUser(0.00001 *(*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries(), (*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries());
   }
+    
+  TLatex l; l.SetNDC(); l.SetTextColor(kBlack);
+  l.SetTextFont(72); l.SetTextSize(0.05); l.DrawLatex(0.20,0.88,"ATLAS");
+  //l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.32,0.88,"Simulation");
+  l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.32,0.88,"Internal");
+  //l.DrawLatex(0.2, 0.81, Form("#scale[0.8]{#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %2.1f fb^{-1}}",analysis_luminosity));
+  l.DrawLatex(0.2, 0.82, "#sqrt{s} = 13 TeV");
+  
   TLatex text; text.SetNDC(); text.SetTextColor(1);
-  text.DrawLatex(0.2, 0.88, Form("category %d", cateIndex));
+  text.DrawLatex(0.2, 0.76, Form("category %d", cateIndex));
+  
+  double yVal = 0.88;
+  TLatex varText; varText.SetNDC(); varText.SetTextColor(1);
+  varText.SetTextSize(0.04);
+  std::vector<TString> currVars = variablesForFunction(m_currFunction);
+  for (int i_v = 0; i_v < (int)currVars.size(); i_v++) {
+    TString currName = currVars[i_v];
+    double currVal = getParameterValue(currName, resonanceMass, cateIndex);
+    currName.ReplaceAll("frac", "fraction_{");
+    currName.ReplaceAll("Nom","");
+    currName.ReplaceAll("nCB","n_{CB");
+    currName.ReplaceAll("sigma","#sigma_{");
+    currName.ReplaceAll("alpha","#alpha_{");
+    currName.ReplaceAll("mu", "#mu_{");
+    currName += "}";
+    varText.DrawLatex(0.7, yVal, Form("%s\t = %2.2f",currName.Data(),currVal));
+    yVal -= 0.06;
+  }
+  
+  // Move to second pad for ratio or subtraction plot:
   pad2->cd();
-  
+  double currChi2Prob = 0.0;
   TGraphErrors* subData = (m_doRatioPlot) ?
-    plotDivision(currData, currPdf, rMin, rMax, rBins) : 
-    plotSubtraction(currData, currPdf, rMin, rMax, rBins);
-  
+    plotDivision(currData, currPdf, rMin, rMax, rBins, currChi2Prob) : 
+    plotSubtraction(currData, currPdf, rMin, rMax, rBins, currChi2Prob);
   subData->GetXaxis()->SetTitle("Mass [GeV]");
   if (m_doRatioPlot) {
     subData->GetYaxis()->SetTitle("Data / Fit");
@@ -1957,6 +1999,9 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex) {
   }
   else line->DrawLine(rMin, 0.0, rMax, 0.0);
   subData->Draw("EPSAME");
+  TLatex chiText; chiText.SetNDC(); chiText.SetTextColor(1);
+  chiText.SetTextSize(0.1);
+  //chiText.DrawLatex(0.7, 0.9, Form("p_{#chi} = %2.2f", currChi2Prob));
   can->Print(Form("%s/plot_singleRes_m%2.2f_c%d%s", m_directory.Data(),
 		  resonanceMass, cateIndex, m_fileFormat.Data()));
 }

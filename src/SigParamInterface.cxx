@@ -107,6 +107,7 @@ bool SigParamInterface::createNew(TString signalType) {
   
   bool signalConverged = true;
   SigParam *sp = new SigParam(signalType, m_outputDir);
+  sp->setLogYAxis(m_config->getBool("useLogYScale"));
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     RooDataSet *currDataSet = getData(signalType, i_c);
     sp->addDataSet(m_config->getNum("higgsMass"), i_c, currDataSet, "m_yy");

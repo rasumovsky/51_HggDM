@@ -145,12 +145,17 @@ TString DMAnalysis::getPrintVarName(TString varName) {
   else if (varName.EqualTo("sumsqrtetmissptyy")) {
     return "#sqrt{(p_{T}^{#gamma#gamma})^{2} + (#slash{E}_{T})^{2}} [GeV]";
   }
+  else if (varName.Contains("dphiyyetmiss")) {
+    return "#Delta#phi(#gamma#gamma-#slash{E}_{T})";
+  }
+  else if (varName.Contains("njets")) return "N_{Jets}";
+  else if (varName.Contains("nleptons")) return "N_{Leptons}";
   else if (varName.Contains("p0")) {
     if (varName.Contains("exp")) return "p_{0} exp.";
     else if (varName.Contains("obs")) return "p_{0} obs.";
     else return "p_{0}";
   }
-    else if (varName.Contains("cl")) {
+  else if (varName.Contains("cl")) {
     if (varName.Contains("exp")) return "CL exp.";
     else if (varName.Contains("obs")) return "CL obs.";
     else return "CL";

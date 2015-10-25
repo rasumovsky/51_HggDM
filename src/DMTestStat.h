@@ -18,6 +18,7 @@
 #include "CommonHead.h"
 #include "CommonFunc.h"
 #include "Config.h"
+#include "HggTwoSidedCBPdf.h"
 #include "DMWorkspace.h"
 #include "RooFitHead.h"
 #include "statistics.h"
@@ -61,6 +62,8 @@ class DMTestStat {
   double getQMuTildeFromNLL(double nllMu, double nllMu0, double nllMuHat,
 			    double muHat, double muTest);
   void loadStatsFromFile();
+  TGraphErrors* plotDivision(RooAbsData *data, RooAbsPdf *pdf, TString cateName,
+			     double xMin, double xMax, double xBins);
   void saveSnapshots(bool doSaveSnapshot);
   void setPlotDirectory(TString directory);
   void setParams(TString paramName, double paramVal, bool doSetConstant);

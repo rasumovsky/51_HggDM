@@ -108,10 +108,10 @@ int defaultPrintLevel      = -1;            // Minuit print level
 int defaultStrategy        = 1;             // Minimization strategy. 0-2. 0 = fastest, least robust. 2 = slowest, most robust
 bool killBelowFatal        = 1;             // In case you want to suppress RooFit warnings further, set to 1
 bool doBlind               = 0;             // in case your analysis is blinded
-bool conditionalExpected   = 1 && !DMAnalysis::doBlind; // Profiling mode for Asimov data: 0 = conditional MLEs, 1 = nominal MLEs
+bool conditionalExpected;//   = 1 && !DMAnalysis::doBlind; // Profiling mode for Asimov data: 0 = conditional MLEs, 1 = nominal MLEs
 bool doTilde               = 0;             // bound mu at zero if true and do the \tilde{q}_{mu} asymptotics
 bool doExp                 = 1;             // compute expected limit
-bool doObs                 = 1 && !DMAnalysis::doBlind; // compute observed limit
+bool doObs;//                 = 1 && !DMAnalysis::doBlind; // compute observed limit
 double precision           = 0.005;         // % precision in mu that defines iterative cutoff
 bool verbose               = 1;             // 1 = very spammy
 bool usePredictiveFit      = 0;             // experimental, extrapolate best fit nuisance parameters based on previous fit results
@@ -1484,17 +1484,22 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   
-
   TString configFile = argv[1];
   INPUTDMSignal = argv[2];
   TString option = argv[3];// can be "highCL", "nosys"
-
+  
   Config *config = new Config(configFile);
-   
+  
+  // Set input locations:
   TString inputDir = Form("%s/%s", (config->getStr("masterOutput")).Data(),
 			  (config->getStr("jobName")).Data());
   TString inputFileName = Form("%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
 				inputDir.Data(), INPUTDMSignal.Data());
+  
+  // Set certain global parameters based on blinding status:
+  conditionalExpected = (1 && !config->getBool("doBlind"));
+  doObs = (1 && !config->getBool("doBlind"));
+  verbose = config->getBool("BeVerbose");
   
   // Make the output directory if it doesn't already exist:
   TString outputDir = Form("%s/DMMuLimit/single_files", inputDir.Data());
@@ -1512,14 +1517,8 @@ int main(int argc, char* argv[]) {
   double CL = 0.95;
   if (option.Contains("highCL")) CL = 0.99;
   std::cout << "REGTEST: calculating " << CL*100 << "% CL limit" << std::endl;
-  runAsymptoticsCLs(localInputFileName.Data(),
-		    wname.Data(),
-		    mname.Data(),
-		    dname.Data(), 
-		    aname.Data(),
-		    outputDir.Data(), 
-		    CL,
-		    option);
+  runAsymptoticsCLs(localInputFileName.Data(), wname.Data(), mname.Data(),
+		    dname.Data(), aname.Data(), outputDir.Data(), CL, option);
   
   // Remove the local input file copy when job completes.
   system(Form("rm %s", localInputFileName.Data()));

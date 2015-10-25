@@ -23,6 +23,7 @@
 
 // ROOT includes:
 #include "TString.h"
+#include "TH1F.h"
 
 // Package includes:
 #include "Config.h"
@@ -39,20 +40,22 @@ class DMEvtSelect
   DMEvtSelect(DMTree *newTree, TString newConfigFile);
   virtual ~DMEvtSelect() {};
   
-  // Accessors:
+  // Public Accessors:
+  int cutIndex(TString cutName);
   int getEventsPerCate(TString cateScheme, int cate);
   double getEventsPerCateWt(TString cateScheme, int cate);
-  //int getNCategories(TString cateScheme);
   int getPassingEvents(TString cutName);
   double getPassingEventsWt(TString cutName);
   int getTotalEvents(TString cutName);
   double getTotalEventsWt(TString cutName);
+  int nCuts();
   void printCutflow(bool weighted);
   void printCategorization(bool weighted);
+  TH1F* retrieveCutflowHist(bool weighted);
   void saveCutflow(TString filename, bool weighted);
   void saveCategorization(TString filename, bool weighted);
 
-  // Mutators
+  // Public Mutators
   void clearCounters();
   int getCategoryNumber(TString cateScheme);
   int getCategoryNumber(TString cateScheme, double weight);
@@ -65,7 +68,7 @@ class DMEvtSelect
   // Member methods:
   bool cutExists(TString cutName);
   bool cateExists(TString cateScheme);
-
+  
   // Member objects:
   Config *m_config;
   DMTree *evtTree;
@@ -80,8 +83,10 @@ class DMEvtSelect
   std::map<TString,int> cateCount;
   std::map<TString,double> cateCountWt;
   
-  TString selectionUsed;
-  TString categoryUsed;
+  // Cutflow histogram:
+  TH1F *m_cutFlowHist_weighted;
+  TH1F *m_cutFlowHist_unweighted;
+  
 };
 
 #endif

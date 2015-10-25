@@ -163,7 +163,6 @@ void DMWorkspace::createNewWS() {
   RooWorkspace* cateWS[m_nCategories];
   RooCategory* categories = new RooCategory("categories", "categories");
   m_combinedWS = new RooWorkspace("combinedWS");
-  m_combinedWS->importClassCode();
   
   // Define the combined PDF:
   RooSimultaneous *combinedPdf
@@ -269,6 +268,10 @@ void DMWorkspace::createNewWS() {
   poiAndNuis->add(*m_modelConfig->GetParametersOfInterest());
   m_combinedWS->saveSnapshot("paramsOrigin", *poiAndNuis);
   
+  // Write workspace to file:
+  m_combinedWS->importClassCode();
+  m_combinedWS->writeToFile(Form("%s/rootfiles/workspaceDM_%s.root",
+			       m_outputDir.Data(), m_DMSignal.Data()));
   // Start profiling the data:
   std::cout << "DMWorkspace: Start profiling data" << std::endl;
   
@@ -308,9 +311,6 @@ void DMWorkspace::createNewWS() {
   fileMuProf << profiledMuValue << endl;
   fileMuProf.close();
   
-  // Write workspace to file:
-  m_combinedWS->writeToFile(Form("%s/rootfiles/workspaceDM_%s.root",
-			       m_outputDir.Data(), m_DMSignal.Data()));
 }
 
 /**
@@ -549,6 +549,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   std::cout << "DMWorkspace: Adding signal parameterizations." << std::endl;
   
   // Loop to load SM signal modes from file and add to workspace:
+  /*
   if (m_options.Contains("ProdModes")) {
     std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
     for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
@@ -574,6 +575,27 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
       delete sp;
     }
   }
+  */
+  
+  // Load DM signal from file, then add to workspace:
+  SigParam *spDM = m_spi->getSigParam(m_DMSignal);
+  if (spDM->addSigToWS(tempWS, m_config->getNum("higgsMass"), m_currCateIndex)){
+    TString currKeyDM 
+      = spDM->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
+    (tempWS->var(Form("sigYield_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
+      ->SetNameTitle("nDM","nDM");
+    // Scale to the analysis luminosity (nSM originally in units of 1 fb-1:
+    (tempWS->var("nDM"))->setVal(tempWS->var("nDM")->getVal() * 0.001 * 
+				 m_config->getNum("analysisLuminosity"));
+    (tempWS->pdf(Form("sigPdf_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
+      ->SetNameTitle("sigPdfDM","sigPdfDM");
+    tempWS->factory("prod::nSigDM(nDM,expectationCommon,expectationDM)");
+  }
+  else {
+    std::cout << "DMWorkspace: Error importing DM signal." << std::endl;
+    exit(0);
+  }
+  std::cout << "DMWorkspace: Finished importing signal PDFs." << std::endl;
   
   // Load total SM signal from file, then add to workspace:
   SigParam *spSM = m_spi->getSigParam("SM");
@@ -582,27 +604,32 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
       = spSM->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
     (tempWS->var(Form("sigYield_SM_%s", currKeySM.Data())))
       ->SetNameTitle("nSM","nSM");
+    // Scale to the analysis luminosity (nSM originally in units of 1 fb-1:
+    (tempWS->var("nSM"))->setVal(tempWS->var("nSM")->getVal() * 0.001 * 
+				 m_config->getNum("analysisLuminosity"));    
     (tempWS->pdf(Form("sigPdf_SM_%s", currKeySM.Data())))
       ->SetNameTitle("sigPdfSM","sigPdfSM");
     tempWS->factory("prod::nSigSM(nSM,expectationCommon,expectationSM)");
   }
-  else std::cout << "DMWorkspace: Error importing SM signal." << std::endl;
-    
-  // Load DM signal from file, then add to workspace:
-  std::cout << "Check0" << std::endl;
-  SigParam *spDM = m_spi->getSigParam(m_DMSignal);
-  if (spDM->addSigToWS(tempWS, m_config->getNum("higgsMass"), m_currCateIndex)){
-    TString currKeyDM 
-      = spDM->getKey(m_config->getNum("higgsMass"), m_currCateIndex);
-    (tempWS->var(Form("sigYield_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
-      ->SetNameTitle("nDM","nDM");
-    (tempWS->pdf(Form("sigPdf_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
-      ->SetNameTitle("sigPdfDM","sigPdfDM");
-    tempWS->factory("prod::nSigDM(nDM,expectationCommon,expectationDM)");
+  else {
+    std::cout << "DMWorkspace: Error importing SM signal." << std::endl;
+    exit(0);
   }
-  else std::cout << "DMWorkspace: Error importing DM signal." << std::endl;
   
-  std::cout << "DMWorkspace: Finished importing signal PDFs." << std::endl;
+  // Equate the SM signal parameters with those of the DM signal:
+  if (m_config->getBool("useSameDMSMSigPDF")) {
+    std::cout << "DMWorkspace: Copying DM fit parameters for SM." << std::endl;
+    RooArgSet *currSet = tempWS->pdf("sigPdfSM")->getVariables();
+    TIterator *iterParam = currSet->createIterator();
+    RooRealVar* currParam = NULL;
+    while ((currParam = (RooRealVar*)iterParam->Next())) {
+      TString corrVar = currParam->GetName();
+      std::cout << "\t" << corrVar << std::endl;
+      corrVar.ReplaceAll("_SM_", Form("_%s_",m_DMSignal.Data()));
+      currParam->setVal(tempWS->var(corrVar)->getVal());
+    }
+  }
+
   
   /*
   // FOR THE LISTS BELOW, use PER->listSources(), returns vector<TString>
@@ -619,12 +646,6 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   }
   */
   
-  // FOR MONDAY:
-  //  1) replace the getCateSigYield expressions below with the yield params
-  //     that were provided by SigParam.
-  //  2) Fix the nuisance parameter implementation above.
-  //  3) WARNING! SHould create a sigparam class that can be called, just so
-  //     it is possible to go back to redo if necessary. 
   // Construct the background PDF:
   std::vector<TString> bkgFunctions = m_config->getStrV("bkgFunctions");
   BkgModel *currBkgModel = new BkgModel(tempWS->var("m_yy"));
@@ -653,6 +674,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   // Model with combined SM production modes:
   tempWS->factory("SUM::modelSB(nSigSM*sigPdfSM,nSigDM*sigPdfDM,sigBias*sigPdfDM,nBkg*bkgPdf)");
+  
   // Model with separated SM production modes:
   if (m_options.Contains("ProdModes")) {
     tempWS->factory("SUM::modelProdSB(nSigggH*sigPdfggH,nSigVBF*sigPdfVBF,nSigWH*sigPdfWH,nSigZH*sigPdfZH,nSigbbH*sigPdfbbH,nSigttH*sigPdfttH,nSigDM*sigPdfDM,expectedBias*sigPdfDM,nBkg*bkgPdf)");
@@ -817,38 +839,30 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 			*globsCateWS);
   
   // Import the observed data set:
-  DMMassPoints *currMassPoints = NULL;
+  RooDataSet *obsData = NULL;
   if (m_config->getBool("doBlind")) {
-    std::vector<TString> bkgProcesses = m_config->getStrV("BkgProcesses");
-    /*
-    // Load the first mass points into currMassPoints:
-    currMassPoints
-      = new DMMassPoints(m_configFile, bkgProcesses[0], "FromFile",
-			 categoryWS->var("m_yy_"+m_currCateName));
-    // Then loop over 
-    for (int i_b = 1; i_b < (int)bkgProcesses.size(); i_b++) {
-      DMMassPoints *currBkgMassPoints
-	= new DMMassPoints(m_configFile, bkgProcesses[i_b], "FromFile", 
-			   categoryWS->var("m_yy_"+m_currCateName));
-      if (i_b == (int)bkgProcesses.size()-1) {
-	currMassPoints->mergeMassPoints("gg_gjet", currBkgMassPoints, true);
-      }
-      else {
-	currMassPoints->mergeMassPoints("gg_gjet", currBkgMassPoints, false);
-      }
-      delete currBkgMassPoints;
-    }
-    */
-    currMassPoints
-      = new DMMassPoints(m_configFile, bkgProcesses[0], "FromFile",
-			 categoryWS->var("m_yy_"+m_currCateName));
     
+    // Loop over all background MC and add them to a single observed dataset:
+    std::vector<TString> bkgProcesses = m_config->getStrV("BkgProcesses");
+    for (int i_b = 0; i_b < (int)bkgProcesses.size(); i_b++) {
+      DMMassPoints *currMassPoints
+	= new DMMassPoints(m_configFile, bkgProcesses[i_b], "FromFile",
+			   categoryWS->var("m_yy_"+m_currCateName));
+      if (i_b == 0) obsData = currMassPoints->getCateDataSet(m_currCateIndex);
+      else obsData->append(*currMassPoints->getCateDataSet(m_currCateIndex));
+    }
   }
   else {
-    currMassPoints = new DMMassPoints(m_configFile, "data", "FromFile",
-				      categoryWS->var("m_yy_"+m_currCateName));
+    DMMassPoints *currMassPoints
+      = new DMMassPoints(m_configFile, "Data", "FromFile",
+			 categoryWS->var("m_yy_"+m_currCateName));
+    obsData = currMassPoints->getCateDataSet(m_currCateIndex);
   }
-  RooDataSet *obsData = currMassPoints->getCateDataSet(m_currCateIndex);
+  
+  if (!obsData) {
+    std::cout << "DMWorkspace: ERROR! Failed to load data." << std::endl;
+  }
+  
   TString obsDataName = Form("obsData_%s",m_currCateName.Data());
   obsData->SetNameTitle(obsDataName, obsDataName);
   categoryWS->import(*obsData);
@@ -860,8 +874,14 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
   //(*categoryWS->pdf("bkgPdf_"+m_currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisBkgCateWS)), SumW2Error(kTRUE));
   (*categoryWS->pdf("bkgPdf_"+m_currCateName)).fitTo(*obsData, Minos(RooArgSet(*nuisCateWS)), SumW2Error(kTRUE));
-  (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
-  
+  if (m_config->getBool("doBlind")) {
+    (*categoryWS->var("nBkg_"+m_currCateName))
+      .setVal(0.001 * m_config->getNum("analysisLuminosity") * 
+	      obsData->sumEntries());
+  }
+  else {
+    (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
+  }
   
   
   // Create Asimov data the old-fashioned way:
@@ -894,7 +914,8 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 
 double DMWorkspace::spuriousSignal() {
   double spurious[10] = { 1.0, 1.0, 1.0, 1.0, 1.0 };// per fb-1
-  return spurious[m_currCateIndex] * m_config->getNum("analysisLuminosity");
+  return spurious[m_currCateIndex] * 0.001 * 
+    m_config->getNum("analysisLuminosity");
 }
 
 /**

@@ -19,6 +19,7 @@
 #include "DMAnalysis.h"
 #include "DMMassPoints.h"
 #include "DMTestStat.h"
+#include "HggTwoSidedCBPdf.h"
 #include "PESReader.h"
 #include "PERReader.h"
 #include "RooFitHead.h"

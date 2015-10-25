@@ -31,7 +31,6 @@
 #include "CommonFunc.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
-#include "BRXSReader.h"
 #include "DMAnalysis.h"
 #include "DMEvtSelect.h"
 #include "DMTree.h"
@@ -52,12 +51,13 @@ class DMMassPoints {
   TString getMassPointsFileName(int cateIndex, TString sampleName);
   
   // Mutators:
+  void combineCutFlowHists();
   TString createLocalFilesAndList(TString originListName);
   void mergeMassPoints(TString newSampleName, DMMassPoints *inputMassPoints,
 		       bool saveMassPoints);
   void setMassObservable(RooRealVar *newObservable);
   void removeLocalFilesAndList(TString listName);
-
+  
  private:
   
   // Member methods:
@@ -65,6 +65,7 @@ class DMMassPoints {
   void fillHist1D(TString varName, bool allEvents, double xVal, double xWeight,
 		  int cateIndex);
   void loadMassPointsFromFile();
+  void printProgressBar(int index, int total);
   void newHist1D(TString varName, int nBins, double xMin, double xMax);
   void saveHists();
   
@@ -82,6 +83,11 @@ class DMMassPoints {
   
   // Plotting information:
   std::map<TString,TH1F*> m_hists;
+  
+  // Cut-flow:
+  std::vector<TH1F*> m_componentCutFlows;
+  std::vector<double> m_componentNorms;
+  TH1F* m_cutFlowHist;
   
 };
 

@@ -27,19 +27,20 @@
 namespace DMAnalysis {
   
   // Member functions:
-  TString nameToFileList(Config *config, TString name);
-  TString nameToxAODCutFile(Config *config, TString name);
   TString getMediatorName(TString modeName);
   TString getPrintMediatorName(TString modeName);
   TString getPrintSampleName(Config *config, TString sampleName);
   TString getPrintVarName(TString varName);
   int getMediatorMass(Config *config, TString modeName);
   int getDarkMatterMass(Config *config, TString modeName);
-  bool isSMSample(Config *config, TString sampleName);
+  bool isBkgSample(Config *config, TString sampleName);
   bool isDMSample(Config *config, TString sampleName);
+  bool isSkimmed(Config *config, TString fileName);
+  bool isSMSample(Config *config, TString sampleName);
   bool isSignalSample(Config *config, TString sampleName);
   bool isWeightedSample(Config *config, TString sampleName);
-
+  TString nameToFileList(Config *config, TString name);  
+  
 };
 
 #endif

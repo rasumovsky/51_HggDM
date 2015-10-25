@@ -44,7 +44,7 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
   m_dataForObsQMu =(m_config->getBool("doBlind")) ? "asimovDataMu0" : "obsData";
   m_dataForExpQMu = "asimovDataMu0";
   
-  if (newWorkspace == NULL) {
+  if (!newWorkspace) {
     m_inputFile
       = new TFile(Form("%s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root",
 		       (m_config->getStr("masterOutput")).Data(),
@@ -55,18 +55,35 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
       m_workspace = (RooWorkspace*)m_inputFile->Get("combinedWS");
     }
     else {
-      std::cout << "DMTestStat: Error loading workspace." << std::endl;
+      std::cout << "DMTestStat: ERROR loading workspace. "
+		<< "Trying to load from DMWorkspace..." << std::endl;
       
       // Load the workspace from the nominal location.
       DMWorkspace *m_dmws = new DMWorkspace(newConfigFile, newDMSignal,
 					    "FromFile");
       m_workspace = m_dmws->getCombinedWorkspace();
     }
+    
+    if (!m_workspace) {
+      std::cout << "DMTestStat: ERROR! Workspace was not found..." << std::endl;
+      exit(0);
+    }
+    else {
+      std::cout << "DMTestStat: Printing the loaded workspace." << std::endl;
+      m_workspace->Print("v");
+    }
   }
   // Use the workspace passed to the class constructor:
   else m_workspace = newWorkspace;
   
-  m_mc = (ModelConfig*)m_workspace->obj("modelConfig");
+  // Then load the ModelConfig if it exists, exit otherwise:
+  if (m_workspace->obj("modelConfig")) {
+    m_mc = (ModelConfig*)m_workspace->obj("modelConfig");
+  }
+  else {
+    std::cout << "DMTestStat: ERROR! ModelConfig was not found." << std::endl;
+    exit(0);
+  }
   
   // Map storing all calculations:
   m_calculatedValues.clear();
@@ -547,14 +564,16 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
   poiAndNuis->add(*nuisanceParameters);
   poiAndNuis->add(*poi);
     
-  // Look for dataset, and create if non-existent and Asimov. 
+  // Check that dataset exists:
   if (!m_workspace->data(datasetName)) {
-    //if (datasetName.Contains("asimovData")) createAsimovData(datasetName);
-    //else {
     std::cout << "DMTestStat: Error! Requested data not available: " 
 	      << datasetName << std::endl;
     exit(0);
-    //}
+  }
+  // Check PDF also exists:
+  else if (!combPdf) {
+    std::cout << "DMTestStat: ERROR! Requested PDF not found..." << std::endl;
+    exit(0);
   }
   
   // Free nuisance parameters before fit:
@@ -582,21 +601,22 @@ double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
     currMuConst->setVal(1.0);
     currMuConst->setConstant(true);
   }
-  
+   
   // The actual fit command:
   RooNLLVar* varNLL = (RooNLLVar*)combPdf
     ->createNLL(*m_workspace->data(datasetName), Constrain(*nuisanceParameters),
   		Extended(combPdf->canBeExtended()));
+    
   RooFitResult *fitResult = statistics::minimize(varNLL, "", NULL, true);
-  if (fitResult->status() != 0) m_allGoodFits = false;
-
+  if (!fitResult || fitResult->status() != 0) m_allGoodFits = false;
+  
   // Save a snapshot if requested:
   if (m_doSaveSnapshot) {
     TString muDMValue = fixMu ? (Form("%d",(int)muVal)) : "Free";
     m_workspace->saveSnapshot(Form("paramsProfileMu%s", muDMValue.Data()),
 			      *poiAndNuis);
   }
-
+  
   // Plot the fit result if the user has set an output directory for plots:
   if (m_doPlot) {
     if (fixMu && ((int)muVal) == 1) plotFits("Mu1", datasetName);
@@ -840,66 +860,6 @@ void DMTestStat::loadStatsFromFile() {
 
 /**
    -----------------------------------------------------------------------------
-   Plot the fits produced by the specified model.
-   @param fitType - the type of fit.
-   @param datasetName - the name of the profiled dataset.
-*/
-void DMTestStat::plotFits(TString fitType, TString datasetName) {
-  std::cout << "DMTestStat: Plot fit " << fitType << ", " << datasetName
-	    << std::endl;
-  TCanvas *can = new TCanvas("can", "can", 800, 800);
-  
-  // Loop over categories:
-  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
-    can->cd();
-    can->Clear();
-    TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
-    RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(50);
-    (*m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data())))
-      .plotOn(frame);
-    (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame,Components((*m_workspace->pdf("sigPdfDM_"+currCateName))), 
-	      LineColor(6));
-    (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame,Components((*m_workspace->pdf("sigPdfSM_"+currCateName))), 
-	      LineColor(3));
-    (*m_workspace->pdf("model_"+currCateName))
-      .plotOn(frame,Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
-	      LineColor(4));
-    (*m_workspace->pdf("model_"+currCateName)).plotOn(frame, LineColor(2));
-    
-    frame->SetYTitle("Events / GeV");
-    frame->SetXTitle("M_{#gamma#gamma} [GeV]");
-    frame->Draw();
-    
-    TLatex text; text.SetNDC(); text.SetTextColor(1);
-    text.DrawLatex(0.2, 0.81, Form("Category %d", i_c));
-    text.DrawLatex(0.2, 0.87, Form("Signal %s", m_DMSignal.Data()));
-    TH1F *histDM = new TH1F("histDM", "histDM", 1, 0, 1);
-    TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
-    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
-    TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
-    histDM->SetLineColor(6);
-    histSM->SetLineColor(3);
-    histBkg->SetLineColor(4);
-    histSig->SetLineColor(2);
-    TLegend leg(0.61, 0.63, 0.89, 0.77);
-    leg.SetFillColor(0);
-    leg.SetTextSize(0.04);
-    leg.SetBorderSize(0);
-    leg.AddEntry(histDM, "Dark matter", "l");
-    leg.AddEntry(histSM, "SM Higgs", "l");
-    leg.AddEntry(histBkg, "Non-resonant", "l");
-    leg.AddEntry(histSig, "Sig. + bkg.", "l");
-    leg.Draw("SAME");
-    can->Print(Form("%s/fitPlot_%s_%s_%s.eps", m_plotDir.Data(),
-		    m_DMSignal.Data(), fitType.Data(), currCateName.Data()));
-  }
-  delete can;
-}
-
-/**
-   -----------------------------------------------------------------------------
    Check whether the specified value has been stored in the value map.
    @param mapKey - the key for the map of values.
    @returns - true iff the categorization has been defined. 
@@ -913,6 +873,179 @@ bool DMTestStat::mapValueExists(TString mapKey) {
     std::cout << "DMTestStat: key " << mapKey << " not defined!" << std::endl;
   }
   return !nonExistent;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Plot the fits produced by the specified model.
+   @param fitType - the type of fit.
+   @param datasetName - the name of the profiled dataset.
+*/
+void DMTestStat::plotFits(TString fitType, TString datasetName) {
+  std::cout << "DMTestStat: Plot fit " << fitType << ", " << datasetName
+	    << std::endl;
+  TCanvas *can = new TCanvas("can", "can", 800, 800);
+  can->cd();
+  TPad *pad1 = new TPad( "pad1", "pad1", 0.00, 0.33, 1.00, 1.00 );
+  TPad *pad2 = new TPad( "pad2", "pad2", 0.00, 0.00, 1.00, 0.33 );
+  pad1->SetBottomMargin(0.00001);
+  pad1->SetBorderMode(0);
+  pad2->SetTopMargin(0.00001);
+  pad2->SetBottomMargin(0.4);
+  pad2->SetBorderMode(0);
+  
+  can->cd();
+  pad1->Draw();
+  pad2->Draw();
+  
+  int xBins = 50; 
+  int xMin = m_config->getNum("DMMyyRangeLo");
+  int xMax = m_config->getNum("DMMyyRangeHi");
+  // Loop over categories:
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    can->cd();
+    //pad1->Clear();
+    pad1->cd();
+    TString currCateName = Form("%s_%d", m_cateScheme.Data(), i_c);
+    RooPlot* frame =  (*m_workspace->var("m_yy_"+currCateName)).frame(xBins);
+    (*m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data())))
+      .plotOn(frame);
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame,Components((*m_workspace->pdf("sigPdfDM_"+currCateName))), 
+	      LineColor(kRed+1), LineStyle(2));
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame,Components((*m_workspace->pdf("sigPdfSM_"+currCateName))), 
+	      LineColor(kGreen+2));
+    (*m_workspace->pdf("model_"+currCateName))
+      .plotOn(frame,Components((*m_workspace->pdf("bkgPdf_"+currCateName))), 
+	      LineColor(kMagenta+1));
+    (*m_workspace->pdf("model_"+currCateName)).plotOn(frame,LineColor(kBlue+1));
+    frame->GetYaxis()->SetRangeUser(0.00001,frame->GetYaxis()->GetXmax());
+    //frame->GetYaxis()->SetRangeUser(0.00001,3.0);
+    frame->SetYTitle("Events / GeV");
+    frame->SetXTitle("M_{#gamma#gamma} [GeV]");
+    frame->Draw();
+  
+    // Also draw the ATLAS text:
+    TLatex l; l.SetNDC(); l.SetTextColor(kBlack);
+    l.SetTextFont(72); l.SetTextSize(0.05); l.DrawLatex(0.5,0.88,"ATLAS");
+    l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.62,0.88,"Internal");
+    l.DrawLatex(0.5, 0.83, Form("#scale[0.8]{#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %2.1f fb^{-1}}",(m_config->getNum("analysisLuminosity")/1000.0)));
+    
+    TLatex text; text.SetNDC(); text.SetTextColor(1); text.SetTextFont(42);
+    text.SetTextSize(0.05);
+    text.DrawLatex(0.5, 0.78, Form("Category %d", i_c));
+    TH1F *histDM = new TH1F("histDM", "histDM", 1, 0, 1);
+    TH1F *histSM = new TH1F("histSM", "histSM", 1, 0, 1);
+    TH1F *histBkg = new TH1F("histBkg", "histBkg", 1, 0, 1);
+    TH1F *histSig = new TH1F("histSig", "histSig", 1, 0, 1);
+    TH1F *histData = new TH1F("histData", "histData", 1, 0, 1);
+    histDM->SetLineColor(kRed+1);
+    histDM->SetLineStyle(2);
+    histSM->SetLineColor(kGreen+2);
+    histBkg->SetLineColor(kMagenta+1);
+    histSig->SetLineColor(kBlue+1);
+    histData->SetLineColor(kBlack);
+    histData->SetMarkerColor(kBlack);
+    TLegend leg(0.5, 0.55, 0.89, 0.75);
+    leg.SetFillColor(0);
+    leg.SetTextSize(0.04);
+    leg.SetBorderSize(0);
+    leg.AddEntry(histDM, 
+		 DMAnalysis::getPrintSampleName(m_config,m_DMSignal),"l");
+    leg.AddEntry(histSM, 
+		 DMAnalysis::getPrintSampleName(m_config,"SMHiggs"), "l");
+    leg.AddEntry(histBkg, "Non-resonant background", "l");
+    leg.AddEntry(histSig, "Signal + background", "l");
+    leg.AddEntry(histData, "Data", "lep");
+    leg.Draw("SAME");
+    
+    // Division plot:
+    pad2->cd();
+    TGraphErrors* subData = plotDivision((m_workspace->data(Form("%s_%s", datasetName.Data(), currCateName.Data()))), (m_workspace->pdf("model_"+currCateName)), currCateName, xMin, xMax, xBins);
+    subData->GetYaxis()->SetTitle("Data / Fit");
+    subData->GetXaxis()->SetTitle("M_{#gamma#gamma} [GeV]");
+    subData->GetXaxis()->SetTitleOffset(0.95);
+    subData->GetYaxis()->SetTitleOffset(0.7);
+    subData->GetXaxis()->SetTitleSize(0.1);
+    subData->GetYaxis()->SetTitleSize(0.1);
+    subData->GetXaxis()->SetLabelSize(0.1);
+    subData->GetYaxis()->SetLabelSize(0.1);
+    subData->GetYaxis()->SetNdivisions(4);
+    subData->SetMarkerColor(1);
+    subData->GetXaxis()->SetRangeUser(xMin, xMax);
+    //subData->GetYaxis()->SetRangeUser(0.000001, xMax);
+    subData->Draw("AEP");
+    TLine *line = new TLine();
+    line->SetLineStyle(1);
+    line->SetLineWidth(2);
+    line->SetLineColor(kRed);
+    line->DrawLine(xMin, 1.0, xMax, 1.0);
+    subData->Draw("EPSAME");
+    
+    // Print the canvas:
+    can->Print(Form("%s/fitPlot_%s_%s_%s.eps", m_plotDir.Data(),
+		    m_DMSignal.Data(), fitType.Data(), currCateName.Data()));
+  }
+  delete can;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Create a ratio plot (or subtraction plot, for the moment...)
+   @param data - The RooAbsData set for comparison.
+   @param pdf - The PDF for comparison.
+   @param cateName - The name of the category.
+   @param xMin - The minimum value of the observable range.
+   @param xMax - The maximum value of the observable range.
+   @param xBins - The number of bins for the observable.
+   @returns - A TGraphErrors to plot.
+*/
+TGraphErrors* DMTestStat::plotDivision(RooAbsData *data, RooAbsPdf *pdf, 
+				       TString cateName, double xMin,
+				       double xMax, double xBins) {
+  RooRealVar *m_yy = (m_workspace->var("m_yy_"+cateName));
+  double minOrigin = m_yy->getMin();
+  double maxOrigin = m_yy->getMax();
+  double nEvents = data->sumEntries();
+  
+  m_yy->setRange("fullRange", xMin, xMax);
+  TH1F *originHist
+    = (TH1F*)data->createHistogram("dataSub", *m_yy,
+  				   RooFit::Binning(xBins, xMin, xMax));
+  TGraphErrors *result = new TGraphErrors();
+  double increment = (xMax - xMin) / ((double)xBins);
+  
+  RooAbsReal* intTot
+    = (RooAbsReal*)pdf->createIntegral(RooArgSet(*m_yy),
+				       RooFit::NormSet(*m_yy), 
+				       RooFit::Range("fullRange"));
+  double valTot = intTot->getVal();
+  int pointIndex = 0; int pointIndexNonZero = 0;
+  for (double i_m = xMin; i_m < xMax; i_m += increment) {
+    m_yy->setRange(Form("range%2.2f",i_m), i_m, (i_m+increment));
+    RooAbsReal* intCurr
+      = (RooAbsReal*)pdf->createIntegral(RooArgSet(*m_yy), 
+					 RooFit::NormSet(*m_yy), 
+					 RooFit::Range(Form("range%2.2f",i_m)));
+    double valCurr = intCurr->getVal();
+    
+    double currMass = i_m + (0.5*increment);
+    double currPdfWeight = nEvents * (valCurr / valTot);
+    TString varName = m_yy->GetName();
+    double currDataWeight = data->sumEntries(Form("%s>%f&&%s<%f",varName.Data(),
+						  i_m,varName.Data(),
+						  (i_m+increment)));
+    double currWeight = currDataWeight / currPdfWeight;
+    result->SetPoint(pointIndex, currMass, currWeight);
+    
+    double currError = originHist->GetBinError(pointIndex+1) / currPdfWeight;
+    result->SetPointError(pointIndex, 0.0, currError);
+    pointIndex++;
+  }
+  m_yy->setMin(minOrigin);
+  m_yy->setMax(maxOrigin);
+  return result;
 }
 
 /**

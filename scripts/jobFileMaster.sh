@@ -30,7 +30,7 @@ else
     # Make output directories:    
     mkdir -vp ${output_dir}/single_files/CL_${job_index}
     mkdir -vp ${output_dir}/single_files/p0_${job_index}
-    mkdir -vp ${output_dir}/single_files/Plots_${job_index}
+    mkdir -vp ${output_dir}/single_files/Hists_${job_index}
     mkdir -vp ${output_dir}/log
     mkdir -vp ${output_dir}/err
     
@@ -50,7 +50,7 @@ else
     ./${exe_name} ${option} ${config_file} 1> ${out}.log 2>${out}.err;
     cp ${job_name}/DMTestStat/CL/* ${output_dir}/single_files/CL_${job_index}/
     cp ${job_name}/DMTestStat/p0/* ${output_dir}/single_files/p0_${job_index}/
-    #cp ${job_name}/DMWorkspace/Plots/*MuFree* ${output_dir}/single_files/Plots_${job_index}/
+    cp ${job_name}/DMMassPoints/hists*.root ${output_dir}/single_files/Hists_${job_index}/
     mv *.log ${output_dir}/log/
     mv *.err ${output_dir}/err/
     rm * -rf

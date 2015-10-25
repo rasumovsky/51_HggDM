@@ -13,7 +13,9 @@
 //  system commands to submit jobs to various clusters.                       //
 //                                                                            //
 //  MasterOption - Note: Each can be followed by the suffix "New"             //
+//    - Cleanup                                                               //
 //    - MassPoints                                                            //
+//    - PlotVariables                                                         //
 //    - SigParam                                                              //
 //    - BkgModel                                                              //
 //    - Workspace                                                             //
@@ -48,13 +50,11 @@
 void recursiveOptimizer(TString exeConfigOrigin, TString exeOption, 
 			int cutIndex, std::vector<TString> cutName,
 			std::vector<double> cutVal) {
-  
   // Get the number of cuts:
   int nCuts = m_config->getInt("NOptVar");
   
   // The recursive case:
   if (cutIndex < nCuts) {
-    
     // Get current cut information:
     std::vector<double> cutPositions
       = m_config->getNumV(Form("OptVarPos%d",cutIndex));
@@ -91,14 +91,13 @@ void recursiveOptimizer(TString exeConfigOrigin, TString exeOption,
     ifstream inputConfig;
     inputConfig.open(exeConfigOrigin);
     TString exeConfigNew = Form("exeConfig%d.cfg", m_jobIndex);
-    ofstream outputConfig;
-    outputConfig.open(exeConfigNew);
-    char key[256];// Need to pipe whole line into key
+    ofstream outputConfig; outputConfig.open(exeConfigNew);
+    string key;
     // Loop over each line of the config file:
     while (!inputConfig.eof()) {
-      inputConfig.getline(key,256);
+      std::getline(inputConfig, key);
       TString currLine = TString(key);
-      
+            
       // Check if the current line specifies cut information:
       bool lineSpecifiesCut = false; 
       TString specifiedName = "";
@@ -214,6 +213,9 @@ void submitToOptimize(TString exeConfigOrigin, TString exeOption) {
   m_jobIndex = 0;
   
   // An output file to track job indices and cuts:
+  system(Form("mkdir -vp %s/%s/DMMaster",
+	      (m_config->getStr("masterOutput")).Data(), 
+	      (m_config->getStr("jobName")).Data()));
   m_headFile.open(Form("%s/%s/DMMaster/jobSummary.txt", 
 		       (m_config->getStr("masterOutput")).Data(), 
 		       (m_config->getStr("jobName")).Data()));
@@ -229,6 +231,7 @@ void submitToOptimize(TString exeConfigOrigin, TString exeOption) {
       m_headFile << m_config->getStr(Form("OptVar%d",i_c)) << " \t";
     }
   }
+  // The remaining lines are filled with values in the recursive method below.
   
   // Call the recursive function:
   std::vector<TString> cutName; cutName.clear();
@@ -430,7 +433,7 @@ void submitPEViaBsub(TString exeConfigFile, TString exeOption,
   if (m_isFirstJob) {
     system(Form("tar zcf Cocoon.tar bin/%s", 
 		(m_config->getStr("exePseudoExp")).Data()));
-    system(Form("chmod +x %s", (m_config->getStr("jobScriptPseudoExp")).Data()));
+    system(Form("chmod +x %s",(m_config->getStr("jobScriptPseudoExp")).Data()));
     system(Form("chmod +x %s/%s/DMWorkspace/rootfiles/workspaceDM_%s.root", 
 		(m_config->getStr("masterOutput")).Data(), 
 		(m_config->getStr("jobName")).Data(), exeSignal.Data()));
@@ -502,30 +505,58 @@ int main (int argc, char **argv) {
   TString toyPlotOptions   = m_config->getStr("toyPlotOptions");
   TString testStatOptions  = m_config->getStr("testStatOptions");
   TString muLimitOptions   = m_config->getStr("muLimitOptions");
+
+  //--------------------------------------//
+  // Step 0: Remove any prior outputs
+  if (masterOption.Contains("Cleanup")) {
+    std::cout << "DMMaster: Step 0 - Cleaning up previous runs." << std::endl;
+    system(Form("rm -rf %s/%s", (m_config->getStr("masterOutput")).Data(), 
+		(m_config->getStr("jobName")).Data()));
+  }
   
   //--------------------------------------//
   // Step 1: Make or load mass points:
   if (masterOption.Contains("MassPoints")) {
-    cout << "DMMaster: Step 1 - Make mass points." << endl;
+    std::cout << "DMMaster: Step 1 - Make mass points." << std::endl;
     
-    // Loop over SM, DM, MC samples:
+    // Load SM signal MxAODs:
     std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
     for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigSMModes[i_SM],
 					  massPointOptions, NULL);
       delete mp;
     }
+    
+    // Load DM signal MxAODs:
     std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
       DMMassPoints *mp = new DMMassPoints(configFileName, sigDMModes[i_DM],
 					  massPointOptions, NULL);
       delete mp;
     }
-    std::vector<TString> MCProcesses = m_config->getStrV("MCProcesses");
-    for (int i_MC = 0; i_MC < (int)MCProcesses.size(); i_MC++) {
-      DMMassPoints *mp = new DMMassPoints(configFileName, MCProcesses[i_MC],
+    
+    // Load background MxAODs:
+    std::vector<TString> BkgProcesses = m_config->getStrV("BkgProcesses");
+    for (int i_Bkg = 0; i_Bkg < (int)BkgProcesses.size(); i_Bkg++) {
+      DMMassPoints *mp = new DMMassPoints(configFileName, BkgProcesses[i_Bkg],
 					  massPointOptions, NULL);
       delete mp;
+    }
+    
+    // Load data MxAODs:
+    DMMassPoints *mp = new DMMassPoints(configFileName, "Data",	
+    					massPointOptions, NULL);
+    delete mp;
+  }
+  
+  //--------------------------------------//
+  // Step 1.2: Make variable plots:
+  if (masterOption.Contains("PlotVariables")) {
+    std::vector<TString> plotVariables = m_config->getStrV("PlotVariables");
+    for (int i_v = 0; i_v < (int)plotVariables.size(); i_v++) {
+      system(Form("./bin/PlotVariables %s %s %s", configFileName.Data(), 
+		  plotVariables[i_v].Data(), 
+		  (m_config->getStr("PlotVariableOptions")).Data()));
     }
   }
   
@@ -731,8 +762,14 @@ int main (int argc, char **argv) {
 	m_isFirstJob = false;
       }
       else {
+	/*
 	TString muCommand = Form(".%s/bin/%s %s %s %s", 
 				 (m_config->getStr("packageLocation")).Data(), 
+				 (m_config->getStr("exeMuLimit")).Data(),
+				 fullConfigPath.Data(), currSignal.Data(), 
+				 muLimitOptions.Data());
+	*/
+	TString muCommand = Form("./bin/%s %s %s %s", 
 				 (m_config->getStr("exeMuLimit")).Data(),
 				 fullConfigPath.Data(), currSignal.Data(), 
 				 muLimitOptions.Data());
@@ -767,11 +804,20 @@ int main (int argc, char **argv) {
 	m_isFirstJob = false;
       }
       else {
-	system(Form(".%s/bin/%s %s %s %s", 
-		    (m_config->getStr("packageLocation")).Data(), 
-		    (m_config->getStr("exeMuLimit")).Data(),
-		    fullConfigPath.Data(), currSignal.Data(),
-		    muLimitOptions.Data()));
+	/*
+	TString muCommand = Form(".%s/bin/%s %s %s %s", 
+				 (m_config->getStr("packageLocation")).Data(), 
+				 (m_config->getStr("exeMuLimit")).Data(),
+				 fullConfigPath.Data(), currSignal.Data(), 
+				 muLimitOptions.Data());
+	*/
+	TString muCommand = Form("./bin/%s %s %s %s", 
+				 (m_config->getStr("exeMuLimit")).Data(),
+				 fullConfigPath.Data(), currSignal.Data(), 
+				 muLimitOptions.Data());
+	std::cout << "Executing following system command: \n\t"
+		  << muCommand << std::endl;
+	system(muCommand);
       }
       jobCounterML++;
     }

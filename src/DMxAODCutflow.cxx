@@ -19,42 +19,84 @@
    Initializes the tool and loads XS, BR values from files. 
    @param newTree - the TTree which contains the sample.
 */
-DMxAODCutflow::DMxAODCutflow(TString fileName) {
+DMxAODCutflow::DMxAODCutflow(TString fileName, TString configFileName) {
   std::cout << "DMxAODCutflow: Initializing DMxAODCutflow" << std::endl;
   std::cout << "\tfrom file: " << fileName << std::endl;
   
-  //TFile *m_inputFile = new TFile(fileName);
-  //TH1F *m_histCuts = (TH1F*)m_inputFile->Get("HighMet_EventCutFlow");
-  m_inputFile = new TFile(fileName);
-  m_histCuts = (TH1F*)m_inputFile->Get("HighMet_EventCutFlow");
+  m_inputFile = TFile::Open(fileName);
   
-  if (!m_histCuts) {
+  // Decide whether the sample is skimmed or unskimmed:
+  Config *config = new Config(configFileName);
+  m_unskimmed = !DMAnalysis::isSkimmed(config, fileName);
+    
+  // Find the cutflow histograms from the file based on limited name info:
+  m_histCuts_weighted = NULL;
+  m_histCuts_unweighted = NULL;
+  //m_histCuts_weighted_NoDalitz = NULL;
+  TIter next(m_inputFile->GetListOfKeys());
+  TObject *currObj;
+  while ((currObj = (TObject*)next())) {
+    TString currName = currObj->GetName();
+    if (currName.Contains("CutFlow") && currName.Contains("weighted")
+    	&& !currName.Contains("noDalitz")) {
+      m_histCuts_weighted = (TH1F*)m_inputFile->Get(currName);
+    }
+    //else if (currName.Contains("CutFlow") && currName.Contains("weighted")
+    //	     && currName.Contains("noDalitz")) {
+    //m_histCuts_weighted_NoDalitz = (TH1F*)m_inputFile->Get(currName);
+    //}
+    else if (currName.Contains("CutFlow") && !currName.Contains("weighted")
+	     && !currName.Contains("noDalitz")) {
+      m_histCuts_unweighted = (TH1F*)m_inputFile->Get(currName);
+    }
+  }
+  if (m_histCuts_weighted && m_histCuts_unweighted) {
+    std::cout << "DMxAODCutflow: Sample is weighted." << std::endl;
+    m_isWeighted = true;
+  }
+  else if (!m_histCuts_weighted && m_histCuts_unweighted) {
+    std::cout << "DMxAODCutflow: Sample is unweighted." << std::endl;
+    m_isWeighted = false;
+    m_histCuts_weighted = NULL;
+  }
+  else if (!m_histCuts_unweighted) {
     std::cout << "DMxAODCutflow: Error loading file: " << fileName << std::endl;
     exit(0);
   }
   
+  // If "NoDalitz" cutflow exists, use it instead:
+  //if (m_histCuts_weighted_NoDalitz) {
+  //  m_histCuts_weighted = m_histCuts_weighted_NoDalitz;
+  //}
+  
   // Reset event counters and initialize values to zero:
   cutList.clear();
-  passCounter.clear();
+  passCounter_weighted.clear();
+  passCounter_unweighted.clear();
   
   // Then fill with histogram contents:
   nCuts = 0;
-  for (int i_b = 1; i_b <= (int)m_histCuts->GetNbinsX(); i_b++) {
-    TString currName = (TString)m_histCuts->GetXaxis()->GetBinLabel(i_b);
-    double currValue = m_histCuts->GetBinContent(i_b);
+  for (int i_b = 1; i_b <= (int)m_histCuts_unweighted->GetNbinsX(); i_b++) {
+    TString currName
+      = (TString)m_histCuts_unweighted->GetXaxis()->GetBinLabel(i_b);
     if (currName.Length() > 1) {
       cutList.push_back(currName);
-      passCounter[currName] = currValue;
+      if (m_isWeighted) {
+	passCounter_weighted[currName]
+	  = m_histCuts_weighted->GetBinContent(i_b);
+      }
+      passCounter_unweighted[currName]
+	= m_histCuts_unweighted->GetBinContent(i_b);
       nCuts++;
     }
   }
-  //delete m_histCuts;
-  //delete m_inputFile;
   
   // Print the MxAOD cutflow.
   printxAODCutflow();
   
   std::cout << "DMxAODCutflow: Successfully initialized!" << std::endl;
+  delete currObj;
+  delete config;
 }
 
 /**
@@ -65,7 +107,8 @@ DMxAODCutflow::DMxAODCutflow(TString fileName) {
 */
 bool DMxAODCutflow::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 
-  bool nonExistent = (passCounter.find(cutName) == passCounter.end());
+  bool nonExistent = (passCounter_unweighted.find(cutName) == 
+		      passCounter_unweighted.end());
   if (nonExistent) {
     std::cout << "DMxAODCutflow: Cut " << cutName << " not defined!"
 	      << std::endl;
@@ -109,8 +152,8 @@ int DMxAODCutflow::getCutOrderByName(TString cutName) {
 /**
    -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
-   @param cutName - the name of the cut.
-   @returns the number of passing events.
+   @param cutName - The name of the cut.
+   @returns - The number of passing events.
 */
 double DMxAODCutflow::getEventsPassingCut(int order) {
   return getEventsPassingCut(getCutNameByOrder(order));
@@ -119,12 +162,13 @@ double DMxAODCutflow::getEventsPassingCut(int order) {
 /**
    -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
-   @param cutName - the name of the cut.
-   @returns the number of passing events.
+   @param cutName - The name of the cut.
+   @returns - The number of passing events.
 */
 double DMxAODCutflow::getEventsPassingCut(TString cutName) {
   if (cutExists(cutName)) {
-    return passCounter[cutName];
+    if (m_isWeighted) return passCounter_weighted[cutName];
+    else return passCounter_unweighted[cutName];
   }
   else {
     exit(0);
@@ -136,19 +180,20 @@ double DMxAODCutflow::getEventsPassingCut(TString cutName) {
    Get a pointer to the cutflow histogram.
 */
 TH1F* DMxAODCutflow::getHist() {
-  return m_histCuts;
+  if (m_isWeighted) return m_histCuts_weighted;
+  else return m_histCuts_unweighted;
 }
 
 /**
    -----------------------------------------------------------------------------
    Get the percentage of events passing the named cut.
-   @param cutName - the name of the cut.
-   @returns - the percentage of events passing just this cut.
+   @param cutName - The name of the cut.
+   @returns - The percentage of events passing just this cut.
 */
 double DMxAODCutflow::getPercentPassingCut(TString cutName) {
   // Divide current passing events by the initial events:
   int priorCutOrder = getCutOrderByName(cutName) - 1;
-  if (priorCutOrder < 1) priorCutOrder = 1;
+  if (priorCutOrder < 3) priorCutOrder = getCutOrderByName(cutName);
   
   TString priorCutName = getCutNameByOrder(priorCutOrder);
   double result = 100.0 * (getEventsPassingCut(cutName) / 
@@ -165,11 +210,29 @@ double DMxAODCutflow::getPercentPassingCut(TString cutName) {
 double DMxAODCutflow::getAccXEffAtCut(TString cutName) {
   // Divide current passing events by the initial events:
   double result = 0.0;
-  if (getEventsPassingCut(getCutNameByOrder(1)) > 0.0) {
+  if (getEventsPassingCut(getCutNameByOrder(3)) > 0.0) {
     result = 100.0 * (getEventsPassingCut(cutName) /
-		      getEventsPassingCut(getCutNameByOrder(1)));
+		      getEventsPassingCut(getCutNameByOrder(3)));
   }
   return result;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get the total number of events in the file, for normalization of MC.
+*/
+double DMxAODCutflow::nTotalEventsInFile() {
+  double nTotalEvents = 0.0;
+  if (!m_isWeighted) nTotalEvents = m_histCuts_unweighted->GetBinContent(1);
+  else {
+    if (m_unskimmed) nTotalEvents = m_histCuts_weighted->GetBinContent(1);
+    else {
+      nTotalEvents = (m_histCuts_weighted->GetBinContent(1) * 
+		      m_histCuts_unweighted->GetBinContent(2) /
+		      m_histCuts_unweighted->GetBinContent(1));
+    }
+  }
+  return nTotalEvents;
 }
 
 /**
@@ -179,7 +242,9 @@ double DMxAODCutflow::getAccXEffAtCut(TString cutName) {
 void DMxAODCutflow::printxAODCutflow() {
   std::cout << "DMxAODCutflow: Printing the xAOD cutflow." << std::endl;
   for (int i_c = 0; i_c < nCuts; i_c++) {
-    std::cout << "\t" << cutList[i_c] << "\t" << passCounter[cutList[i_c]] 
+    double currPassVal = m_isWeighted ? 
+      passCounter_weighted[cutList[i_c]] : passCounter_unweighted[cutList[i_c]];
+    std::cout << "\t" << cutList[i_c] << "\t" << currPassVal 
 	      << "\t" << getAccXEffAtCut(cutList[i_c]) << "%." << std::endl;
   }
 }

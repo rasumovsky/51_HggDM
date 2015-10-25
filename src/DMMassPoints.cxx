@@ -39,6 +39,11 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
   m_options = newOptions;
   m_hists.clear();
   
+  // For the full cut-flow:
+  m_componentCutFlows.clear();
+  m_componentNorms.clear();
+  m_cutFlowHist = NULL;
+  
   // Load the config file:
   m_config = new Config(m_configFileName);
   
@@ -70,27 +75,107 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
 
 /**
    -----------------------------------------------------------------------------
+   Combine the MxAOD cutflow histograms with the histograms that have analysis-
+   specific cut information implemented.
+*/
+void DMMassPoints::combineCutFlowHists() {
+  std::cout << "DMMassPoints: Combine the cutflow histograms." << std::endl;
+  TH1F *fullCutFlowHist = new TH1F(Form("cutFlowFull_%s", m_sampleName.Data()),
+				   Form("cutFlowFull_%s", m_sampleName.Data()),
+				   m_cutFlowHist->GetNbinsX(), 0,
+				   m_cutFlowHist->GetNbinsX());
+  int nMxAODCuts = (int)((m_config->getStrV("MxAODCutList")).size());
+  
+  // Check the sizes of samples:
+  if (m_componentNorms.size() != m_componentCutFlows.size()) {
+    std::cout << "DMMassPoints: ERROR! Wrong normalization of samples." 
+	      << std::endl;
+    exit(0);
+  }
+  
+  // Loop over component cutflows and add them to the new cutflow:
+  for (int i_c = 0; i_c < (int)m_componentCutFlows.size(); i_c++) {
+    for (int i_b = 0; i_b <= m_componentCutFlows[i_c]->GetNbinsX()+1; i_b++) {
+      //fullCutFlowHist->Fill(m_componentCutFlows[i_c]->GetBinCenter(i_b), 
+      //		    m_componentCutFlows[i_c]->GetBinContent(i_b));
+      fullCutFlowHist->Fill(m_componentCutFlows[i_c]->GetBinCenter(i_b), 
+			    (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
+			     m_componentNorms[i_c]));
+    }
+  }
+  
+  // Update the bin labeling:
+  for (int i_b = 1; i_b <= fullCutFlowHist->GetNbinsX(); i_b++) {
+    fullCutFlowHist->GetXaxis()
+      ->SetBinLabel(i_b,(m_componentCutFlows[0])->GetXaxis()->GetBinLabel(i_b));
+  }
+  
+  // Check the results of the cut-flow merging:
+  std::cout << "DMMassPoints: The MxAOD has " 
+	    << fullCutFlowHist->GetBinContent(nMxAODCuts) 
+	    << " while the current program has " 
+	    << m_cutFlowHist->GetBinContent(nMxAODCuts) << " for " 
+	    << fullCutFlowHist->GetXaxis()->GetBinLabel(nMxAODCuts) 
+	    << std::endl;
+  double discrepancy = fabs((fullCutFlowHist->GetBinContent(nMxAODCuts) - 
+			     m_cutFlowHist->GetBinContent(nMxAODCuts)) / 
+			    fullCutFlowHist->GetBinContent(nMxAODCuts));
+  if (discrepancy > 0.01) {
+    std::cout << "DMMassPoints: ERROR! That discrepancy of " << discrepancy 
+	      << " is too large :(" << std::endl;
+    exit(0);
+  }
+  
+  // Then add the cuts from this program:
+  for (int i_b = nMxAODCuts+1; i_b <= m_cutFlowHist->GetNbinsX(); i_b++) {
+    fullCutFlowHist->SetBinContent(i_b, m_cutFlowHist->GetBinContent(i_b));
+  }
+  m_cutFlowHist = fullCutFlowHist;
+  fullCutFlowHist->GetXaxis()->SetBinLabel(nMxAODCuts+1, "Lepton Veto");
+  fullCutFlowHist->GetXaxis()
+    ->SetBinLabel(nMxAODCuts+2,Form("p_{T}^{#gamma#gamma} > %d GeV",
+				    (int)(m_config->getNum("AnaCutDiphotonPT")/
+					  1000.0)));
+  fullCutFlowHist->GetXaxis()
+    ->SetBinLabel(nMxAODCuts+3,Form("#slash{E}_{T} > %d GeV", 
+				    (int)(m_config->getNum("AnaCutETMiss")/
+					  1000.0)));
+  
+  m_cutFlowHist->GetXaxis()->SetNdivisions(m_cutFlowHist->GetNbinsX());
+  m_cutFlowHist->GetXaxis()->CenterLabels();
+  // This TH1F is written to file in the saveHists() method.
+}
+
+/**
+   -----------------------------------------------------------------------------
    Create local copies of files and a new file list.
    @param originListName - The name of the original file list.
    @returns - The name of the new file list.
 */
 TString DMMassPoints::createLocalFilesAndList(TString originListName) {
-  int fileIndex = 0;
+  std::cout << "DMMassPoints: createLocalFilesAndList." << std::endl;
   TString outputListName = "temporaryList.txt";
-  TString currFile;
+  TString currLine;
   ifstream originFile(originListName);
   ofstream outputFile(outputListName);
   while (!originFile.eof()) {
-    originFile >> currFile;
-    if (currFile.Contains("eos/atlas")) outputFile << currFile << std::endl;
-    else {
-      system(Form("cp %s file%d.root", currFile.Data(), fileIndex));
-      outputFile << Form("file%d.root", fileIndex) << std::endl;
+    originFile >> currLine;
+    if (currLine.Contains("eos/atlas")) {
+      TString newLine = currLine;
+      TString directory = currLine.Contains("data") ? 
+	Form("%s/", (m_config->getStr("MxAODDirectoryData")).Data()) :
+	Form("%s/", (m_config->getStr("MxAODDirectoryMC")).Data());
+      newLine.ReplaceAll(directory, "");
+      system(Form("xrdcp %s %s", currLine.Data(), newLine.Data()));
+      outputFile << newLine << std::endl;
     }
-    fileIndex++;
+    else {
+      outputFile << currLine << std::endl;
+    }
   }
   originFile.close();
   outputFile.close();
+  std::cout << "DMMassPoints: Finished copying files." << std::endl;
   return outputListName;
 }
 
@@ -174,7 +259,6 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex, TString sampleName) {
 void DMMassPoints::mergeMassPoints(TString newSampleName, 
 				   DMMassPoints *inputMassPoints,
 				   bool saveMassPoints) {
-
   
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     // First rename the datasets in this object:
@@ -254,7 +338,9 @@ void DMMassPoints::saveHists() {
   for (histIter = m_hists.begin(); histIter != m_hists.end(); histIter++) {
     histIter->second->Write();
   }
-  
+  // Also save the cutflow hist to this file:
+  m_cutFlowHist->Write();
+
   outputFile->Close();
   delete outputFile;
 }
@@ -277,7 +363,7 @@ void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
 void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
   
-  // Alternative: use file list:
+  // Use file list:
   TString listName = DMAnalysis::nameToFileList(m_config, m_sampleName);
   // If option says copy files, make local file copies and then run:
   if (m_options.Contains("CopyFile")) {
@@ -289,15 +375,10 @@ void DMMassPoints::createNewMassPoints() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt, m_configFileName);
   
-  // Tool to get the total number of events at the generator level.
-  DMxAODCutflow *dmx
-    = new DMxAODCutflow(DMAnalysis::nameToxAODCutFile(m_config, m_sampleName));
-  double nGeneratedEvt = dmx->getEventsPassingCut(1);
-  delete dmx;
-  
-  // Tool to load cross sections and branching ratios:
-  BRXSReader *brxs = new BRXSReader(m_configFileName);
-  
+  // For updating the nTotalEventsInFile:
+  TString currFileName = "";
+  double nTotalEventsInFile = 0.0;
+
   std::map<string,RooDataSet*> dataMap;
   dataMap.clear();
   
@@ -306,13 +387,13 @@ void DMMassPoints::createNewMassPoints() {
   args->add(*m_yy);
   
   // Define histograms to save:
-  newHist1D("pTyy", 40, 0.0, 600.0);
-  newHist1D("ETMiss", 40, 0.0, 600.0);
-  newHist1D("ratioETMisspTyy", 40, 0.0, 4.0);
-  newHist1D("aTanRatio", 40, 0.0, TMath::Pi()/2.0);
-  newHist1D("myy", 40, 105.0, 160.0);
-  newHist1D("sumSqrtETMisspTyy", 40, 0.0, 600);
-  newHist1D("dPhiyyETMiss", 40, 0.0, TMath::Pi());
+  newHist1D("pTyy", 25, 0.0, 500.0);
+  newHist1D("ETMiss", 20, 0.0, 400.0);
+  newHist1D("ratioETMisspTyy", 20, 0.0, 4.0);
+  newHist1D("aTanRatio", 20, 0.0, TMath::Pi()/2.0);
+  newHist1D("myy", 20, 105.0, 160.0);
+  newHist1D("sumSqrtETMisspTyy", 20, 0.0, 600);
+  //newHist1D("dPhiyyETMiss", 20, 0.0, TMath::Pi());
   newHist1D("njets", 8, 0, 8);
   newHist1D("nleptons", 5, 0, 5);
   
@@ -349,80 +430,84 @@ void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: Loop over DMTree with " << entries
 	    << " entries." << std::endl;
   for (Long64_t event = 0; event < entries; event++) {
+    
+    // Load event and print the progress bar:
     dmt->fChain->GetEntry(event);
+    //printProgressBar(event, entries);
+    
+    // Check if this is a new file (which requires a different overall norm:
+    if (!currFileName.EqualTo(chain->GetFile()->GetName())) {
+      currFileName = chain->GetFile()->GetName();
+      std::cout << "DMMassPoints: Switch to file : " << currFileName
+		<< std::endl;
+      // Tool to get the total number of events at the generator level.
+      DMxAODCutflow *dmx = new DMxAODCutflow(currFileName, m_configFileName);
+      nTotalEventsInFile = dmx->nTotalEventsInFile();
+      
+      // Then also get the cutflow histogram:
+      double currNorm = 1.00000000;
+      TH1F* currHist = (TH1F*)dmx->getHist()->Clone();
+      if (m_isWeighted) {
+	//currNorm = (m_config->getNum("analysisLuminosity") * 
+	//	    dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff /
+	//	    nTotalEventsInFile);
+	// Normalization of inputs to 1 fb-1:
+	currNorm = (1000.0 * dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff /
+		    nTotalEventsInFile);
+	
+	// Add branching ratio for DM samples:
+	if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
+	  currNorm *= m_config->getNum("BranchingRatioHyy");
+	}
+	//currHist->Scale(currNorm);
+      }
+      m_componentCutFlows.push_back(currHist);
+      m_componentNorms.push_back(currNorm);
+    }
     
     // Calculate the weights for the cutflow first!
-    double evtWeight = 1.0;
+    double evtWeight = 1.00000000;
     if (m_isWeighted) {
-      double pileupWeight = 1.0;//dmt->EventInfoAuxDyn_PileupWeight;
-      evtWeight *= (m_config->getNum("analysisLuminosity") * 
-		    pileupWeight / nGeneratedEvt);
+      //evtWeight = (m_config->getNum("analysisLuminosity") * 
+      //	   dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff * 
+      //	   dmt->HGamEventInfoAuxDyn_weight / nTotalEventsInFile);
+      // Normalization of inputs to 1 fb-1:
+      evtWeight = (1000.0 * dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff * 
+		   dmt->HGamEventInfoAuxDyn_weight / nTotalEventsInFile);
       
-      // Multiply by the appropriate luminosity, xsection & branching ratio.
-      if (DMAnalysis::isSMSample(m_config, m_sampleName)) {
-	evtWeight *= ((brxs->getSMBR(m_config->getNum("higgsMass"),
-				     "gammagamma", "BR")) *
-		      (brxs->getSMXS(m_config->getNum("higgsMass"), 
-				     m_sampleName, "XS")));
-      }
-      // Dark matter XSBR includes cross-section and branching ratio.
-      else if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
-	// Multiply by cross-section in pb:
-	evtWeight *=brxs->getDMXSBR(DMAnalysis::getMediatorMass(m_config,
-								m_sampleName),
-				    DMAnalysis::getDarkMatterMass(m_config,
-								  m_sampleName),
-				    DMAnalysis::getMediatorName(m_sampleName),
-				    "XS");
-	evtWeight *=brxs->getDMXSBR(DMAnalysis::getMediatorMass(m_config,
-								m_sampleName),
-				    DMAnalysis::getDarkMatterMass(m_config,
-								  m_sampleName),
-				    DMAnalysis::getMediatorName(m_sampleName),
-				    "FEFF");
-      }
-      else if (DMAnalysis::isWeightedSample(m_config, m_sampleName)) {
-	evtWeight *= brxs->getMCXS(m_sampleName, "XS");
-	evtWeight *= brxs->getMCXS(m_sampleName, "FEFF");
-      }
-      else {
-	std::cout << "DMMassPoint: Error! No weighting procedure defined!"
-		  << std::endl;
-	exit(0);
+      // Also add in branching ratio for DM samples:
+      if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
+	evtWeight *= m_config->getNum("BranchingRatioHyy");
       }
     }
     
     // The mass parameter:
-    double invariantMass = dmt->HGamEventInfoAuxDyn_HighMet_yy_m;
-    if (m_config->getBool("RescaleAFII") && 
-	DMAnalysis::isDMSample(m_config, m_sampleName)) {
-      invariantMass += 1.0;
+    double invariantMass = dmt->HGamEventInfoAuxDyn_m_yy / 1000.0;
+    int nLeptons = ((int)(dmt->HGamElectronsAuxDyn_pt->size()) +
+		    (int)(dmt->HGamMuonsAuxDyn_pt->size()));
+    //if (m_config->getBool("RescaleAFII") && 
+    //	DMAnalysis::isDMSample(m_config, m_sampleName)) {
+    //invariantMass += 1.0;
+    //}
+
+    // Then commence plotting for events passing inclusive H->yy selection:
+    double varEtMiss = dmt->HGamEventInfoAuxDyn_TST_met / 1000.0;
+    double varPtYY = dmt->HGamEventInfoAuxDyn_pT_yy / 1000.0;
+    if (dmt->HGamEventInfoAuxDyn_cutFlow >= 
+	(int)m_config->getStrV("MxAODCutList").size()) {
+      fillHist1D("pTyy", true, varPtYY, evtWeight, -1);
+      fillHist1D("ETMiss", true, varEtMiss, evtWeight, -1);
+      fillHist1D("ratioETMisspTyy", true, (varEtMiss / varPtYY), evtWeight, -1);
+      fillHist1D("sumSqrtETMisspTyy", true,
+		 sqrt(varEtMiss*varEtMiss+varPtYY*varPtYY), evtWeight, -1);
+      fillHist1D("aTanRatio",true,TMath::ATan(varEtMiss/varPtYY),evtWeight,-1);
+      fillHist1D("myy", true, invariantMass, evtWeight, -1);
+      fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_Njets, evtWeight, -1);
+      fillHist1D("nleptons", true, nLeptons, evtWeight, -1);
     }
-    // Then commence plotting for ALL events:
-    fillHist1D("pTyy", true, dmt->HGamEventInfoAuxDyn_HighMet_yy_pt,
-	       evtWeight, -1);
-    fillHist1D("ETMiss", true, dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST,
-	       evtWeight, -1);
-    fillHist1D("ratioETMisspTyy", true, 
-	       (dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
-		dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
-	       evtWeight, -1);
-    fillHist1D("sumSqrtETMisspTyy", true, sqrt(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST*dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST + dmt->HGamEventInfoAuxDyn_HighMet_yy_pt*dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
-	       evtWeight, -1);
-    fillHist1D("aTanRatio", true, 
-	       TMath::ATan(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
-			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
-	       evtWeight, -1);
-    fillHist1D("myy", true, invariantMass, evtWeight, -1);
-    fillHist1D("dPhiyyETMiss", true, 
-	       dmt->HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi, evtWeight, -1);
-    fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_HighMet_jet_n,
-	       evtWeight, -1);
-    fillHist1D("nleptons", true, dmt->HGamEventInfoAuxDyn_HighMet_lep_n2,
-	       evtWeight, -1);
     
     // Make sure events pass the selection:
-    if (!selector->passesCut("allCuts", evtWeight)) continue;
+    if (!selector->passesCut("AllCuts", evtWeight)) continue;
     
     // Save the categories:
     int currCate = selector->getCategoryNumber(m_config->getStr("cateScheme"),
@@ -440,27 +525,17 @@ void DMMassPoints::createNewMassPoints() {
     massFiles[currCate] << invariantMass << " " << evtWeight << std::endl;
     
     // Then commence plotting for PASSING events:
-    fillHist1D("pTyy", false, dmt->HGamEventInfoAuxDyn_HighMet_yy_pt,
-	       evtWeight, currCate);
-    fillHist1D("ETMiss", false, dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST,
-	       evtWeight, currCate);
-    fillHist1D("ratioETMisspTyy", false, 
-	       (dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
-		dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
-	       evtWeight, currCate);
-    fillHist1D("sumSqrtETMisspTyy", false, sqrt(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST*dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST + dmt->HGamEventInfoAuxDyn_HighMet_yy_pt*dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), evtWeight, currCate);
-    fillHist1D("aTanRatio", false, 
-	       TMath::ATan(dmt->HGamEventInfoAuxDyn_HighMet_MET_reb_TST/
-			   dmt->HGamEventInfoAuxDyn_HighMet_yy_pt), 
+    fillHist1D("pTyy", false, varPtYY, evtWeight, currCate);
+    fillHist1D("ETMiss", false, varEtMiss, evtWeight, currCate);
+    fillHist1D("ratioETMisspTyy", false,(varEtMiss/varPtYY),evtWeight,currCate);
+    fillHist1D("sumSqrtETMisspTyy", false, 
+	       sqrt(varEtMiss*varEtMiss+varPtYY*varPtYY), evtWeight, currCate);
+    fillHist1D("aTanRatio", false, TMath::ATan(varEtMiss/varPtYY), 
 	       evtWeight, currCate);
     fillHist1D("myy", false, invariantMass, evtWeight, currCate);
-    fillHist1D("dPhiyyETMiss", false, 
-	       dmt->HGamEventInfoAuxDyn_HighMet_yy_met_deltaPhi,
-	       evtWeight, currCate);
-    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_HighMet_jet_n,
-	       evtWeight, currCate);
-    fillHist1D("nleptons", false, dmt->HGamEventInfoAuxDyn_HighMet_lep_n2,
-	       evtWeight, -1);
+    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_Njets, evtWeight, 
+	       currCate);
+    fillHist1D("nleptons", false, nLeptons, evtWeight, -1);
   }
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
   
@@ -474,20 +549,23 @@ void DMMassPoints::createNewMassPoints() {
 				    (m_config->getStr("cateScheme")).Data(),
 				    m_sampleName.Data()), m_isWeighted);
   
+  // Then retrieve the cutflow hist and save it:
+  m_cutFlowHist = selector->retrieveCutflowHist(m_isWeighted);
+  combineCutFlowHists();
+  
   // Close output mass point files.
   for (int i_f = 0; i_f < m_config->getInt("nCategories"); i_f++) {
     massFiles[i_f].close();
   }
   
   // If options said to run locally, remove the files.
-  if (m_options.Contains("CopyFile")) {
-    removeLocalFilesAndList(listName);
-  }
+  if (m_options.Contains("CopyFile")) removeLocalFilesAndList(listName);
 
-  // Finally, save the histograms to file:
+  // Finally, save the histograms (including variables and cutflow) to file:
   saveHists();
   
   std::cout << "DMMassPoints: Finished creating new mass points!" << std::endl;
+  delete selector;
 }
 
 /**
@@ -560,15 +638,39 @@ void DMMassPoints::loadMassPointsFromFile() {
 
 /**
    -----------------------------------------------------------------------------
+   Prints a progress bar to screen to provide elapsed time and remaining time
+   information to the user. This is useful when processing large datasets. 
+   @param index - The current event index.
+   @param total - The total number of events.
+*/
+void DMMassPoints::printProgressBar(int index, int total) {
+  if (index%10000 == 0) {
+    TString print_bar = " [";
+    for (int bar = 0; bar < 20; bar++) {
+      double current_fraction = double(bar) / 20.0;
+      if (double(index)/double(total) > current_fraction) print_bar.Append("/");
+      else print_bar.Append(".");
+    }
+    print_bar.Append("] ");
+    double percent = 100.0 * (double(index) / double(total));
+    TString text = Form("%s %2.2f ", print_bar.Data(), percent);
+    std::cout << text << "%\r" << std::flush; 
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
    Remove the local files and file list.
    @param listName - The name of the local file list.
 */
 void DMMassPoints::removeLocalFilesAndList(TString listName) {
-  TString currFile;
+  TString currLine;
   ifstream localFile(listName);
   while (!localFile.eof()) {
-    localFile >> currFile;
-    if (!currFile.Contains("eos/atlas")) system(Form("rm %s", currFile.Data()));
+    localFile >> currLine;
+    if (!currLine.Contains("eos/atlas") && !currLine.EqualTo("")) {
+      system(Form("rm %s", currLine.Data()));
+    }
   }
   localFile.close();
   system(Form("rm %s", listName.Data()));

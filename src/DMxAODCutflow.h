@@ -26,13 +26,17 @@
 #include "TFile.h"
 #include "TH1F.h"
 
+// Package includes:
+#include "Config.h"
+#include "DMAnalysis.h"
+
 class DMxAODCutflow 
 {
   
  public:
   
   //DMxAODCutflow();
-  DMxAODCutflow(TString fileName);
+  DMxAODCutflow(TString fileName, TString configFileName);
   virtual ~DMxAODCutflow() {};
   
   // Accessors:
@@ -44,6 +48,7 @@ class DMxAODCutflow
   double getPercentPassingCut(TString cutName);
   double getAccXEffAtCut(TString cutName);
   void printxAODCutflow();
+  double nTotalEventsInFile();
   
  private:
   
@@ -53,10 +58,16 @@ class DMxAODCutflow
   // Member objects:
   int nCuts;
   std::vector<TString> cutList;
-  std::map<TString,double> passCounter;
+  std::map<TString,double> passCounter_weighted;
+  std::map<TString,double> passCounter_unweighted;
   
+  bool m_unskimmed;
+  bool m_isWeighted;
   TFile *m_inputFile;
-  TH1F *m_histCuts;
+  TH1F *m_histCuts_weighted;
+  TH1F *m_histCuts_unweighted;
+  //TH1F *m_histCuts_weighted_NoDalitz;
+  
 };
 
 #endif

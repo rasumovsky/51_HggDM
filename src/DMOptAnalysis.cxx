@@ -165,8 +165,9 @@ void DMOptAnalysis::loadOptimizationData(TString directory) {
     else {
       AnaInfo *currAna = new AnaInfo((vectorizedLine[0]).Atoi());
       for (int i_c = 1; i_c < (int)vectorizedLine.size(); i_c++) {
-	currAna->setCutVal(m_optimizedCutList[i_c-1], 
-			   (vectorizedLine[i_c]).Atof());
+	double currentCutVal = (vectorizedLine[i_c]).Atof();
+	if (currentCutVal > 1000.) currentCutVal = currentCutVal / 1000.0;
+	currAna->setCutVal(m_optimizedCutList[i_c-1], currentCutVal);
       }
       
       // Then loop over the signals:
@@ -313,17 +314,6 @@ void DMOptAnalysis::plotCutsAndStat(TString signal, TString cutNameX,
   }
   //hCont->Draw("surf1");
   hCont->Draw("COLZ");
-  /*
-  TPolyLine3D *pl3d1 = new TPolyLine3D(2);
-  pl3d1->SetLineColor(kRed);
-  pl3d1->SetLineWidth(3);
-  pl3d1->SetPoint(0, xMin, yOpt, hCont->GetZaxis()->GetXmin());
-  pl3d1->SetPoint(1, xMin, yOpt, zOpt);
-  pl3d1->SetPoint(2, xOpt, yOpt, zOpt);
-  pl3d1->SetPoint(3, xOpt, yMin, zOpt);
-  pl3d1->SetPoint(4, xOpt, yMin, hCont->GetZaxis()->GetXmin());
-  pl3d1->Draw("SAME");
-  */  
   can->Print(Form("%s/%s/%s_%s_vs_%s.eps", m_outputDir.Data(), signal.Data(), 
 		  statistic.Data(), cutNameX.Data(), cutNameY.Data()));
   can->Clear();

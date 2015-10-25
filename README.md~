@@ -24,14 +24,13 @@ inputs have been produced previously before generating them from scratch.
 
 ### Package contents:
 
-##### data/settingsHDM_h008.cfg
+##### settingsHDM.cfg
   Luminosity, higgs mass, m_yy range, file names, script locations, production 
-  mode information should all go here. The user should be very careful when
-  modifying this file between analysis steps.
+  mode information should all go here.
 
 ##### DMAnalysis
-  This namespace stores all general analysis methods. The idea is to avoid hard-
-  coding anything in the supporting classes. 
+  This namespace should store all general analysis methods. The idea is to
+  avoid hard-coding anything in the supporting classes. 
 
 ##### DMMaster
   This is the master 'wrapper' class for the analysis. Using this class, all the

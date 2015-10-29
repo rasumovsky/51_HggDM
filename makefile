@@ -38,7 +38,7 @@ GLIBS	+= -lTreePlayer -lProof -lProofPlayer -lutil -lRooFit -lRooFitCore  -lRooS
 OBJS_Template		= obj/template.o
 DEPS_Template		:= $(OBJS_Template:.o=.d) 
 
-bin/%	: obj/%.o obj/statistics.o obj/statisticsDict.o obj/RooBernsteinM.o obj/RooBernsteinMDict.o obj/CommonFunc.o obj/Config.o obj/HggTwoSidedCBPdf.o obj/HggTwoSidedCBPdfDict.o obj/DMTree.o obj/BRXSReader.o obj/PESReader.o obj/PERReader.o obj/DMxAODCutflow.o obj/DMEvtSelect.o obj/DMCheckJobs.o obj/DMAnalysis.o obj/DMMassPoints.o obj/SigParam.o obj/SigParamInterface.o obj/BkgModel.o obj/DMWorkspace.o obj/DMTestStat.o obj/DMToyTree.o obj/DMToyAnalysis.o obj/DMOptAnalysis.o
+bin/%	: obj/%.o obj/statistics.o obj/statisticsDict.o obj/RooBernsteinM.o obj/RooBernsteinMDict.o obj/CommonFunc.o obj/Config.o obj/HggTwoSidedCBPdf.o obj/HggTwoSidedCBPdfDict.o obj/DMTree.o obj/PESReader.o obj/PERReader.o obj/DMxAODCutflow.o obj/DMEvtSelect.o obj/DMCheckJobs.o obj/DMAnalysis.o obj/DMMassPoints.o obj/SigParam.o obj/SigParamInterface.o obj/BkgModel.o obj/DMWorkspace.o obj/DMTestStat.o obj/DMToyTree.o obj/DMToyAnalysis.o obj/DMOptAnalysis.o obj/AnaInfo.o obj/AnaCollection.o 
 
 	@echo "Linking " $@
 	echo $(LD) $(LDFLAGS) $^ $(GLIBS) -o $@	
@@ -75,5 +75,5 @@ obj/%Dict.o:	%.hh
 
 clean:
 	@echo "Cleaning $<..."
-	rm -fr *~ obj/*.o */*~ *_Dict.* *.a 
+	rm -fr *~ obj/*.d */*~ *_Dict.* *.a bin/*
 	@echo "Done"

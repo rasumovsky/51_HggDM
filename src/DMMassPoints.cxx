@@ -84,6 +84,7 @@ void DMMassPoints::combineCutFlowHists() {
 				   Form("cutFlowFull_%s", m_sampleName.Data()),
 				   m_cutFlowHist->GetNbinsX(), 0,
 				   m_cutFlowHist->GetNbinsX());
+  
   int nMxAODCuts = (int)((m_config->getStrV("MxAODCutList")).size());
   
   // Check the sizes of samples:
@@ -95,12 +96,20 @@ void DMMassPoints::combineCutFlowHists() {
   
   // Loop over component cutflows and add them to the new cutflow:
   for (int i_c = 0; i_c < (int)m_componentCutFlows.size(); i_c++) {
-    for (int i_b = 0; i_b <= m_componentCutFlows[i_c]->GetNbinsX()+1; i_b++) {
+    for (int i_b = 1; i_b <= m_componentCutFlows[i_c]->GetNbinsX(); i_b++) {
       //fullCutFlowHist->Fill(m_componentCutFlows[i_c]->GetBinCenter(i_b), 
-      //		    m_componentCutFlows[i_c]->GetBinContent(i_b));
-      fullCutFlowHist->Fill(m_componentCutFlows[i_c]->GetBinCenter(i_b), 
-			    (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
-			     m_componentNorms[i_c]));
+      //		     (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
+      //		     m_componentNorms[i_c]));
+      double addedValue = (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
+			   m_componentNorms[i_c]);
+      double addedError = (m_componentCutFlows[i_c]->GetBinError(i_b) * 
+			   m_componentNorms[i_c]);
+      // Error = sqrt(prevErr^2 + newErr^2)
+      double newError = sqrt((fullCutFlowHist->GetBinError(i_b) * 
+			      fullCutFlowHist->GetBinError(i_b)) + 
+			     (addedError * addedError));
+      fullCutFlowHist->AddBinContent(i_b, addedValue);
+      fullCutFlowHist->SetBinError(i_b, newError);
     }
   }
   
@@ -129,6 +138,7 @@ void DMMassPoints::combineCutFlowHists() {
   // Then add the cuts from this program:
   for (int i_b = nMxAODCuts+1; i_b <= m_cutFlowHist->GetNbinsX(); i_b++) {
     fullCutFlowHist->SetBinContent(i_b, m_cutFlowHist->GetBinContent(i_b));
+    fullCutFlowHist->SetBinError(i_b, m_cutFlowHist->GetBinError(i_b));
   }
   m_cutFlowHist = fullCutFlowHist;
   fullCutFlowHist->GetXaxis()->SetBinLabel(nMxAODCuts+1, "Lepton Veto");
@@ -315,15 +325,21 @@ void DMMassPoints::newHist1D(TString varName, int nBins, double xMin,
   m_hists[Form("%s_ALL",varName.Data())]
     = new TH1F(Form("%s_ALL",varName.Data()), Form("%s_ALL",varName.Data()),
 	       nBins, xMin, xMax);
+  if (m_isWeighted) m_hists[Form("%s_ALL",varName.Data())]->Sumw2(true);
+  
   m_hists[Form("%s_PASS",varName.Data())]
     = new TH1F(Form("%s_PASS",varName.Data()), Form("%s_PASS",varName.Data()),
 	       nBins, xMin, xMax);
+  if (m_isWeighted) m_hists[Form("%s_PASS",varName.Data())]->Sumw2(true);
   
   // Categorized histograms:
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     m_hists[Form("%s_c%d_PASS",varName.Data(),i_c)]
       = new TH1F(Form("%s_c%d_PASS",varName.Data(),i_c),
 		 Form("%s_c%d_PASS",varName.Data(),i_c),nBins,xMin,xMax);
+    if (m_isWeighted) {
+      m_hists[Form("%s_c%d_PASS",varName.Data(),i_c)]->Sumw2(true);
+    }
   }
 }
 

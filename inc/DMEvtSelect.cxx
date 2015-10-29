@@ -66,6 +66,7 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   // Create a temporary cutflow histogram, to be replaced:
   m_cutFlowHist_weighted = new TH1F("cutflow_weighted", "cutflow_weighted",
 				    cutList.size()-1, 0, cutList.size()-1);
+  m_cutFlowHist_weighted->Sumw2(true);
   
   // Create a temporary cutflow histogram, to be replaced:
   m_cutFlowHist_unweighted = new TH1F("cutflow_unweighted","cutflow_unweighted",

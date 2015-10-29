@@ -8,8 +8,7 @@
 //                                                                            //
 //  This class builds the workspace for the dark matter analysis fits.        //
 //                                                                            //
-//  Options: "StackPlot" to stack all backgrounds together.                   //
-//           "LogScale" to set logarithmic y-axis.                            //
+//  Options: "LogScale" to set logarithmic y-axis.                            //
 //           "CombineSM" to combine H->yy SM production modes.                //
 //           "Normalize" to scale to unity                                    //
 //           "Scale2Data" to scale the plot to data normalization             //
@@ -177,12 +176,12 @@ void loadSampleHistograms(TString sampleName, TString varName) {
   }
   
   // Sum up everything but the DM signal for axis scaling:
-  if (varName.Contains("cutFlowFull")) {
-    nonDMSum_ALL += hAll->GetBinContent(3);
-  }
-  else {
-    if (!DMAnalysis::isDMSample(m_config, sampleName) && 
-	!sampleName.Contains("Data")) {
+  if (!DMAnalysis::isDMSample(m_config, sampleName) && 
+      !sampleName.Contains("Data")) {
+    if (varName.Contains("cutFlowFull")) {
+      nonDMSum_ALL += hAll->GetBinContent(3);
+    }
+    else {
       nonDMSum_ALL += hAll->Integral();
       nonDMSum_PASS += hPass->Integral();
     }
@@ -208,11 +207,24 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
   TString endTag = allEvents ? "_ALL" : "_PASS";
   
   // Begin plotting:
-  TCanvas *can = new TCanvas("can", "can", 800, 600);
+  //TCanvas *can = new TCanvas("can", "can", 800, 600);
+  //can->cd();
+  
+  TCanvas *can = new TCanvas("can", "can", 800, 800);
   can->cd();
+  TPad *pad1 = new TPad( "pad1", "pad1", 0.00, 0.33, 1.00, 1.00 );
+  TPad *pad2 = new TPad( "pad2", "pad2", 0.00, 0.00, 1.00, 0.33 );
+  pad1->SetBottomMargin(0.00001);
+  pad1->SetBorderMode(0);
+  pad2->SetTopMargin(0.00001);
+  pad2->SetBottomMargin(0.4);
+  pad2->SetBorderMode(0);
+  pad1->Draw();
+  pad2->Draw();
+  pad1->cd();
   
   // Create a legend to which we will add items:
-  TLegend leg(0.5,0.73,0.92,0.91);
+  TLegend leg(0.5,0.65,0.92,0.91);
   leg.SetBorderSize(0);
   leg.SetFillColor(0);
   leg.SetTextSize(0.03);
@@ -228,6 +240,12 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
   Color_t colorStack[14] = {kViolet+6, kTeal-9, kOrange+1, kAzure-2, kYellow-9, 
 			    kRed-7, kTeal-3, kAzure-8, kMagenta-10, kOrange+7,  
 			    kBlue-10, kGreen-6, kOrange-2,kRed+2};
+  
+  // Save sumw2 errors for each bin:
+  double centersX[100] = {0.0}; double errorsX[100] = {0.0}; 
+  double centersY[100] = {0.0}; double errorsY[100] = {0.0}; 
+  double centersRatioY[100] = {0.0}; double errorsRatioY[100] = {0.0};
+  TH1F* dataHistPointer = NULL;
   
   // Loop over the saved histograms:
   int index = 0; int indexSM = 0; int indexDM = 0; int indexBkg = 0;
@@ -252,8 +270,6 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
       if (badSample) continue;
     }
     
-    //std::cout << "\tSample index " << index << ", " << currName << std::endl;
-    
     // Get pointer to the histogram and modify the name:
     TH1F *currHist = m_hists[i_s];
     currName = currName.ReplaceAll("_"+varName, "");
@@ -261,7 +277,9 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
     currName = currName.ReplaceAll(Form("_c%d",cateIndex), "");
     
     // SMOOTHING?
-    if (m_options.Contains("Smooth") && !DMAnalysis::isDMSample(m_config, currName) && !currName.Contains("Data")) {
+    if (m_options.Contains("Smooth") && 
+	!DMAnalysis::isDMSample(m_config, currName) &&
+	!currName.Contains("Data")) {
       currHist->Smooth(1);
     }
     
@@ -280,17 +298,32 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
 	// Scale to appropriate luminosity
 	scaleFactor = 0.001 * m_config->getNum("analysisLuminosity");
       }
+    
+      // Then scale histograms and format:
       currHist->Scale(scaleFactor);
       currHist->SetFillColor(colorStack[index]);
       currHist->SetLineWidth(2);
       hs.Add(currHist);
       leg.AddEntry(currHist, 
 		   DMAnalysis::getPrintSampleName(m_config, currName), "F");
+    
+      // Loop over histogram bins to calculate errors:
+      for (int i_b = 1; i_b <= currHist->GetNbinsX(); i_b++) {
+	errorsX[i_b] = 0.5 * currHist->GetBinWidth(i_b);
+	errorsY[i_b] = sqrt((errorsY[i_b] * errorsY[i_b]) + 
+			    (currHist->GetBinError(i_b) * 
+			     currHist->GetBinError(i_b)));
+	centersX[i_b] = currHist->GetBinCenter(i_b);
+	centersY[i_b] += currHist->GetBinContent(i_b); 
+	centersRatioY[i_b] = 1.0;
+	errorsRatioY[i_b] = errorsY[i_b] / centersY[i_b];
+      }
     }
     // DM sample:
     else if (DMAnalysis::isDMSample(m_config, currName)) {
       currHist->SetLineColor(colorListDM[indexDM]);
       currHist->SetLineStyle(2+indexDM);
+      //currHist->SetMarkerSize(0);
       indexDM++;
       leg.AddEntry(currHist, DMAnalysis::getPrintSampleName(m_config, currName),
 		   "L");
@@ -309,7 +342,24 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
     }
     // Data:
     else {
+      if (m_options.Contains("Normalize")) {
+	double scaleFactor = 1.0;
+	if (varName.Contains("cutFlowFull")) {
+	  scaleFactor = 1.0 / currHist->GetBinContent(3);
+	  for (int i_b = 1; i_b <= currHist->GetNbinsX(); i_b++) {
+	    currHist->SetBinContent(i_b, (currHist->GetBinContent(i_b) * 
+					  scaleFactor));
+	    currHist->SetBinError(i_b, (currHist->GetBinError(i_b) * 
+					scaleFactor));
+	  }
+	}
+	else {
+	  scaleFactor = 1.0 / currHist->Integral();
+	  currHist->Scale(scaleFactor);
+	}	
+      }
       leg.AddEntry(currHist, "Data", "lep");
+      dataHistPointer = currHist;
     }
     
     // Format plot axes:
@@ -330,21 +380,23 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
     
     if (m_options.Contains("LogScale")) {
       if (m_options.Contains("Normalize")) {
-	currHist->GetYaxis()->SetRangeUser(0.00000001, 1000);
+	currHist->GetYaxis()->SetRangeUser(0.000000011, 1000);
 	currHist->GetYaxis()->SetTitle("Fractional Acceptance");
       }
       else if (allEvents) {
-	currHist->GetYaxis()->SetRangeUser(0.01, 100*nonDMSum_ALL);
+	currHist->GetYaxis()->SetRangeUser(0.011, 100*nonDMSum_ALL);
       }
-      else currHist->GetYaxis()->SetRangeUser(0.01, 100*nonDMSum_PASS);
+      else currHist->GetYaxis()->SetRangeUser(0.011, 100*nonDMSum_PASS);
       gPad->SetLogy();
     }
     else {
       if (m_options.Contains("Normalize")) {
-	currHist->GetYaxis()->SetRangeUser(0.0, 2.0);
+	currHist->GetYaxis()->SetRangeUser(0.001, 2.0);
       }
-      else if (allEvents) currHist->GetYaxis()->SetRangeUser(0.0, nonDMSum_ALL);
-      else currHist->GetYaxis()->SetRangeUser(0.0, nonDMSum_PASS);
+      else if (allEvents) {
+	currHist->GetYaxis()->SetRangeUser(0.001, nonDMSum_ALL);
+      }
+      else currHist->GetYaxis()->SetRangeUser(0.001, nonDMSum_PASS);
     }
     
     if (varName.Contains("njets") || varName.Contains("nleptons")) {
@@ -352,19 +404,34 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
       currHist->GetXaxis()->CenterLabels();
     }
     
+    currHist->GetYaxis()->SetNdivisions(currHist->GetNbinsX());
+    
     // Draw the histograms:
     if (index == 0) currHist->Draw();
-    else if (!m_options.Contains("StackPlot") && !currName.Contains("Data")) {
-      currHist->Draw("SAME");
-    }
-    
     index++;
   }
   
+  // Create an error graph:
+  TGraphAsymmErrors *gErrors
+    = new TGraphAsymmErrors(m_hists[0]->GetNbinsX()+1, centersX, centersY, 
+			    errorsX, errorsX, errorsY, errorsY);
+  gErrors->SetFillStyle(3354);
+  gErrors->SetFillColor(kBlack);
+  gErrors->SetLineWidth(2);
+  
+  TGraphAsymmErrors *gErrorsRatio
+    = new TGraphAsymmErrors(m_hists[0]->GetNbinsX()+1, centersX, centersRatioY, 
+			    errorsX, errorsX, errorsRatioY, errorsRatioY);
+  gErrorsRatio->SetFillStyle(3354);
+  gErrorsRatio->SetFillColor(kBlack);
+  gErrorsRatio->SetLineWidth(2);
+  
   // Draw the stack plots:
-  if (m_options.Contains("StackPlot")) hs.Draw("SAMEHIST");
-    
+  hs.Draw("SAMEHIST");
+  gErrors->Draw("e2SAME");
+  
   //Then re-draw DM signals because they might not have been drawn on top:
+  // Also add the DM signal above the other histograms:
   for (int i_s = 0; i_s < (int)m_hists.size(); i_s++) {
     TString currName = m_names[i_s];
     if (!currName.Contains(endTag)) continue;
@@ -385,9 +452,11 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
     currName = currName.ReplaceAll("_"+varName, "");
     currName = currName.ReplaceAll(endTag, "");
     currName = currName.ReplaceAll(Form("_c%d",cateIndex), "");
-    if (DMAnalysis::isDMSample(m_config, currName)) {
-      currHist->Draw("axisSAME");
-      currHist->Draw("SAME");
+    
+    // Only draw if DM sample:
+    if (DMAnalysis::isDMSample(m_config, currName)) {	 
+      currHist->Draw("axishistSAME");
+      currHist->Draw("histSAME");
     }
     else if (currName.Contains("Data")) {
       currHist->Draw("EPSAME");
@@ -402,15 +471,206 @@ void makeCombinedPlot(bool allEvents, TString varName, int cateIndex) {
   
   // Draw the legend then print the canvas:
   leg.Draw("SAME");
+  
+  // Then switch to ratio plot (sub-plot):
+  pad2->cd();
+
+  // Need a data histogram for last part:
+  if (!dataHistPointer) { 
+    std::cout << "PlotVariables: ERROR! No data hist pointer..." << std::endl;
+    exit(0);
+  }
+  
+
+  
+  // Then create data ratio:
+  TH1F *hDataRatio = new TH1F("hDataRatio", "hDataRatio", 
+			      m_hists[0]->GetNbinsX(), 
+			      m_hists[0]->GetXaxis()->GetXmin(),
+			      m_hists[0]->GetXaxis()->GetXmax());
+ 
+  // loop over bins of data histogram, retrieve values:
+  for (int i_b = 1; i_b <= dataHistPointer->GetNbinsX(); i_b++) {
+    double ratioVal = 1.0;
+    double ratioErr = 0.0;
+    if (dataHistPointer) {
+      ratioVal = (dataHistPointer->GetBinContent(i_b) / centersY[i_b]);
+      ratioErr = (dataHistPointer->GetBinError(i_b) / centersY[i_b]);
+    }
+    hDataRatio->SetBinContent(i_b, ratioVal);
+    hDataRatio->SetBinError(i_b, ratioErr);
+  }
+
+  TH1F *hClone = (TH1F*)dataHistPointer->Clone("newData");
+  for (int i_b = 1; i_b <= hClone->GetNbinsX(); i_b++) {
+    hClone->SetBinContent(i_b, 1.0);
+    hClone->SetBinError(i_b, 0.0);
+  }
+  hClone->SetMarkerSize(0);
+  hClone->SetLineStyle(1);
+  hClone->SetLineWidth(2);
+  hClone->SetLineColor(kRed);
+  hClone->GetYaxis()->SetTitle("Data / MC");
+  hClone->GetYaxis()->SetRangeUser(-0.2,2.2);
+  hClone->GetYaxis()->SetNdivisions(5);
+  hClone->GetYaxis()->SetTitleOffset(0.65);
+  hClone->GetXaxis()->SetTitleSize(0.1);
+  hClone->GetYaxis()->SetTitleSize(0.1);
+  hClone->GetXaxis()->SetLabelSize(0.1);
+  hClone->GetYaxis()->SetLabelSize(0.1);
+  hClone->GetXaxis()->SetLabelOffset(0.02);
+  hClone->GetXaxis()->SetTitleOffset(1.5);
+  hClone->Draw("");
+  
+  // Then draw both ratios:
+  gErrorsRatio->Draw("e2same");  
+  hDataRatio->Draw("EPSAME");
+  
+  // Finally, print the canvas:
   if (cateIndex < 0) {
     can->Print(Form("%s/plot_%s%s.eps", m_outputDir.Data(), varName.Data(), 
+		    endTag.Data()));
+    can->Print(Form("%s/plot_%s%s.C", m_outputDir.Data(), varName.Data(), 
 		    endTag.Data()));
   }
   else {
     can->Print(Form("%s/plot_%s_c%d%s.eps", m_outputDir.Data(), varName.Data(), 
 		    cateIndex, endTag.Data()));
+    can->Print(Form("%s/plot_%s_c%d%s.C", m_outputDir.Data(), varName.Data(),
+		    cateIndex, endTag.Data()));
   }
   delete can;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Make a LaTex table with the event yield, percent passing, and efficiency of 
+   each cut for every sample and every cut.
+*/
+void makeLatexTable(TString tableType) {
+  if (!tableType.EqualTo("Backgrounds") && !tableType.EqualTo("SignalAndData")){
+    std::cout << "PlotVariables: Bad table type: " << tableType << std::endl;
+    exit(0);
+  }
+  
+  TString tableLocation = Form("%s/cutFlowTable_%s.txt", m_outputDir.Data(),
+			       tableType.Data());
+  std::ofstream latexTable(tableLocation);
+  latexTable << "\\begin{table}[!htb]" << std::endl;
+  latexTable << "\\caption{Event selection.}" 
+	     << std::endl;
+  latexTable << "\\label{tab:cutFlow}" << std::endl;
+  latexTable << "\\centering" << std::endl;
+  
+  // Come up with the first line (list of cuts):
+  TString firstLine = "Cut";
+  TString tabFormat = "l";
+  // Write the first line, which
+  for (int i_s = 0; i_s < (int)m_hists.size(); i_s++) {
+    TString currName = m_names[i_s];
+    // Histogram selection:
+    if (!currName.Contains("_ALL")) continue;
+    
+    currName = currName.ReplaceAll("_cutFlowFull", "");
+    currName = currName.ReplaceAll("_ALL", "");
+        
+    if (tableType.EqualTo("Backgrounds") && 
+	(DMAnalysis::isDMSample(m_config, currName) ||
+	 DMAnalysis::isSMSample(m_config, currName) ||
+	 currName.Contains("Data") || currName.Contains("SMHiggs"))) {
+      continue;
+    }
+    else if (tableType.EqualTo("SignalAndData") && 
+	     !(DMAnalysis::isDMSample(m_config, currName) || 
+	       DMAnalysis::isSMSample(m_config, currName) ||
+	       currName.Contains("Data") || currName.Contains("SMHiggs"))) {
+      continue;
+    }
+    
+    //makeLatexTable("SignalAndData"
+    TH1F *currHist = m_hists[i_s];
+    TString currPName = DMAnalysis::getPrintSampleName(m_config, currName);
+    currPName.ReplaceAll("#","\\");
+    firstLine += Form(" & $%s$", currPName.Data());
+    tabFormat += "|r";
+  }
+  
+  latexTable << "\\begin{tabular}{" << tabFormat << "}" << std::endl;
+  latexTable << "\\hline" << std::endl;
+  latexTable << firstLine << " \\\\" << std::endl;
+  latexTable << "\\hline" << std::endl;
+  latexTable << "\\hline" << std::endl;
+  // Now loop over cuts (each cut is a row of the table):
+  // Create labels, including list of cuts:
+  TString eventsLine = "Selected events";
+  TString efficiencyLine = "Efficiency";
+
+  int startBin = 3; int endBin = m_hists[0]->GetNbinsX();
+  for (int i_b = startBin; i_b <= endBin; i_b++) {
+    TString currCutName = m_hists[0]->GetXaxis()->GetBinLabel(i_b);
+    currCutName = currCutName.ReplaceAll("#","\\");
+    latexTable << currCutName;
+    
+    // Then loop over samples.
+    for (int i_s = 0; i_s < (int)m_hists.size(); i_s++) {
+      TString currName = m_names[i_s];
+      // Histogram selection:
+      if (!currName.Contains("_ALL")) continue;
+      
+      currName = currName.ReplaceAll("_cutFlowFull", "");
+      currName = currName.ReplaceAll("_ALL", "");
+      
+      if (tableType.EqualTo("Backgrounds") && 
+	  (DMAnalysis::isDMSample(m_config, currName) ||
+	   DMAnalysis::isSMSample(m_config, currName) ||
+	   currName.Contains("Data") || currName.Contains("SMHiggs"))) {
+	continue;
+      }
+      else if (tableType.EqualTo("SignalAndData") && 
+	       !(DMAnalysis::isDMSample(m_config, currName) || 
+		 DMAnalysis::isSMSample(m_config, currName) ||
+		 currName.Contains("Data") || currName.Contains("SMHiggs"))) {
+	continue;
+      }
+      TH1F *currHist = m_hists[i_s];
+      double eventVal = currHist->GetBinContent(i_b);
+      double eventErr = currHist->GetBinError(i_b);
+      double cutRelEff = 100.0 * (currHist->GetBinContent(i_b) /
+				  currHist->GetBinContent(i_b-1));
+      if (i_b == startBin) cutRelEff = 100.0;
+      double cutTotalEff = 100.0 * (currHist->GetBinContent(i_b) /
+				    currHist->GetBinContent(startBin));
+      double cutTotalEffErr = ((eventErr / eventVal) * cutTotalEff);
+      if (!currName.Contains("Data")) {
+	latexTable << " & " << Form("%.2f", eventVal);
+      }
+      else {
+	latexTable << " & " << (int)eventVal;
+      }
+      
+      if (i_b == endBin) {
+	eventsLine += Form(" & %f \\pm %f", eventVal, eventErr);
+	efficiencyLine += Form(" & %f \\pm %f \\%%", 
+			       cutTotalEff, cutTotalEffErr);
+      }
+    }
+    
+    latexTable << "\\\\" << std::endl;
+  }
+  
+  // Then include lines with total passing events and efficiency
+  latexTable << "\\hline" << std::endl;
+  latexTable << "\\hline" << std::endl;
+  latexTable << eventsLine << " \\\\" << std::endl;
+  latexTable << efficiencyLine << " \\\\" << std::endl;
+  
+  // Then loop over samples to get the number of events passing.
+  latexTable << "\\hline" << std::endl;
+  latexTable << "\\end{tabular}" << std::endl;
+  latexTable << "\\end{table}" << std::endl;
+  latexTable.close();
+  std::cout << "PlotVariables: Printed LaTex table: " << tableLocation 
+	    << std::endl;
 }
 
 /**
@@ -512,7 +772,13 @@ int main(int argc, char **argv) {
   if (!m_config->getBool("doBlind")) {
     loadSampleHistograms("Data", varName);
   }
-    
+  
+  // Make a cut-flow table if already making a cutflow plot:
+  if (varName.Contains("cutFlowFull")) {
+    makeLatexTable("Backgrounds");
+    makeLatexTable("SignalAndData");
+  }
+
   // Make the plots without cuts applied and with cuts applied.
   // Avoid this if the variable being plotted is the cutflow:
   makeCombinedPlot(true, varName, -1);
@@ -523,6 +789,6 @@ int main(int argc, char **argv) {
       makeCombinedPlot(false, varName, i_c);
     }
   }
-
+  
   return 0;
 }

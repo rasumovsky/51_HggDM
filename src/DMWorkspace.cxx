@@ -590,6 +590,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
     (tempWS->pdf(Form("sigPdf_%s_%s", m_DMSignal.Data(), currKeyDM.Data())))
       ->SetNameTitle("sigPdfDM","sigPdfDM");
     tempWS->factory("prod::nSigDM(nDM,expectationCommon,expectationDM)");
+    std::cout << "DMWorkspace: The number of DM events expected is "
+	      << tempWS->var("nDM")->getVal() << " in category " 
+	      << m_currCateIndex << std::endl;
   }
   else {
     std::cout << "DMWorkspace: Error importing DM signal." << std::endl;
@@ -882,7 +885,9 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   else {
     (*categoryWS->var("nBkg_"+m_currCateName)).setVal(obsData->sumEntries());
   }
-  
+  std::cout << "DMWorkspace: The number of data events is "
+	    << (*categoryWS->var("nBkg_"+m_currCateName)).getVal()
+	    << " in category " << m_currCateIndex << std::endl;
   
   // Create Asimov data the old-fashioned way:
   createAsimovData(categoryWS, 0, m_muNominalSM);

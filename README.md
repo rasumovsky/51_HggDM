@@ -24,9 +24,11 @@ inputs have been produced previously before generating them from scratch.
 
 ### Package contents:
 
-##### settingsHDM.cfg
+##### settingsHDM_h008.cfg
   Luminosity, higgs mass, m_yy range, file names, script locations, production 
-  mode information should all go here.
+  mode information should all go here. Default job options also are included. 
+  The h008 tag refers to the MxAOD production for which this file has been
+   developed. 
 
 ##### DMAnalysis
   This namespace should store all general analysis methods. The idea is to
@@ -123,15 +125,20 @@ Then to run,
      ./bin/DMMaster <Program> <SettingsFile>
 
 The program can be any of the following options: 
-- MassPoints
-- SigParam
-- Workspace
-- ResubmitWorkspace
-- TossPseudoExp
-- PlotPseudoExp
-- TestStat
-- ResubmitTestStat
-- MuLimit
+  - Cleanup (clean old files from previous analysis runs)
+  - MassPoints (make mass files as inputs for and model)
+  - PlotVariables (plot interesting kinematic variables)
+  - SigParam (build the signal PDF from MC)
+  - BkgModel (build the background model)
+  - Workspace (build the statistical model)
+  - ResubmitWorkspace (submit failed Workspace jobs again)
+  - TossPseudoExp (toss pseudo experiment ensemble)
+  - PlotPseudoExp (plot the results of pseudo experiments)
+  - TestStat (calculate p0 and CLs)
+  - ResubmitTestStat (submit failed TestStat jobs again)
+  - MuLimit (get the 95% CL limit on the parameter of interest)
+  - Optimizer (optimize the analysis selection with meta job)
+  - OptAnalysis (analyze the results of Optimizer)
 
 The code will automatically run any required upstream programs in order to 
 ensure that it has all required inputs. For instance, if you want to create a 

@@ -223,11 +223,11 @@ double DMxAODCutflow::getAccXEffAtCut(TString cutName) {
 */
 double DMxAODCutflow::nTotalEventsInFile() {
   double nTotalEvents = 0.0;
-  if (!m_isWeighted) nTotalEvents = m_histCuts_unweighted->GetBinContent(1);
+  if (!m_isWeighted) nTotalEvents = m_histCuts_unweighted->GetBinContent(1);//?
   else {
-    if (m_unskimmed) nTotalEvents = m_histCuts_weighted->GetBinContent(1);
+    if (m_unskimmed) nTotalEvents = m_histCuts_weighted->GetBinContent(3);
     else {
-      nTotalEvents = (m_histCuts_weighted->GetBinContent(1) * 
+      nTotalEvents = (m_histCuts_weighted->GetBinContent(3) * 
 		      m_histCuts_unweighted->GetBinContent(2) /
 		      m_histCuts_unweighted->GetBinContent(1));
     }

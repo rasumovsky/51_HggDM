@@ -23,7 +23,7 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "HGamTools/SigParam.h"
+#include "SigParam.h"
 
 /**
    -----------------------------------------------------------------------------
@@ -2572,8 +2572,9 @@ void SigParam::printResTable(double resonanceMass) {
   TString tableLocation = Form("%s/latexTable.txt", m_directory.Data());
   std::ofstream latexTable(tableLocation);
   latexTable << "\\begin{table}[!htb]" << std::endl;
-  latexTable << "\\caption{Parameterization functions for the Crystal Ball plus Gaussian PDF variables.}" << std::endl;
-  latexTable << "\\label{tab:default_sig_par_CBGA}" << std::endl;
+  latexTable << "\\caption{Mean and resolution for the PDF in each category.}"
+	     << std::endl;
+  latexTable << "\\label{tab:fitMeanAndRes}" << std::endl;
   latexTable << "\\centering" << std::endl;
   latexTable << "\\begin{tabular}{lcc}" << std::endl;
   latexTable << "\\hline" << std::endl;
@@ -2587,11 +2588,11 @@ void SigParam::printResTable(double resonanceMass) {
     double currSigma = getMeanOrStdDev("StdDev", resonanceMass, i_c);
     if ((int)m_cateNames.size() == m_nCategories) {
       latexTable << m_cateNames[i_c] << " & " << currMean << " & " << currSigma
-		 << std::endl;
+		 << " \\\\" << std::endl;
     }
     else {
       latexTable << "category " << i_c << " & " << currMean << " & " 
-		 << currSigma << std::endl;
+		 << currSigma << " \\\\" << std::endl;
     }
   }
   latexTable << "\\hline" << std::endl;

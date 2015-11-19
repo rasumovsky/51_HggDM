@@ -28,7 +28,11 @@ DMxAODCutflow::DMxAODCutflow(TString fileName, TString configFileName) {
   // Decide whether the sample is skimmed or unskimmed:
   Config *config = new Config(configFileName);
   m_unskimmed = !DMAnalysis::isSkimmed(config, fileName);
-    
+  
+  // NOTE: at the moment, the weighted cutflow histogram is the 
+  // weighted_nodalitz histogram. Not sure whether this is the correct choice.
+  // need to check.
+  
   // Find the cutflow histograms from the file based on limited name info:
   m_histCuts_weighted = NULL;
   m_histCuts_unweighted = NULL;
@@ -38,7 +42,7 @@ DMxAODCutflow::DMxAODCutflow(TString fileName, TString configFileName) {
   while ((currObj = (TObject*)next())) {
     TString currName = currObj->GetName();
     if (currName.Contains("CutFlow") && currName.Contains("weighted")
-    	&& !currName.Contains("noDalitz")) {
+    	&& currName.Contains("noDalitz")) {
       m_histCuts_weighted = (TH1F*)m_inputFile->Get(currName);
     }
     //else if (currName.Contains("CutFlow") && currName.Contains("weighted")
@@ -103,7 +107,7 @@ DMxAODCutflow::DMxAODCutflow(TString fileName, TString configFileName) {
    -----------------------------------------------------------------------------
    Check whether the specified cut has been defined.
    @param cutName - the name of the cut whose existence shall be questioned.
-   @returns - true iff the cut exists.
+   @return - true iff the cut exists.
 */
 bool DMxAODCutflow::cutExists(TString cutName) {
   // Checks if there is a key corresponding to cutName in the map: 
@@ -120,7 +124,7 @@ bool DMxAODCutflow::cutExists(TString cutName) {
    -----------------------------------------------------------------------------
    Get the name of a cut based on its order in the xAOD cutflow, starting at 1.
    @param order - the order of the cut in the xAOD cutflow.
-   @returns - the name of the cut.
+   @return - the name of the cut.
 */
 TString DMxAODCutflow::getCutNameByOrder(int order) {
   if (order > 0 && order <= nCuts) {
@@ -136,7 +140,7 @@ TString DMxAODCutflow::getCutNameByOrder(int order) {
    -----------------------------------------------------------------------------
    Get the order of a cut based on its name.
    @param cutName - the name of the cut.
-   @returns - the order of the cut in the xAOD cutflow.
+   @return - the order of the cut in the xAOD cutflow.
 */
 int DMxAODCutflow::getCutOrderByName(TString cutName) {
   if (cutExists(cutName)) {
@@ -153,7 +157,7 @@ int DMxAODCutflow::getCutOrderByName(TString cutName) {
    -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
    @param cutName - The name of the cut.
-   @returns - The number of passing events.
+   @return - The number of passing events.
 */
 double DMxAODCutflow::getEventsPassingCut(int order) {
   return getEventsPassingCut(getCutNameByOrder(order));
@@ -163,7 +167,7 @@ double DMxAODCutflow::getEventsPassingCut(int order) {
    -----------------------------------------------------------------------------
    Get the number of events passing a particular stage of the xAOD cutflow.
    @param cutName - The name of the cut.
-   @returns - The number of passing events.
+   @return - The number of passing events.
 */
 double DMxAODCutflow::getEventsPassingCut(TString cutName) {
   if (cutExists(cutName)) {
@@ -188,7 +192,7 @@ TH1F* DMxAODCutflow::getHist() {
    -----------------------------------------------------------------------------
    Get the percentage of events passing the named cut.
    @param cutName - The name of the cut.
-   @returns - The percentage of events passing just this cut.
+   @return - The percentage of events passing just this cut.
 */
 double DMxAODCutflow::getPercentPassingCut(TString cutName) {
   // Divide current passing events by the initial events:
@@ -205,7 +209,7 @@ double DMxAODCutflow::getPercentPassingCut(TString cutName) {
    -----------------------------------------------------------------------------
    Get the acceptance X efficiency of the analysis up to this point.
    @param cutName - the name of the cut.
-   @returns - the percentage acceptance times efficiency total.
+   @return - the percentage acceptance times efficiency total.
 */
 double DMxAODCutflow::getAccXEffAtCut(TString cutName) {
   // Divide current passing events by the initial events:

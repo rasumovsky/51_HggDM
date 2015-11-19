@@ -24,7 +24,7 @@
    @param newSampleName - The name of the data/MC sample.
    @param newOptions - The job options ("New", "FromFile").
    @param newObservable - The RooRealVar to be used in the datasets (m_yy).
-   @returns void.
+   @return - void.
 */
 DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName, 
 			   TString newOptions, RooRealVar *newObservable) {
@@ -160,7 +160,7 @@ void DMMassPoints::combineCutFlowHists() {
    -----------------------------------------------------------------------------
    Create local copies of files and a new file list.
    @param originListName - The name of the original file list.
-   @returns - The name of the new file list.
+   @return - The name of the new file list.
 */
 TString DMMassPoints::createLocalFilesAndList(TString originListName) {
   std::cout << "DMMassPoints: createLocalFilesAndList." << std::endl;
@@ -215,7 +215,7 @@ void DMMassPoints::fillHist1D(TString varName, bool allEvents, double xVal,
    -----------------------------------------------------------------------------
    Create a RooDataSet containing the mass points in a given category.
    @param cateIndex - The index of the category for which we want the .txt name.
-   @returns The RooDataSet of the data in the specified category.
+   @return - The RooDataSet of the data in the specified category.
 */
 RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
   m_cateData[cateIndex]->Print("v");
@@ -225,7 +225,7 @@ RooDataSet* DMMassPoints::getCateDataSet(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Returns a pointer to the mass observable used in the dataset.
-   @returns pointer to the observable (m_yy).
+   @return - A pointer to the observable (m_yy).
 */
 RooRealVar* DMMassPoints::getMassObservable() {
   return m_yy;
@@ -235,7 +235,7 @@ RooRealVar* DMMassPoints::getMassObservable() {
    -----------------------------------------------------------------------------
    Get the name of the output textfile for the given category index.
    @param cateIndex - The index of the category for which we want the .txt name.
-   @returns The full path of the mass points text file.
+   @return - The full path of the mass points text file.
 */
 TString DMMassPoints::getMassPointsFileName(int cateIndex) {
   return getMassPointsFileName(cateIndex, m_sampleName);
@@ -246,7 +246,7 @@ TString DMMassPoints::getMassPointsFileName(int cateIndex) {
    Get the name of the output textfile for the given category index.
    @param cateIndex - The index of the category for which we want the .txt name.
    @param newSampleName - The name of the data/MC sample.
-   @returns The full path of the mass points text file.
+   @return - The full path of the mass points text file.
 */
 TString DMMassPoints::getMassPointsFileName(int cateIndex, TString sampleName) {
   TString name = Form("%s/%s_%d_%s.txt", m_outputDir.Data(), 
@@ -345,6 +345,7 @@ void DMMassPoints::newHist1D(TString varName, int nBins, double xMin,
 
 /**
    -----------------------------------------------------------------------------
+   Save the histograms, including cutflow and kinematic distributions, to file.
 */
 void DMMassPoints::saveHists() {
   TFile *outputFile = new TFile(Form("%s/hists_%s.root", m_outputDir.Data(),
@@ -365,7 +366,7 @@ void DMMassPoints::saveHists() {
    -----------------------------------------------------------------------------
    Set the pointer to the observable. 
    @param newObservable - The new RooRealVar observable to use for datasets. 
-   @returns void.
+   @return - void.
  */
 void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
   m_yy = newObservable;
@@ -374,7 +375,7 @@ void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
 /**
    -----------------------------------------------------------------------------
    Create new mass points by looping over the TTree.
-   @returns void.
+   @return - void.
 */
 void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
@@ -588,7 +589,7 @@ void DMMassPoints::createNewMassPoints() {
    -----------------------------------------------------------------------------
    Load the mass points from text files that have already been produced. This is
    much faster than producing mass points from scratch, and is preferred. 
-   @returns void.
+   @return - void.
 */
 void DMMassPoints::loadMassPointsFromFile() {
   std::cout << "DMMassPoints: loading mass points from .txt file." << std::endl;

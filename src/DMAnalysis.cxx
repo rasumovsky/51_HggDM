@@ -317,7 +317,7 @@ TString DMAnalysis::nameToFileList(Config *config, TString name) {
   TString newListName = Form("%s/FileLists/list_%s.txt", 
 			     (config->getStr("masterInput")).Data(),
 			     name.Data());
-  ofstream newFileList(newListName);
+  std::ofstream newFileList(newListName);
   
   // Use a format specifier for DM samples:
   if (isDMSample(config, name)) {

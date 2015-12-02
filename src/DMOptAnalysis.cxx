@@ -122,7 +122,7 @@ std::vector<TString> DMOptAnalysis::listDirectoryContents(TString directory) {
   std::vector<TString> result; result.clear();
   system(Form("ls %s | tee templist.txt", directory.Data()));
   TString currFile;
-  ifstream dirListFile("templist.txt");
+  std::ifstream dirListFile("templist.txt");
   while (!dirListFile.eof()) {
     dirListFile >> currFile;
     result.push_back(Form("%s/%s", directory.Data(), currFile.Data()));
@@ -143,7 +143,7 @@ void DMOptAnalysis::loadOptimizationData(TString directory) {
   //int jobIndex; double cut1Val; double cut2Val;
   std::string currStrLine;
   TString currLine;
-  ifstream inputSummaryFile(Form("%s/jobSummary.txt", directory.Data()));
+  std::ifstream inputSummaryFile(Form("%s/jobSummary.txt", directory.Data()));
   if (!inputSummaryFile.is_open()) {
     std::cout << "DMOptAnalysis: Failed to open jobSummary.txt" << std::endl;
     exit(0);
@@ -178,7 +178,7 @@ void DMOptAnalysis::loadOptimizationData(TString directory) {
 	TString currP0FileName = Form("%s/single_files/p0_%d/p0_values_%s.txt",
 				      directory.Data(), currAna->getIndex(),
 				      signalList[i_DM].Data());
-	ifstream currP0File(currP0FileName);
+	std::ifstream currP0File(currP0FileName);
 	if (!currP0File.is_open()) currAna->setGood(false);
 	else {
 	  TString currP0Name; double currExpP0; double currObsP0;
@@ -194,7 +194,7 @@ void DMOptAnalysis::loadOptimizationData(TString directory) {
 	TString currCLFileName = Form("%s/single_files/CL_%d/CL_values_%s.txt",
 				      directory.Data(), currAna->getIndex(),
 				      signalList[i_DM].Data());
-	ifstream currCLFile(currCLFileName);
+	std::ifstream currCLFile(currCLFileName);
 	if (!currCLFile.is_open()) currAna->setGood(false);
 	else {
 	  TString currCLName; double currObsCL; double currExpCLN2;

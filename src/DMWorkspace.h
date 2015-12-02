@@ -20,8 +20,6 @@
 #include "DMMassPoints.h"
 #include "DMTestStat.h"
 #include "HggTwoSidedCBPdf.h"
-#include "PESReader.h"
-#include "PERReader.h"
 #include "RooFitHead.h"
 #include "RooStatsHead.h"
 #include "SigParam.h"
@@ -65,8 +63,6 @@ class DMWorkspace {
 
   // Helper classes:
   Config *m_config;
-  PESReader *m_pes;
-  PERReader *m_per;
   SigParamInterface *m_spi;
 
   // Updated for each call to createNewCategoryWS():

@@ -151,8 +151,8 @@ void DMWorkspace::createNewWS() {
   std::cout << "........................................" << std::endl;
   
   // Read tables of PES and PER and store values:
-  m_pes = new PESReader(m_config->getStr("fileNamePESValues"), m_nCategories);
-  m_per = new PERReader(m_config->getStr("fileNamePERValues"), m_nCategories);
+  //m_pes = new PESReader(m_config->getStr("fileNamePESValues"), m_nCategories);
+  //m_per = new PERReader(m_config->getStr("fileNamePERValues"), m_nCategories);
   
   // Instantiate the signal parameterization class using the observable:
   m_spi = new SigParamInterface(m_configFile, "FromFile");
@@ -440,6 +440,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
   
   //--------------------------------------//
   // SYSTEMATICS: Resolution:
+  /*
   if (switch_per) {
     double setupPER[4] = {0.0, 0, 1, 1};
     // Loop over sources of resolution systematic uncertainty:
@@ -486,6 +487,7 @@ RooWorkspace* DMWorkspace::createNewCategoryWS() {
 	     *&expectedShape);
     }
   }
+  */
   
   //--------------------------------------//
   // Parameters of interest (POIs):

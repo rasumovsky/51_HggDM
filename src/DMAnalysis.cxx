@@ -313,6 +313,8 @@ bool DMAnalysis::isWeightedSample(Config *config, TString sampleName) {
     @returns - The file list location.
 */
 TString DMAnalysis::nameToFileList(Config *config, TString name) {
+  // Check that directory exists for file lists:
+  system(Form("mkdir -vp %s/FileLists",(config->getStr("masterInput")).Data()));
   // Create a new file list:
   TString newListName = Form("%s/FileLists/list_%s.txt", 
 			     (config->getStr("masterInput")).Data(),

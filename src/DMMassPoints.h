@@ -88,7 +88,7 @@ class DMMassPoints {
   std::vector<TH1F*> m_componentCutFlows;
   std::vector<double> m_componentNorms;
   TH1F* m_cutFlowHist;
-  
+
 };
 
 #endif

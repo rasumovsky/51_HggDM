@@ -13,6 +13,8 @@
 //  mass points from a previously generated text file, using newOptions =     //
 //  "FromFile" or "New".                                                      //
 //                                                                            //
+//  New option: "Syst" to implement systematic variations.                    //
+//                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "DMMassPoints.h"
@@ -52,9 +54,7 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
     m_yy = new RooRealVar("m_yy", "m_yy", m_config->getNum("DMMyyRangeLo"),
 			  m_config->getNum("DMMyyRangeHi"));
   }
-  else {
-    setMassObservable(newObservable);
-  }
+  else setMassObservable(newObservable);
   
   // Assign output directory, and make sure it exists:
   m_outputDir = Form("%s/%s/DMMassPoints", 
@@ -97,9 +97,6 @@ void DMMassPoints::combineCutFlowHists() {
   // Loop over component cutflows and add them to the new cutflow:
   for (int i_c = 0; i_c < (int)m_componentCutFlows.size(); i_c++) {
     for (int i_b = 1; i_b <= m_componentCutFlows[i_c]->GetNbinsX(); i_b++) {
-      //fullCutFlowHist->Fill(m_componentCutFlows[i_c]->GetBinCenter(i_b), 
-      //		     (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
-      //		     m_componentNorms[i_c]));
       double addedValue = (m_componentCutFlows[i_c]->GetBinContent(i_b) * 
 			   m_componentNorms[i_c]);
       double addedError = (m_componentCutFlows[i_c]->GetBinError(i_b) * 
@@ -166,8 +163,8 @@ TString DMMassPoints::createLocalFilesAndList(TString originListName) {
   std::cout << "DMMassPoints: createLocalFilesAndList." << std::endl;
   TString outputListName = "temporaryList.txt";
   TString currLine;
-  ifstream originFile(originListName);
-  ofstream outputFile(outputListName);
+  std::ifstream originFile(originListName);
+  std::ofstream outputFile(outputListName);
   while (!originFile.eof()) {
     originFile >> currLine;
     if (currLine.Contains("eos/atlas")) {
@@ -282,12 +279,12 @@ void DMMassPoints::mergeMassPoints(TString newSampleName,
     m_cateData[i_c]->append(*(inputMassPoints->getCateDataSet(i_c)));
     
     // Open input and output files:
-    ifstream inputFile1;
+    std::ifstream inputFile1;
     inputFile1.open(getMassPointsFileName(i_c));
-    ifstream inputFile2;
+    std::ifstream inputFile2;
     inputFile2.open(inputMassPoints->getMassPointsFileName(i_c));
     
-    ofstream outputFile;
+    std::ofstream outputFile;
     outputFile.open(getMassPointsFileName(i_c, newSampleName));
     
     // Then save the output, if requested:
@@ -415,7 +412,7 @@ void DMMassPoints::createNewMassPoints() {
   newHist1D("nleptons", 5, 0, 5);
   
   // Define datasets and mass files in loop over categories:
-  ofstream massFiles[20];
+  std::ofstream massFiles[20];
   std::cout << "DMMassPoints: Define datasets & files." << std::endl;
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     
@@ -621,9 +618,9 @@ void DMMassPoints::loadMassPointsFromFile() {
 			      (m_config->getStr("cateScheme")).Data(), i_c),
 			 *m_yy);
     }
-        
+    
     double readMass; double readWeight;
-    ifstream massFile(getMassPointsFileName(i_c));
+    std::ifstream massFile(getMassPointsFileName(i_c));
     std::cout << "DMMassPoints: opening " << getMassPointsFileName(i_c)
 	      << std::endl;
     
@@ -682,7 +679,7 @@ void DMMassPoints::printProgressBar(int index, int total) {
 */
 void DMMassPoints::removeLocalFilesAndList(TString listName) {
   TString currLine;
-  ifstream localFile(listName);
+  std::ifstream localFile(listName);
   while (!localFile.eof()) {
     localFile >> currLine;
     if (!currLine.Contains("eos/atlas") && !currLine.EqualTo("")) {

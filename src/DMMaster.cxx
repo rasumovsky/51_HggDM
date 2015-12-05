@@ -12,6 +12,9 @@
 //  classes (mass points, signal parameterization), while others will use     //
 //  system commands to submit jobs to various clusters.                       //
 //                                                                            //
+//  To run:                                                                   //
+//    ./bin/DMMaster <MasterOption> <configFileName>                          //
+//                                                                            //
 //  MasterOption - Note: Each can be followed by the suffix "New"             //
 //    - Cleanup                                                               //
 //    - MassPoints                                                            //

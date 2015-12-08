@@ -62,7 +62,7 @@ class DMEvtSelect
   bool passesCut(TString cutName);
   bool passesCut(TString cutName, double weight);
   void setTree(DMTree *newTree);
-
+  void setSysVariation(TString sysVariation);
  private:
   
   // Member methods:
@@ -87,6 +87,7 @@ class DMEvtSelect
   TH1F *m_cutFlowHist_weighted;
   TH1F *m_cutFlowHist_unweighted;
   
+  TString m_sysVariation;
 };
 
 #endif

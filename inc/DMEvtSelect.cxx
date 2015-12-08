@@ -63,6 +63,9 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   
   evtTree = newTree;
   
+  // Set the systematic variation ("Nominal" by default):
+  m_sysVariation = "Nominal";
+  
   // Create a temporary cutflow histogram, to be replaced:
   m_cutFlowHist_weighted = new TH1F("cutflow_weighted", "cutflow_weighted",
 				    cutList.size()-1, 0, cutList.size()-1);
@@ -199,15 +202,17 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   }
   // Split MET - low and high MET categories.
   else if (cateScheme.EqualTo("splitETMiss")) {
-    if (evtTree->HGamEventInfoAuxDyn_TST_met > 140000.0) currCate = 1;
+    if (evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] > 140000.0) {
+      currCate = 1;
+    }
     else currCate = 0;
   }
   // Ratio ETMiss/pT categorization:
   else if (cateScheme.EqualTo("RatioEtmPt")) {
     double ratioCut1 = m_config->getNum("RatioCut1");
     double ratioCut2 = m_config->getNum("RatioCut2");
-    double currRatio = (evtTree->HGamEventInfoAuxDyn_TST_met / 
-			evtTree->HGamEventInfoAuxDyn_pT_yy);
+    double currRatio = (evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] / 
+			evtTree->HGamEventInfoAuxDyn_pT_yy[m_sysVariation]);
     if (currRatio < ratioCut1) currCate = 0;
     else if (currRatio >= ratioCut1 && currRatio < ratioCut2) currCate = 1; 
     else if (currRatio >= ratioCut2) currCate = 2;
@@ -331,7 +336,7 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   bool passes = true;
   
   // The mass parameter:
-  double invariantMass = evtTree->HGamEventInfoAuxDyn_m_yy;
+  double invariantMass = evtTree->HGamEventInfoAuxDyn_m_yy[m_sysVariation];
   
   bool isMxAODCut = false;
   int currCutIndex = 0;
@@ -346,20 +351,22 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   
   // MxAOD cuts:
   if (isMxAODCut) {
-    passes = (evtTree->HGamEventInfoAuxDyn_cutFlow > currCutIndex);
+    passes = (evtTree->HGamEventInfoAuxDyn_cutFlow[m_sysVariation] >
+	      currCutIndex);
   }
   // Lepton Veto Cut:
   else if (cutName.EqualTo("LeptonVeto") && m_config->getBool("LeptonVeto")) {
-    passes = ((evtTree->HGamElectronsAuxDyn_pt)->size() == 0 && (evtTree->HGamMuonsAuxDyn_pt)->size() == 0);
+    passes = ((evtTree->HGamElectronsAuxDyn_pt[m_sysVariation])->size() == 0 &&
+	      (evtTree->HGamMuonsAuxDyn_pt[m_sysVariation])->size() == 0);
   }
   // Cut on the diphoton transverse momentum:
   else if (cutName.EqualTo("DiphotonPT")) {
-    passes = (evtTree->HGamEventInfoAuxDyn_pT_yy >
+    passes = (evtTree->HGamEventInfoAuxDyn_pT_yy[m_sysVariation] >
 	      m_config->getNum("AnaCutDiphotonPT"));
   }
   // Cut on the event missing transverse energy:
   else if (cutName.EqualTo("DiphotonETMiss")) {
-    passes = (evtTree->HGamEventInfoAuxDyn_TST_met > 
+    passes = (evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] > 
 	      m_config->getNum("AnaCutETMiss"));
   }
   // Check whether event passes all of the cuts above:
@@ -492,6 +499,16 @@ void DMEvtSelect::saveCutflow(TString fileName, bool weighted) {
     }
   }
   outFile.close();
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set which systematic uncertainty variation to use with the TTree. 
+   @param sysVariation - The name of the systematic variation to use for the 
+   selection ("Nominal" by default).
+*/
+void DMEvtSelect::setSysVariation(TString sysVariation) {
+  m_sysVariation = sysVariation;
 }
 
 /**

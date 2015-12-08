@@ -61,6 +61,7 @@ DMMassPoints::DMMassPoints(TString newConfigFile, TString newSampleName,
 		     (m_config->getStr("masterOutput")).Data(), 
 		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
+  system(Form("mkdir -vp %s/Systematics", m_outputDir.Data()));
   
   // Check if data should be weighted:
   m_isWeighted = DMAnalysis::isWeightedSample(m_config, m_sampleName);
@@ -389,6 +390,16 @@ void DMMassPoints::createNewMassPoints() {
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt, m_configFileName);
   
+  // Also instantiate tools with systematics:
+  std::map<TString, DMEvtSelect*> sysSelectors; sysSelectors.clear();
+  std::vector<TString> systList = m_config->getStrV("SystematicsList");
+  if (m_options.Contains("Syst")) {
+    for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
+      sysSelectors[systList[i_s]] = new DMEvtSelect(dmt, m_configFileName);
+      sysSelectors[systList[i_s]]->setSysVariation(systList[i_s]);
+    }
+  }
+  
   // For updating the nTotalEventsInFile:
   TString currFileName = "";
   double nTotalEventsInFile = 0.0;
@@ -462,18 +473,16 @@ void DMMassPoints::createNewMassPoints() {
       double currNorm = 1.00000000;
       TH1F* currHist = (TH1F*)dmx->getHist()->Clone();
       if (m_isWeighted) {
-	//currNorm = (m_config->getNum("analysisLuminosity") * 
-	//	    dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff /
-	//	    nTotalEventsInFile);
 	// Normalization of inputs to 1 fb-1:
-	currNorm = (1000.0 * dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff /
-		    nTotalEventsInFile);
+	currNorm
+	  = (1000.0 * 	   
+	     dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff["Nominal"] /
+	     nTotalEventsInFile);
 	
 	// Add branching ratio for DM samples:
 	if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
 	  currNorm *= m_config->getNum("BranchingRatioHyy");
 	}
-	//currHist->Scale(currNorm);
       }
       m_componentCutFlows.push_back(currHist);
       m_componentNorms.push_back(currNorm);
@@ -482,12 +491,11 @@ void DMMassPoints::createNewMassPoints() {
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.00000000;
     if (m_isWeighted) {
-      //evtWeight = (m_config->getNum("analysisLuminosity") * 
-      //	   dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff * 
-      //	   dmt->HGamEventInfoAuxDyn_weight / nTotalEventsInFile);
       // Normalization of inputs to 1 fb-1:
-      evtWeight = (1000.0 * dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff * 
-		   dmt->HGamEventInfoAuxDyn_weight / nTotalEventsInFile);
+      evtWeight = (1000.0 * 
+		   dmt->HGamEventInfoAuxDyn_crossSectionBRfilterEff["Nominal"] *
+		   dmt->HGamEventInfoAuxDyn_weight["Nominal"] / 
+		   nTotalEventsInFile);
       
       // Also add in branching ratio for DM samples:
       if (DMAnalysis::isDMSample(m_config, m_sampleName)) {
@@ -496,18 +504,14 @@ void DMMassPoints::createNewMassPoints() {
     }
     
     // The mass parameter:
-    double invariantMass = dmt->HGamEventInfoAuxDyn_m_yy / 1000.0;
-    int nLeptons = ((int)(dmt->HGamElectronsAuxDyn_pt->size()) +
-		    (int)(dmt->HGamMuonsAuxDyn_pt->size()));
-    //if (m_config->getBool("RescaleAFII") && 
-    //	DMAnalysis::isDMSample(m_config, m_sampleName)) {
-    //invariantMass += 1.0;
-    //}
-
+    double invariantMass = dmt->HGamEventInfoAuxDyn_m_yy["Nominal"] / 1000.0;
+    int nLeptons = ((int)(dmt->HGamElectronsAuxDyn_pt["Nominal"]->size()) +
+		    (int)(dmt->HGamMuonsAuxDyn_pt["Nominal"]->size()));
+    
     // Then commence plotting for events passing inclusive H->yy selection:
-    double varEtMiss = dmt->HGamEventInfoAuxDyn_TST_met / 1000.0;
-    double varPtYY = dmt->HGamEventInfoAuxDyn_pT_yy / 1000.0;
-    if (dmt->HGamEventInfoAuxDyn_cutFlow >= 
+    double varEtMiss = dmt->HGamEventInfoAuxDyn_TST_met["Nominal"] / 1000.0;
+    double varPtYY = dmt->HGamEventInfoAuxDyn_pT_yy["Nominal"] / 1000.0;
+    if (dmt->HGamEventInfoAuxDyn_cutFlow["Nominal"] >= 
 	(int)m_config->getStrV("MxAODCutList").size()) {
       fillHist1D("pTyy", true, varPtYY, evtWeight, -1);
       fillHist1D("ETMiss", true, varEtMiss, evtWeight, -1);
@@ -516,8 +520,16 @@ void DMMassPoints::createNewMassPoints() {
 		 sqrt(varEtMiss*varEtMiss+varPtYY*varPtYY), evtWeight, -1);
       fillHist1D("aTanRatio",true,TMath::ATan(varEtMiss/varPtYY),evtWeight,-1);
       fillHist1D("myy", true, invariantMass, evtWeight, -1);
-      fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_Njets, evtWeight, -1);
+      fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_Njets["Nominal"],
+		 evtWeight, -1);
       fillHist1D("nleptons", true, nLeptons, evtWeight, -1);
+    }
+    
+    // For systematic variations of the selection:
+    if (m_options.Contains("Syst")) {
+      for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
+	sysSelectors[systList[i_s]]->passesCut("AllCuts", evtWeight);
+      }
     }
     
     // Make sure events pass the selection:
@@ -533,9 +545,9 @@ void DMMassPoints::createNewMassPoints() {
       wt.setVal(evtWeight);
       m_cateData[currCate]->add(RooArgSet(*m_yy,wt), evtWeight);
     }
-    else {
-      m_cateData[currCate]->add(*m_yy);
-    }
+    else m_cateData[currCate]->add(*m_yy);
+    
+    // Write mass point to file:
     massFiles[currCate] << invariantMass << " " << evtWeight << std::endl;
     
     // Then commence plotting for PASSING events:
@@ -547,11 +559,26 @@ void DMMassPoints::createNewMassPoints() {
     fillHist1D("aTanRatio", false, TMath::ATan(varEtMiss/varPtYY), 
 	       evtWeight, currCate);
     fillHist1D("myy", false, invariantMass, evtWeight, currCate);
-    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_Njets, evtWeight, 
-	       currCate);
+    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_Njets["Nominal"],
+	       evtWeight, currCate);
     fillHist1D("nleptons", false, nLeptons, evtWeight, -1);
   }
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
+  
+  // For systematic variations of the selection:
+  if (m_options.Contains("Syst")) {
+    for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
+      sysSelectors[systList[i_s]]
+	->saveCutflow(Form("%s/Systematics/cutflow_%s_%s.txt",
+			   m_outputDir.Data(), systList[i_s].Data(),
+			   m_sampleName.Data()), m_isWeighted);
+      sysSelectors[systList[i_s]]
+	->saveCategorization(Form("%s/Systematics/categorization_%s_%s_%s.txt",
+				  m_outputDir.Data(), systList[i_s].Data(),
+				  (m_config->getStr("cateScheme")).Data(),
+				  m_sampleName.Data()), m_isWeighted);
+    }
+  }
   
   // Print the cutflow and category yields (weighted if MC):
   selector->printCutflow(m_isWeighted);

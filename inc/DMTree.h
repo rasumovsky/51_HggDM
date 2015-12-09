@@ -12,6 +12,7 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 using std::vector;
@@ -57,7 +58,7 @@ class DMTree {
   TBranch *b_HGamTruthHiggsBosonsAuxDyn_m;
   
   // Methods:
-  DMTree(TTree *tree = 0);
+  DMTree(TTree *tree, std::vector<TString> sysNames);
   virtual ~DMTree();
   virtual Int_t Cut(Long64_t entry);
   virtual Int_t GetEntry(Long64_t entry);
@@ -74,20 +75,14 @@ class DMTree {
 #endif
 
 #ifdef DMTree_cxx
-DMTree::DMTree(TTree *tree) : fChain(0) {
-  // if parameter tree is not specified (or zero), connect the file
-  // used to generate this class and read the Tree.
-  if (tree == 0) {
-    TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("PowhegPy8_VBF125.MxAOD.p2421.h008.root");
-    if (!f || !f->IsOpen()) {
-      f = new TFile("PowhegPy8_VBF125.MxAOD.p2421.h008.root");
-    }
-    f->GetObject("CollectionTree",tree);
-    
-  }
-  Init(tree);
+DMTree::DMTree(TTree *tree, std::vector<TString> sysNames) : fChain(0) {
+  
   m_sysNames.clear();
   m_sysNames.push_back("Nominal");
+  for (int i_s = 0; i_s < (int) sysNames.size(); i_s++) {
+    m_sysNames.push_back(sysNames[i_s]);
+  }
+  Init(tree);
 }
 
 DMTree::~DMTree() {
@@ -132,55 +127,55 @@ void DMTree::Init(TTree *tree) {
   HGamElectronsAuxDyn_pt = 0;
   HGamMuonsAuxDyn_pt = 0;
   HGamTruthHiggsBosonsAuxDyn_m = 0;
-    
+  
   // Loop over systematics:
   for (int i_s = 0; i_s < (int)m_sysNames.size(); i_s++) {
     
-    TString tag = "";;
-    if (!tag.EqualTo("Nominal")) {
-      tag = Form("_%s", m_sysNames[i_s].Data());
-    }
-    
-    b_HGamEventInfoAuxDyn_m_yy[tag] = NULL;
-    b_HGamEventInfoAuxDyn_pT_yy[tag] = NULL;
-    b_HGamEventInfoAuxDyn_cosTS_yy[tag] = NULL;
-    b_HGamEventInfoAuxDyn_Njets[tag] = NULL;
-    b_HGamEventInfoAuxDyn_cutFlow[tag] = NULL;
-    b_HGamEventInfoAuxDyn_weightInitial[tag] = NULL;
-    b_HGamEventInfoAuxDyn_weight[tag] = NULL;
-    b_HGamEventInfoAuxDyn_TST_met[tag] = NULL;
-    b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag] = NULL;
+    // Create a map tag (key for maps) and data tag (name for MxAOD branches).
+    TString mTag = m_sysNames[i_s];
+    TString dTag = (mTag.EqualTo("Nominal")) ?
+      "" : Form("_%s", m_sysNames[i_s].Data());
+  
+    b_HGamEventInfoAuxDyn_m_yy[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_pT_yy[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_cosTS_yy[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_Njets[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_cutFlow[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_weightInitial[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_weight[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_TST_met[mTag] = NULL;
+    b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[mTag] = NULL;
         
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.m_yy",tag.Data()),
-			     &HGamEventInfoAuxDyn_m_yy[tag],
-			     &b_HGamEventInfoAuxDyn_m_yy[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.pT_yy",tag.Data()),
-			     &HGamEventInfoAuxDyn_pT_yy[tag],
-			     &b_HGamEventInfoAuxDyn_pT_yy[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.cosTS_yy",tag.Data()),
-			     &HGamEventInfoAuxDyn_cosTS_yy[tag],
-			     &b_HGamEventInfoAuxDyn_cosTS_yy[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.Njets",tag.Data()),
-			     &HGamEventInfoAuxDyn_Njets[tag],
-			     &b_HGamEventInfoAuxDyn_Njets[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.cutFlow",tag.Data()), 
-			     &HGamEventInfoAuxDyn_cutFlow[tag],
-			     &b_HGamEventInfoAuxDyn_cutFlow[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.weightInitial",
-				  tag.Data()),
-			     &HGamEventInfoAuxDyn_weightInitial[tag], 
-			     &b_HGamEventInfoAuxDyn_weightInitial[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.weight",tag.Data()),
-			     &HGamEventInfoAuxDyn_weight[tag],
-			     &b_HGamEventInfoAuxDyn_weight[tag]);
-    fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.TST_met",tag.Data()),
-			     &HGamEventInfoAuxDyn_TST_met[tag],
-			     &b_HGamEventInfoAuxDyn_TST_met[tag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.m_yy",dTag.Data()),
+			     &HGamEventInfoAuxDyn_m_yy[mTag],
+			     &b_HGamEventInfoAuxDyn_m_yy[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.pT_yy",dTag.Data()),
+			     &HGamEventInfoAuxDyn_pT_yy[mTag],
+			     &b_HGamEventInfoAuxDyn_pT_yy[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.cosTS_yy",dTag.Data()),
+			     &HGamEventInfoAuxDyn_cosTS_yy[mTag],
+			     &b_HGamEventInfoAuxDyn_cosTS_yy[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.Njets",dTag.Data()),
+			     &HGamEventInfoAuxDyn_Njets[mTag],
+			     &b_HGamEventInfoAuxDyn_Njets[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.cutFlow",dTag.Data()), 
+			     &HGamEventInfoAuxDyn_cutFlow[mTag],
+			     &b_HGamEventInfoAuxDyn_cutFlow[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.weightInitial",
+				  dTag.Data()),
+			     &HGamEventInfoAuxDyn_weightInitial[mTag], 
+			     &b_HGamEventInfoAuxDyn_weightInitial[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.weight",dTag.Data()),
+			     &HGamEventInfoAuxDyn_weight[mTag],
+			     &b_HGamEventInfoAuxDyn_weight[mTag]);
+    fChain->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.TST_met",dTag.Data()),
+			     &HGamEventInfoAuxDyn_TST_met[mTag],
+			     &b_HGamEventInfoAuxDyn_TST_met[mTag]);
     fChain
-      ->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.crossSectionBRfilterEff",
-			      tag.Data()),
-			 &HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag],
-			 &b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag]);
+      ->SetBranchAddress(Form("HGamEventInfo%sAuxDyn.crossSectionBRfilterEff",
+			      dTag.Data()),
+			 &HGamEventInfoAuxDyn_crossSectionBRfilterEff[mTag],
+			 &b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[mTag]);
   }
   
   // The branches that don't have systematic variations:
@@ -218,10 +213,6 @@ Int_t DMTree::Cut(Long64_t entry) {
 // returns  1 if entry is accepted.
 // returns -1 otherwise.
    return 1;
-}
-
-void DMTree::DefineSystematics(std::vector<TString> sysNames) {
-  m_sysNames = sysNames;
 }
 
 #endif // #ifdef DMTree_cxx

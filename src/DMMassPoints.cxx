@@ -380,6 +380,8 @@ void DMMassPoints::createNewMassPoints() {
   
   // Check whether experimental systematic uncertainties should be evaluated:
   bool getSystematics = m_options.Contains("Syst");
+  std::vector<TString> systList; systList.clear();
+  if (getSystematics) systList = m_config->getStrV("SystematicsList");
   
   // Construct file list for the TChain:
   TString listName
@@ -390,14 +392,13 @@ void DMMassPoints::createNewMassPoints() {
     listName = createLocalFilesAndList(listName);
   }
   TChain *chain = CommonFunc::MakeChain("CollectionTree", listName, "badfile");
-  DMTree *dmt = new DMTree(chain);
+  DMTree *dmt = new DMTree(chain, systList);
   
   // Tool to implement the cutflow, categorization, and counting. 
   DMEvtSelect *selector = new DMEvtSelect(dmt, m_configFileName);
   
   // Also instantiate tools with systematics:
   std::map<TString, DMEvtSelect*> sysSelectors; sysSelectors.clear();
-  std::vector<TString> systList = m_config->getStrV("SystematicsList");
   if (getSystematics) {
     for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
       sysSelectors[systList[i_s]] = new DMEvtSelect(dmt, m_configFileName);
@@ -460,10 +461,10 @@ void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: Loop over DMTree with " << entries
 	    << " entries." << std::endl;
   for (Long64_t event = 0; event < entries; event++) {
-    
+  
     // Load event and print the progress bar:
     dmt->fChain->GetEntry(event);
-    //printProgressBar(event, entries);
+    printProgressBar(event, entries);
     
     // Check if this is a new file (which requires a different overall norm:
     if (!currFileName.EqualTo(chain->GetFile()->GetName())) {
@@ -519,7 +520,7 @@ void DMMassPoints::createNewMassPoints() {
     double varEtMiss = dmt->HGamEventInfoAuxDyn_TST_met["Nominal"] / 1000.0;
     double varPtYY = dmt->HGamEventInfoAuxDyn_pT_yy["Nominal"] / 1000.0;
     int nJets = dmt->HGamEventInfoAuxDyn_Njets["Nominal"];
-        
+    
     if (dmt->HGamEventInfoAuxDyn_cutFlow["Nominal"] >= 
 	(int)m_config->getStrV("MxAODCutList").size()) {
       fillHist1D("pTyy", true, varPtYY, evtWeight, -1);
@@ -532,7 +533,7 @@ void DMMassPoints::createNewMassPoints() {
       fillHist1D("njets", true, nJets, evtWeight, -1);
       fillHist1D("nleptons", true, nLeptons, evtWeight, -1);
     }
-        
+    
     // For systematic variations of the selection:
     if (getSystematics) {
       for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
@@ -692,7 +693,7 @@ void DMMassPoints::loadMassPointsFromFile() {
    @param total - The total number of events.
 */
 void DMMassPoints::printProgressBar(int index, int total) {
-  if (index%10000 == 0) {
+  if (index%100 == 0) {
     TString print_bar = " [";
     for (int bar = 0; bar < 20; bar++) {
       double current_fraction = double(bar) / 20.0;

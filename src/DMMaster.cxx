@@ -18,6 +18,7 @@
 //  MasterOption - Note: Each can be followed by the suffix "New"             //
 //    - Cleanup                                                               //
 //    - MassPoints                                                            //
+//    - GetSystematics                                                        //
 //    - PlotVariables                                                         //
 //    - SigParam                                                              //
 //    - BkgModel                                                              //
@@ -518,9 +519,9 @@ int main (int argc, char **argv) {
   }
   
   //--------------------------------------//
-  // Step 1: Make or load mass points:
+  // Step 1.1: Make or load mass points:
   if (masterOption.Contains("MassPoints")) {
-    std::cout << "DMMaster: Step 1 - Make mass points." << std::endl;
+    std::cout << "DMMaster: Step 1.1 - Make mass points." << std::endl;
     
     // Load SM signal MxAODs:
     std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
@@ -553,8 +554,26 @@ int main (int argc, char **argv) {
   }
   
   //--------------------------------------//
-  // Step 1.2: Make variable plots:
+  // Step 1.2: Make cutflows with experimental systematics:
+  if (masterOption.Contains("GetSystematics")) {
+    std::cout << "DMMaster: Step 1.2 - Make kinematic variable plots."
+	      << std::endl;
+    // Load MxAODs with systematic uncertainties:
+    std::vector<TString> sysSamples = m_config->getStrV("SystematicsSamples");
+    for (int i_s = 0; i_s < (int)sysSamples.size(); i_s++) {
+      // Mass point options will include "Syst":
+      TString sysOptions = massPointOptions + "_Syst";
+      DMMassPoints *mp 
+	= new DMMassPoints(configFileName, sysSamples[i_s], sysOptions, NULL);
+      delete mp;
+    }
+  }
+  
+  //--------------------------------------//
+  // Step 1.3: Make variable plots:
   if (masterOption.Contains("PlotVariables")) {
+    std::cout << "DMMaster: Step 1.3 - Make kinematic variable plots."
+	      << std::endl;
     std::vector<TString> plotVariables = m_config->getStrV("PlotVariables");
     for (int i_v = 0; i_v < (int)plotVariables.size(); i_v++) {
       system(Form("./bin/PlotVariables %s %s %s", configFileName.Data(), 
@@ -566,7 +585,8 @@ int main (int argc, char **argv) {
   //--------------------------------------//
   // Step 2: Make or load the signal parameterization:
   if (masterOption.Contains("SigParam")) {
-    cout << "DMMaster: Step 2 - Make signal parameterization." << endl;
+    std::cout << "DMMaster: Step 2 - Make signal parameterization." 
+	      << std::endl;
     SigParamInterface *spi = new SigParamInterface(configFileName,
 						   sigParamOptions);
     delete spi;
@@ -576,7 +596,7 @@ int main (int argc, char **argv) {
   // Step 3: Create the background model (spurious signal calculation):
   // REPLACE WITH SPURIOUS SIGNAL CODE.
   if (masterOption.Contains("BkgModel")) {
-    cout << "DMMaster: Step 4 - Making the background model." << endl;
+    std::cout << "DMMaster: Step 4 - Making the background model." << std::endl;
     exit(0);
   }
   
@@ -651,8 +671,8 @@ int main (int argc, char **argv) {
   // Step 5.1: Create pseudoexperiment ensemble:
   TString currToySignal = m_config->getStr("exampleSignal");
   if (masterOption.Contains("TossPseudoExp")) {
-    cout << "DMMaster: Step 5.1 - Creating pseudoexperiments for signal "
-	 << currToySignal << std::endl;
+    std::cout << "DMMaster: Step 5.1 - Creating pseudoexperiments for signal "
+	      << currToySignal << std::endl;
     
     int toySeed = m_config->getInt("toySeed");
     int nToysTotal = m_config->getInt("nToysTotal");
@@ -851,4 +871,3 @@ int main (int argc, char **argv) {
 	 (int)time, ((float)time/CLOCKS_PER_SEC));
   return 0;
 }
-

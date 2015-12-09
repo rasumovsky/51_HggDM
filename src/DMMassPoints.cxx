@@ -378,8 +378,13 @@ void DMMassPoints::setMassObservable(RooRealVar *newObservable) {
 void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: creating new mass points from tree." << std::endl;
   
-  // Use file list:
-  TString listName = DMAnalysis::nameToFileList(m_config, m_sampleName);
+  // Check whether experimental systematic uncertainties should be evaluated:
+  bool getSystematics = m_options.Contains("Syst");
+  
+  // Construct file list for the TChain:
+  TString listName
+    = DMAnalysis::nameToFileList(m_config, m_sampleName, getSystematics);
+  
   // If option says copy files, make local file copies and then run:
   if (m_options.Contains("CopyFile")) {
     listName = createLocalFilesAndList(listName);
@@ -393,7 +398,7 @@ void DMMassPoints::createNewMassPoints() {
   // Also instantiate tools with systematics:
   std::map<TString, DMEvtSelect*> sysSelectors; sysSelectors.clear();
   std::vector<TString> systList = m_config->getStrV("SystematicsList");
-  if (m_options.Contains("Syst")) {
+  if (getSystematics) {
     for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
       sysSelectors[systList[i_s]] = new DMEvtSelect(dmt, m_configFileName);
       sysSelectors[systList[i_s]]->setSysVariation(systList[i_s]);
@@ -526,7 +531,7 @@ void DMMassPoints::createNewMassPoints() {
     }
     
     // For systematic variations of the selection:
-    if (m_options.Contains("Syst")) {
+    if (getSystematics) {
       for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
 	sysSelectors[systList[i_s]]->passesCut("AllCuts", evtWeight);
       }
@@ -566,7 +571,7 @@ void DMMassPoints::createNewMassPoints() {
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;
   
   // For systematic variations of the selection:
-  if (m_options.Contains("Syst")) {
+  if (getSystematics) {
     for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
       sysSelectors[systList[i_s]]
 	->saveCutflow(Form("%s/Systematics/cutflow_%s_%s.txt",

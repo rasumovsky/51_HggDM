@@ -310,25 +310,48 @@ bool DMAnalysis::isWeightedSample(Config *config, TString sampleName) {
     Convert the sample name to the corresponding file list.
     @param config - The config file for the analysis settings.
     @param name - The name of the sample.
+    @param useSys - True iff. samples with experimental systematics are needed.
     @returns - The file list location.
 */
-TString DMAnalysis::nameToFileList(Config *config, TString name) {
-  // Check that directory exists for file lists:
+TString DMAnalysis::nameToFileList(Config *config, TString name, bool useSys) {
+  
+  // Check that file list directory exists, and make if it doesn't:
   system(Form("mkdir -vp %s/FileLists",(config->getStr("masterInput")).Data()));
-  // Create a new file list:
-  TString newListName = Form("%s/FileLists/list_%s.txt", 
-			     (config->getStr("masterInput")).Data(),
-			     name.Data());
+  
+  // Create a new file list (name depends on sample type and sys. setting:
+  TString newListName = useSys ? 
+    Form("%s/FileLists/list_%s_Sys.txt", (config->getStr("masterInput")).Data(),
+	 name.Data()) :
+    Form("%s/FileLists/list_%s.txt", (config->getStr("masterInput")).Data(),
+	 name.Data());
   std::ofstream newFileList(newListName);
   
-  // Use a format specifier for DM samples:
-  if (isDMSample(config, name)) {
+  // First check if it is a systematic sample:
+  if (useSys) {
+    TString keyName = (isDMSample(config,name)) ? 
+      "MxAODForm_DM_Sys" : Form("MxAODForm_%s_Sys",name.Data());
+    std::vector<TString> listMxAODs = config->getStrV(keyName);
+    for (int i_s = 0; i_s < (int)listMxAODs.size(); i_s++) {
+      if (isDMSample(config,name)) {
+	TString currMxAODName = listMxAODs[i_s];
+	currMxAODName.ReplaceAll("NAME",name);
+	newFileList << currMxAODName << std::endl;
+      }
+      else {
+	newFileList << listMxAODs[i_s] << std::endl;
+      }
+    }
+  }
+  
+  // Else if it is a nominal DM sample, use a format specifier:
+  else if (isDMSample(config, name)) {
     TString MxAODName = config->getStr("MxAODForm_DM");
-    MxAODName = MxAODName.ReplaceAll("NAME",name);
+    MxAODName.ReplaceAll("NAME",name);
     newFileList << config->getStr("MxAODDirectoryMC") << "/" << MxAODName 
 		<< std::endl;
   }
-  // Use MxAOD list in the settings file for SM Higgs, backgrounds, and data:
+  
+  // Else use MxAOD list in the settings file for SM Higgs, backgrounds, data:
   else {
     std::vector<TString> listMxAODs
       = config->getStrV(Form("MxAODList_%s", name.Data()));

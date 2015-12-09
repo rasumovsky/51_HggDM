@@ -39,7 +39,7 @@ namespace DMAnalysis {
   bool isSMSample(Config *config, TString sampleName);
   bool isSignalSample(Config *config, TString sampleName);
   bool isWeightedSample(Config *config, TString sampleName);
-  TString nameToFileList(Config *config, TString name);  
+  TString nameToFileList(Config *config, TString name, bool useSys);  
   
 };
 

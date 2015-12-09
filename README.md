@@ -24,15 +24,18 @@ inputs have been produced previously before generating them from scratch.
 
 ### Package contents:
 
-##### settingsHDM_h008.cfg
+##### settingsHDM_sys.cfg
   Luminosity, higgs mass, m_yy range, file names, script locations, production 
   mode information should all go here. Default job options also are included. 
-  The h008 tag refers to the MxAOD production for which this file has been
-   developed. 
+  The sys tag refers to the fact that MxAODs with systematic variations can now
+  be specified. Be careful: there are differences between the nominal and 
+  systematic MxAOD path specifications. Specifically, one must specify the 
+  entire file location for systematics MxAODs (root://eosatlas//eos...), since 
+  the files are spread across many locations.
 
 ##### DMAnalysis
   This namespace should store all general analysis methods. The idea is to
-  avoid hard-coding anything in the supporting classes. 
+  avoid duplication of methods to minimize the pain of changing things. 
 
 ##### DMMaster
   This is the master 'wrapper' class for the analysis. Using this class, all the
@@ -127,6 +130,7 @@ Then to run,
 The program can be any of the following options: 
   - Cleanup (clean old files from previous analysis runs)
   - MassPoints (make mass files as inputs for and model)
+  - GetSystematics (make cutflows and categorizations for all syst. variations)
   - PlotVariables (plot interesting kinematic variables)
   - SigParam (build the signal PDF from MC)
   - BkgModel (build the background model)

@@ -473,7 +473,7 @@ void DMMassPoints::createNewMassPoints() {
       // Tool to get the total number of events at the generator level.
       DMxAODCutflow *dmx = new DMxAODCutflow(currFileName, m_configFileName);
       nTotalEventsInFile = dmx->nTotalEventsInFile();
-      
+            
       // Then also get the cutflow histogram:
       double currNorm = 1.00000000;
       TH1F* currHist = (TH1F*)dmx->getHist()->Clone();
@@ -489,10 +489,11 @@ void DMMassPoints::createNewMassPoints() {
 	  currNorm *= m_config->getNum("BranchingRatioHyy");
 	}
       }
+      
       m_componentCutFlows.push_back(currHist);
       m_componentNorms.push_back(currNorm);
     }
-    
+        
     // Calculate the weights for the cutflow first!
     double evtWeight = 1.00000000;
     if (m_isWeighted) {
@@ -507,15 +508,18 @@ void DMMassPoints::createNewMassPoints() {
 	evtWeight *= m_config->getNum("BranchingRatioHyy");
       }
     }
-    
+        
     // The mass parameter:
     double invariantMass = dmt->HGamEventInfoAuxDyn_m_yy["Nominal"] / 1000.0;
-    int nLeptons = ((int)(dmt->HGamElectronsAuxDyn_pt["Nominal"]->size()) +
-		    (int)(dmt->HGamMuonsAuxDyn_pt["Nominal"]->size()));
-    
+    std::vector<float> elPt = *dmt->HGamElectronsAuxDyn_pt;
+    std::vector<float> muPt = *dmt->HGamMuonsAuxDyn_pt;
+    int nLeptons = (int)(elPt.size() + muPt.size());
+        
     // Then commence plotting for events passing inclusive H->yy selection:
     double varEtMiss = dmt->HGamEventInfoAuxDyn_TST_met["Nominal"] / 1000.0;
     double varPtYY = dmt->HGamEventInfoAuxDyn_pT_yy["Nominal"] / 1000.0;
+    int nJets = dmt->HGamEventInfoAuxDyn_Njets["Nominal"];
+        
     if (dmt->HGamEventInfoAuxDyn_cutFlow["Nominal"] >= 
 	(int)m_config->getStrV("MxAODCutList").size()) {
       fillHist1D("pTyy", true, varPtYY, evtWeight, -1);
@@ -525,18 +529,17 @@ void DMMassPoints::createNewMassPoints() {
 		 sqrt(varEtMiss*varEtMiss+varPtYY*varPtYY), evtWeight, -1);
       fillHist1D("aTanRatio",true,TMath::ATan(varEtMiss/varPtYY),evtWeight,-1);
       fillHist1D("myy", true, invariantMass, evtWeight, -1);
-      fillHist1D("njets", true, dmt->HGamEventInfoAuxDyn_Njets["Nominal"],
-		 evtWeight, -1);
+      fillHist1D("njets", true, nJets, evtWeight, -1);
       fillHist1D("nleptons", true, nLeptons, evtWeight, -1);
     }
-    
+        
     // For systematic variations of the selection:
     if (getSystematics) {
       for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
 	sysSelectors[systList[i_s]]->passesCut("AllCuts", evtWeight);
       }
     }
-    
+        
     // Make sure events pass the selection:
     if (!selector->passesCut("AllCuts", evtWeight)) continue;
     
@@ -554,7 +557,7 @@ void DMMassPoints::createNewMassPoints() {
     
     // Write mass point to file:
     massFiles[currCate] << invariantMass << " " << evtWeight << std::endl;
-    
+        
     // Then commence plotting for PASSING events:
     fillHist1D("pTyy", false, varPtYY, evtWeight, currCate);
     fillHist1D("ETMiss", false, varEtMiss, evtWeight, currCate);
@@ -564,8 +567,7 @@ void DMMassPoints::createNewMassPoints() {
     fillHist1D("aTanRatio", false, TMath::ATan(varEtMiss/varPtYY), 
 	       evtWeight, currCate);
     fillHist1D("myy", false, invariantMass, evtWeight, currCate);
-    fillHist1D("njets", false, dmt->HGamEventInfoAuxDyn_Njets["Nominal"],
-	       evtWeight, currCate);
+    fillHist1D("njets", false, nJets, evtWeight, currCate);
     fillHist1D("nleptons", false, nLeptons, evtWeight, -1);
   }
   std::cout << "DMMassPoints: End of loop over input DMTree." << std::endl;

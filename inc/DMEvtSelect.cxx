@@ -356,8 +356,8 @@ bool DMEvtSelect::passesCut(TString cutName, double weight) {
   }
   // Lepton Veto Cut:
   else if (cutName.EqualTo("LeptonVeto") && m_config->getBool("LeptonVeto")) {
-    passes = ((evtTree->HGamElectronsAuxDyn_pt[m_sysVariation])->size() == 0 &&
-	      (evtTree->HGamMuonsAuxDyn_pt[m_sysVariation])->size() == 0);
+    passes = ((evtTree->HGamElectronsAuxDyn_pt)->size() == 0 &&
+	      (evtTree->HGamMuonsAuxDyn_pt)->size() == 0);
   }
   // Cut on the diphoton transverse momentum:
   else if (cutName.EqualTo("DiphotonPT")) {

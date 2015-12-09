@@ -329,7 +329,7 @@ TString DMAnalysis::nameToFileList(Config *config, TString name, bool useSys) {
   // First check if it is a systematic sample:
   if (useSys) {
     TString keyName = (isDMSample(config,name)) ? 
-      "MxAODForm_DM_Sys" : Form("MxAODForm_%s_Sys",name.Data());
+      "MxAODForm_DM_Sys" : Form("MxAODList_%s_Sys",name.Data());
     std::vector<TString> listMxAODs = config->getStrV(keyName);
     for (int i_s = 0; i_s < (int)listMxAODs.size(); i_s++) {
       if (isDMSample(config,name)) {

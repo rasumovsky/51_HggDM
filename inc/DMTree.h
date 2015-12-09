@@ -27,7 +27,6 @@ class DMTree {
   std::vector<TString> m_sysNames;
   
   // Declaration of nominal and systematics leaf types:
-  std::map<TString, std::vector<float>* > HGamElectronsAuxDyn_pt;
   std::map<TString, Float_t> HGamEventInfoAuxDyn_m_yy;
   std::map<TString, Float_t> HGamEventInfoAuxDyn_pT_yy;
   std::map<TString, Float_t> HGamEventInfoAuxDyn_cosTS_yy;
@@ -37,11 +36,12 @@ class DMTree {
   std::map<TString, Float_t> HGamEventInfoAuxDyn_weight;
   std::map<TString, Float_t> HGamEventInfoAuxDyn_TST_met;
   std::map<TString, Float_t> HGamEventInfoAuxDyn_crossSectionBRfilterEff;
-  std::map<TString, std::vector<float>* > HGamMuonsAuxDyn_pt;
-  std::map<TString, std::vector<float>* > HGamTruthHiggsBosonsAuxDyn_m;
+  
+  std::vector<float> *HGamElectronsAuxDyn_pt;
+  std::vector<float> *HGamMuonsAuxDyn_pt;
+  std::vector<float> *HGamTruthHiggsBosonsAuxDyn_m;
   
   // List of branches
-  std::map<TString, TBranch*> b_HGamElectronsAuxDyn_pt;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_m_yy;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_pT_yy;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_cosTS_yy;
@@ -51,9 +51,11 @@ class DMTree {
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_weight;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_TST_met;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_crossSectionBRfilterEff;
-  std::map<TString, TBranch*> b_HGamMuonsAuxDyn_pt;
-  std::map<TString, TBranch*> b_HGamTruthHiggsBosonsAuxDyn_m;
-
+  
+  TBranch *b_HGamElectronsAuxDyn_pt;
+  TBranch *b_HGamMuonsAuxDyn_pt;
+  TBranch *b_HGamTruthHiggsBosonsAuxDyn_m;
+  
   // Methods:
   DMTree(TTree *tree = 0);
   virtual ~DMTree();
@@ -125,13 +127,13 @@ void DMTree::Init(TTree *tree) {
   fChain = tree;
   fCurrent = -1;
   fChain->SetMakeClass(1);
-  
-  //m_useSys = useSys;
-  //m_sysNames.clear();
-  //m_sysNames.push_back("Nominal");
-
-  //HGamEventInfo_EG_RESOLUTION_ALL__1downAuxDyn.cutFlow
-  
+    
+  // Set object pointer
+  HGamElectronsAuxDyn_pt = 0;
+  HGamMuonsAuxDyn_pt = 0;
+  HGamTruthHiggsBosonsAuxDyn_m = 0;
+    
+  // Loop over systematics:
   for (int i_s = 0; i_s < (int)m_sysNames.size(); i_s++) {
     
     TString tag = "";;
@@ -139,12 +141,6 @@ void DMTree::Init(TTree *tree) {
       tag = Form("_%s", m_sysNames[i_s].Data());
     }
     
-    // Set object pointer
-    HGamElectronsAuxDyn_pt[tag] = 0;
-    HGamMuonsAuxDyn_pt[tag] = 0;
-    HGamTruthHiggsBosonsAuxDyn_m[tag] = 0;
-    
-    b_HGamElectronsAuxDyn_pt[tag] = NULL;
     b_HGamEventInfoAuxDyn_m_yy[tag] = NULL;
     b_HGamEventInfoAuxDyn_pT_yy[tag] = NULL;
     b_HGamEventInfoAuxDyn_cosTS_yy[tag] = NULL;
@@ -154,12 +150,7 @@ void DMTree::Init(TTree *tree) {
     b_HGamEventInfoAuxDyn_weight[tag] = NULL;
     b_HGamEventInfoAuxDyn_TST_met[tag] = NULL;
     b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag] = NULL;
-    b_HGamMuonsAuxDyn_pt[tag] = NULL;
-    b_HGamTruthHiggsBosonsAuxDyn_m[tag] = NULL;
-    
-    fChain->SetBranchAddress(Form("HGamElectronsAuxDyn%s.pt",tag.Data()),
-			     &HGamElectronsAuxDyn_pt[tag],
-			     &b_HGamElectronsAuxDyn_pt[tag]);
+        
     fChain->SetBranchAddress(Form("HGamEventInfoAuxDyn%s.m_yy",tag.Data()),
 			     &HGamEventInfoAuxDyn_m_yy[tag],
 			     &b_HGamEventInfoAuxDyn_m_yy[tag]);
@@ -190,13 +181,18 @@ void DMTree::Init(TTree *tree) {
 			      tag.Data()),
 			 &HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag],
 			 &b_HGamEventInfoAuxDyn_crossSectionBRfilterEff[tag]);
-    fChain->SetBranchAddress(Form("HGamMuonsAuxDyn%s.pt",tag.Data()),
-			     &HGamMuonsAuxDyn_pt[tag],
-			     &b_HGamMuonsAuxDyn_pt[tag]);
-    fChain->SetBranchAddress(Form("HGamTruthHiggsBosonsAuxDyn%s.m",tag.Data()),
-			     &HGamTruthHiggsBosonsAuxDyn_m[tag],
-			     &b_HGamTruthHiggsBosonsAuxDyn_m[tag]);
   }
+  
+  // The branches that don't have systematic variations:
+  fChain->SetBranchAddress("HGamElectronsAuxDyn.pt",
+			   &HGamElectronsAuxDyn_pt,
+			   &b_HGamElectronsAuxDyn_pt);
+  fChain->SetBranchAddress("HGamMuonsAuxDyn.pt",
+			   &HGamMuonsAuxDyn_pt,
+			   &b_HGamMuonsAuxDyn_pt);
+  fChain->SetBranchAddress("HGamTruthHiggsBosonsAuxDyn.m",
+			   &HGamTruthHiggsBosonsAuxDyn_m,
+			   &b_HGamTruthHiggsBosonsAuxDyn_m);
   
   Notify();
 }

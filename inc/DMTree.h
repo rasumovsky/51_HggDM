@@ -136,6 +136,12 @@ void DMTree::Init(TTree *tree) {
     TString dTag = (mTag.EqualTo("Nominal")) ?
       "" : Form("_%s", m_sysNames[i_s].Data());
   
+    // Someone carelessly put a space in the branch name:
+    if (dTag.Contains("FT_EFF_extrapolation_from_charm")) {
+      dTag.ReplaceAll("FT_EFF_extrapolation_from_charm",
+		      "FT_EFF_extrapolation from charm");
+    }
+
     b_HGamEventInfoAuxDyn_m_yy[mTag] = NULL;
     b_HGamEventInfoAuxDyn_pT_yy[mTag] = NULL;
     b_HGamEventInfoAuxDyn_cosTS_yy[mTag] = NULL;

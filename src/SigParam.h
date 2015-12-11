@@ -5,7 +5,7 @@
 //                                                                            //
 //  Author: Andrew Hard                                                       //
 //  Email: ahard@cern.ch                                                      //
-//  Date: 08/11/2015                                                          //
+//  Date: 10/12/2015                                                          //
 //                                                                            //
 //  Accessors access class data without modifying the member objects, while   //
 //  mutators modify the state of the class (and also sometimes return data.   //
@@ -44,8 +44,10 @@
 #include <TMath.h>
 #include <TRandom.h>
 #include <TRandom3.h>
+#include "TRegexp.h"
 #include "TROOT.h"
 #include "TString.h"
+#include "TSystem.h"
 #include "TTree.h"
 
 // ROOT math headers:
@@ -133,10 +135,13 @@ class SigParam {
   std::vector<TString> getVariableNames(double resonanceMass, int cateIndex);
   TString getVarParameterization(TString varName);
   RooWorkspace* getWorkspace();
+  double getYieldErrorInCategory(double resonanceMass, int cateIndex);
+  double getYieldErrorTotal(double resonanceMass);
   double getYieldInCategory(double resonanceMass, int cateIndex);
   double getYieldInWindow(double resonanceMass, int cateIndex, double obsMin,
 			  double obsMax);
-  double getYieldInWindow(double resonanceMass, double obsMin, double obsMax);
+  double getYieldTotalInWindow(double resonanceMass, double obsMin, 
+			       double obsMax);
   double getYieldTotal(double resonanceMass);
   std::vector<TString> listParamsForVar(TString varName);
   std::vector<TString> variablesForFunction(TString function);
@@ -154,7 +159,7 @@ class SigParam {
 		    double eventWeight);
   std::vector<double> doBiasTest(double resonanceMass, int cateIndex,
 				 TString dataType, int seed);
-  void doBinnedFit(bool doBinned, double nBinsPerGeV = 1.0);
+  void doBinnedFit(bool doBinned, double geVPerBin = 1.0);
   bool generateAndFitData(double resonanceMass, int cateIndex, TString dataType,
 			  int seed = 1);
   RooDataSet* generateData(double resonanceMass, int cateIndex,
@@ -177,8 +182,13 @@ class SigParam {
   void saveYieldList();
   void setDirectory(TString directory);
   void setLogYAxis(bool useLogYAxis);
+  void setMassWindowSize(double fraction);
+  void setMassWindowFixed(bool fixWindow, double windowMin, double windowMax);
   void setParamState(TString paramName, TString valueAndRange);
+  void setPlotATLASLabel(TString atlasLabel);
   void setPlotFormat(TString fileFormat);
+  void setPlotLuminosity(TString lumiLabel);
+  void setPlotXAxisTitle(TString xAxisTitle);
   void setRatioPlot(bool doRatioPlot, double ratioMin, double ratioMax);
   void setResMassConstant(bool setConstant, double resonanceMass);
   void setResMassConstant(bool setConstant);
@@ -190,7 +200,6 @@ class SigParam {
  private:
   
   //----------Private Accessors----------//
-  //std::vector<int> categoriesForMass(double resonanceMass);
   bool dataExists(double resonanceMass, int cateIndex);
   bool equalMasses(double massValue1, double massValue2);
   bool functionIsDefined(TString function);
@@ -215,8 +224,7 @@ class SigParam {
 			    bool parameterized);
   void parameterizeVar(TString varName, double mRegularized, double mResonance,
 		       int cateIndex, bool parameterized);
-  RooDataSet* plotData(RooAbsData *data, RooRealVar *observable, double xBins,
-		       double resonanceMass);
+  RooDataSet* plotData(RooAbsData *data, RooRealVar *observable);
   TGraphErrors* plotSubtraction(RooAbsData *data, RooAbsPdf *pdf, 
 				RooRealVar *observable, double xBins,
 				double &chi2Prob);
@@ -254,7 +262,12 @@ class SigParam {
   
   // True iff fits should be binned.
   bool m_binned;
-  int m_nBinsPerGeV;
+  //int m_nBinsPerGeV;
+  int m_geVPerBin;
+  double m_windowFraction;
+  double m_windowMin;
+  double m_windowMax;
+  bool m_fixWindow;
   
   // Fit parameter options:
   bool m_sameCBGAMean;
@@ -266,14 +279,16 @@ class SigParam {
   double m_generatedDataNorm;
   std::map<TString,double> m_testStats;
   
-
   // Plot options:
-  bool m_useLogYAxis;
+  TString m_atlasLabel;
+  std::vector<TString> m_cateNames;
+  TString m_currFunction;
   bool m_doRatioPlot;
+  TString m_lumiLabel;
   double m_ratioMin;
   double m_ratioMax;
-  TString m_currFunction;
-  std::vector<TString> m_cateNames;
+  bool m_useLogYAxis;
+  TString m_xAxisTitle;
   
   // A bool to control how spammy the tool is:
   bool m_verbose;

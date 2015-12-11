@@ -4,7 +4,7 @@
 //                                                                            //
 //  Creator: Andrew Hard                                                      //
 //  Email: ahard@cern.ch  <-- Please use for reporting issues!                //
-//  Date: 08/11/2015                                                          //
+//  Date: 10/12/2015                                                          //
 //                                                                            //
 //  This class implements the resonance modeling for the ATLAS Hgamma group.  //
 //                                                                            //
@@ -16,8 +16,14 @@
 //       * "GAx3" for 3 Gaussians                                             //
 //       * "BifurGA" for bifurcated Gaussian                                  //
 //       * "Landau"                                                           //
+//       * "LAx2"                                                             //
+//       * "CBLA"                                                             //
 //       * "CBPlusVoigt"                                                      //
 //       * "Voigt"                                                            //
+//       * "DoubleCBLA"                                                       //
+//       * "GALA"                                                             //
+//       * "BifurGALA"                                                        //
+//       * "LandauMod"                                                        //
 //                                                                            //
 //    - Category indices should start at zero.                                //
 //                                                                            //
@@ -63,6 +69,8 @@ SigParam::SigParam(TString signalType, TString directory) {
   
   // Some basic fit options:
   useCommonCBGAMean(false);
+  setMassWindowSize(0.1); // Used by default
+  setMassWindowFixed(false, 105,140); // Not used unless called by user
   
   // Fit result information:
   m_currChi2 = 0.0;
@@ -70,11 +78,16 @@ SigParam::SigParam(TString signalType, TString directory) {
   m_currExtendVal = 0.0;
   m_generatedDataNorm = 0.0;
   
-  // Set the plot format:
+  // Set the plot formatting:
   doBinnedFit(false, 1);
   setLogYAxis(false);
+  setPlotATLASLabel("Simulation Internal");
   setPlotFormat(".eps");
+  setPlotLuminosity("1.0 fb^{-1}");
+  setPlotXAxisTitle("Mass [GeV]");
   setRatioPlot(true, 0.0, 2.0);
+  
+  // Funny stuff to save the function name in the workspace for loading later:
   m_currFunction = "DoubleCB";
   RooRealVar nameVar("functionName", m_currFunction, 0);
   m_ws->import(nameVar);
@@ -94,7 +107,6 @@ SigParam::SigParam(TString signalType, TString directory) {
   setVarParameterization("sigmaGANom", "@0+@1*obs");
   // Double-sided Crystal Ball:
   setVarParameterization("alphaCBLo", "@0+@1/(obs+@2)");
-  //setVarParameterization("alphaCBHi", "@0+@1*obs");
   setVarParameterization("alphaCBHi", "@0+@1/(obs+@2)");
   // Triple Gaussian:
   setVarParameterization("muGA1Nom", "@0+@1*obs+mRes");
@@ -109,10 +121,17 @@ SigParam::SigParam(TString signalType, TString directory) {
   // Landau:
   setVarParameterization("muLANom", "@0+@1*obs+@2*obs*obs+mRes");
   setVarParameterization("sigmaLANom", "@0+@1*obs");
+  // Double Landau:
+  setVarParameterization("muLA1Nom", "@0+@1*obs+@2*obs*obs+mRes");
+  setVarParameterization("muLA2Nom", "@0+@1*obs+@2*obs*obs+mRes");
+  setVarParameterization("sigmaLA1Nom", "@0+@1*obs");
+  setVarParameterization("sigmaLA2Nom", "@0+@1*obs");
   // Voigt:
   setVarParameterization("muVoigtNom", "@0+@1*obs+@2*obs*obs+mRes");
   setVarParameterization("widthVoigtNom", "@0+@1*obs");
   setVarParameterization("sigmaVoigtNom", "@0+@1*obs"); 
+  // Modified Landau:
+  setVarParameterization("alphaLA", "@0+@1*obs");
   
   //--------------------------------------------------------------------------//
   // Default parameter values below are for parameterized fit over mResonance.
@@ -125,7 +144,7 @@ SigParam::SigParam(TString signalType, TString directory) {
   // Crystal Ball + Gaussian:
   setParamState("a_alphaCB", "[2.2,0.0,4.0]");
   setParamState("b_alphaCB", "[0.0,-0.1,0.1]");
-  setParamState("nCB", "[5.0,0.1,10.0]");
+  setParamState("nCB", "[10.0]");
   setParamState("a_muGANom", "[-0.0,-2.0,2.0]");
   setParamState("b_muGANom", "[-0.1,-0.5,0.5]");
   setParamState("c_muGANom", "[-0.02,-0.5,0.5]");
@@ -167,6 +186,18 @@ SigParam::SigParam(TString signalType, TString directory) {
   setParamState("c_muLANom", "[-0.02,-0.5,0.5]");
   setParamState("a_sigmaLANom", "[0.0,-10.0,10.0]");
   setParamState("b_sigmaLANom", "[3.90,0.01,10.0]");
+  // Double Landau:
+  setParamState("a_muLA1Nom", "[-0.01,-2.0,2.0]");
+  setParamState("b_muLA1Nom", "[-0.11,-0.5,0.5]");
+  setParamState("c_muLA1Nom", "[-0.021,-0.5,0.5]");
+  setParamState("a_muLA2Nom", "[-0.0,-2.0,2.0]");
+  setParamState("b_muLA2Nom", "[-0.1,-0.5,0.5]");
+  setParamState("c_muLA2Nom", "[-0.02,-0.5,0.5]");
+  setParamState("a_sigmaLA1Nom", "[0.01,-10.0,10.0]");
+  setParamState("b_sigmaLA1Nom", "[3.91,0.01,10.0]");
+  setParamState("a_sigmaLA2Nom", "[0.0,-10.0,10.0]");
+  setParamState("b_sigmaLA2Nom", "[3.90,0.01,10.0]");
+  setParamState("fracLA1", "[0.32,0.01,0.99]");
   // Voigt:
   setParamState("a_muVoigtNom", "[-0.0,-2.0,2.0]");
   setParamState("b_muVoigtNom", "[-0.1,-0.5,0.5]");
@@ -175,26 +206,24 @@ SigParam::SigParam(TString signalType, TString directory) {
   setParamState("b_widthVoigtNom", "[1.8,0.1,4.0]");
   setParamState("a_sigmaVoigtNom", "[5.0,-1.0,20.0]");
   setParamState("b_sigmaVoigtNom", "[1.8,0.1,4.0]");
+  // Modified Landau:
+  setParamState("a_alphaLA", "[0.0,-1.0,1.0]");
+  setParamState("b_alphaLA", "[0.0,-1.0,1.0]");
+  // Other:
+  setParamState("fracGA", "[0.5,0.01,0.99]");
   
   //--------------------------------------------------------------------------//
   // Parameter values below are for fits to individual mass points:
+  // Some parameters such as nCB and frac are listed above to avoid duplication.
   // Common parameters:
   setParamState("muCBNom", "[125,0.1,10000]");
   setParamState("sigmaCBNom", "[1.7,0.01,200.0]");
-  //setParamState("alphaCB", "[1.5,1.0,3.0]");
   setParamState("alphaCB", "[1.5,0.1,3.0]");
-  //setParamState("nCB", "[9.0,0.01,30.0]");
-  setParamState("nCB", "[10.0]");
   setParamState("muGANom", "[125,0.1,10000]");
   setParamState("sigmaGANom", "[10.0,0.01,80.0]");
-  setParamState("fracCB", "[0.9,0.001,0.999]");
-  
   // Double-sided Crystal Ball PDF:
   setParamState("alphaCBLo", "[1.5,0.1,2.5]");
-  setParamState("nCBLo", "[17.0,0.01,30.0]");
   setParamState("alphaCBHi", "[2.2,0.1,3.0]");
-  setParamState("nCBHi", "[5.2,0.01,10.0]");
-  
   // Triple Gaussian PDF:
   setParamState("muGA1Nom", "[125,0.0,10000]");
   setParamState("muGA2Nom", "[125,0.0,10000]");
@@ -202,21 +231,23 @@ SigParam::SigParam(TString signalType, TString directory) {
   setParamState("sigmaGA1Nom", "[2.0,0.01,200.0]");
   setParamState("sigmaGA2Nom", "[4.0,0.01,200.0]");
   setParamState("sigmaGA3Nom", "[6.0,0.01,200.0]");
-  setParamState("fracGA1", "[0.5,0.001,0.999]");
-  setParamState("fracGA2", "[0.4,0.001,0.999]");
-  
   // Bifurcated Gaussian PDF:
   setParamState("sigmaGALowNom", "[3.0,0.01,200.0]");
   setParamState("sigmaGAHiNom", "[1.0,0.01,200.0]");
-  
-  // Landau parameterization:
+  // Landau PDF:
   setParamState("muLANom", "[125,0.0,10000]");
   setParamState("sigmaLANom", "[2.0,0.01,200.0]");
-  
-  // Voigt-specific parameters:
+  // Double Landau PDF:
+  setParamState("muLA1Nom", "[125,0.0,10000]");
+  setParamState("muLA2Nom", "[126,0.0,10000]");
+  setParamState("sigmaLA1Nom", "[2.1,0.01,200.0]");
+  setParamState("sigmaLA2Nom", "[2.0,0.01,200.0]");
+  // Voigt PDF:
   setParamState("muVoigtNom", "[125,0.0,10000]");
   setParamState("widthVoigtNom", "[10.0,0.01,80.0]");
   setParamState("sigmaVoigtNom", "[10.0,0.01,80.0]");
+  // Modified Landau:
+  setParamState("alphaLA", "[0.0,-1.0,1.0]");
   
   std::cout << "SigParam: Successfully initialized!" << std::endl;
 }
@@ -280,7 +311,6 @@ void SigParam::addDataTree(double resonanceMass, int cateIndex,
   
   // Loop over the TTree.
   for (Long64_t i_t = 0; i_t < dataTree->GetEntries(); i_t++) {
-    
     // Add current event values to the dataset used for parameterization.
     addMassPoint(resonanceMass, cateIndex, massValue, weightValue);
   }
@@ -619,7 +649,8 @@ void SigParam::binSingleDataSet(TString unbinnedName, TString binnedName,
     = m_ws->var(Form("m_yy_%s", (getKey(resonanceMass, cateIndex)).Data()));
   
   // Create a histogram to automatically bin the points:
-  int nBins = (int)(m_nBinsPerGeV*(myyCurr->getMax() - myyCurr->getMin()));
+  //int nBins = (int)(m_nBinsPerGeV*(myyCurr->getMax() - myyCurr->getMin()));
+  int nBins = (int)((myyCurr->getMax()-myyCurr->getMin())/(double)m_geVPerBin);
   TH1 *hist = unbinnedData
     ->createHistogram(Form("hist_%s",unbinnedName.Data()), *myyCurr, 
 		      RooFit::Binning(nBins, myyCurr->getMin(),
@@ -828,11 +859,11 @@ std::vector<double> SigParam::doBiasTest(double resonanceMass, int cateIndex,
    -----------------------------------------------------------------------------
    Option to do a binned fit. Sets the private variable m_binned.
    @param binned - True iff the fit should be binned.
-   @param nBinsPerGeV - The number of bins per GeV for the binned data.
+   @param geVPerBin - The number of bins per GeV for the binned data.
 */
-void SigParam::doBinnedFit(bool binned, double nBinsPerGeV) {
+void SigParam::doBinnedFit(bool binned, double geVPerBin) {
   m_binned = binned;
-  m_nBinsPerGeV = nBinsPerGeV;
+  m_geVPerBin = geVPerBin;
   if (m_verbose) {
     std::cout << "SigParam: Binned bool = " << m_binned << std::endl;
   }
@@ -1021,11 +1052,18 @@ RooFitResult* SigParam::fitResult(int cateIndex, TString dataType,
 bool SigParam::functionIsDefined(TString function) {
   if (function.Contains("DoubleCB") || function.Contains("CBGA") ||
       function.Contains("GAx3") || function.Contains("BifurGA") ||
-      function.Contains("Landau") || function.Contains("Voigt")) {
+      function.Contains("Landau") || function.Contains("Voigt") || 
+      function.Contains("LAx2") || function.Contains("CBLA") || 
+      function.Contains("DoubleCBLA") || 
+      function.Contains("GALA") || 
+      function.Contains("BifurGALA") || function.Contains("LandauMod")){
     return true;
   }
   else {
-    std::cout << "SigParam: ERROR! " << function << " is undefined. Please use one of the following: DoubleCB, CBGA, GAx3, BifurGA, Landau, Voigt, CBPlusVoigt..." 
+    std::cout << "SigParam: ERROR! " << function << " is undefined. Please use"
+	      << " one of the following: DoubleCB, CBGA, GAx3, BifurGA, Landau,"
+	      << " LAx2, CBLA, Voigt, CBPlusVoigt, DoubleCBLA, "
+	      << "GALA, BifurGALA, LandauMod"
 	      << std::endl;
     return false;
   }
@@ -1154,7 +1192,8 @@ RooDataSet* SigParam::generateData(double resonanceMass, int cateIndex,
     // Turn original dataset into histogram:
     double min = m_ws->var(obsName)->getMin();
     double max = m_ws->var(obsName)->getMax();
-    int bins = (int)(m_nBinsPerGeV * (max - min));
+    //int bins = (int)(m_nBinsPerGeV * (max - min));
+    int bins = (int)((max - min)/(double)m_geVPerBin);
     TString originObsName = Form("m_yy_%s", currKey.Data());
     TH1F *dataHist = (TH1F*)m_ws->data(dataName)
       ->createHistogram("histTmp", *m_ws->var(originObsName),
@@ -1633,6 +1672,58 @@ RooWorkspace* SigParam::getWorkspace() {
 
 /**
    -----------------------------------------------------------------------------
+   Get the error on the signal yield for a particular mass in a particular 
+   category. NOTE: THIS FAILS IF DATASET NOT DEFINED. 
+   @param resonanceMass - The truth mass of the resonance.
+   @param cateIndex - The index of the category for which we want the PDF.
+   @return - The signal yield for the specified mass in the given category.
+*/
+double SigParam::getYieldErrorInCategory(double resonanceMass, int cateIndex) {
+  if (m_verbose) {
+    std::cout << "SigParam: Get error on yield in category = " 
+	      << cateIndex << " at mass = " << resonanceMass << std::endl;
+  }
+  TString currKey = getKey(resonanceMass,cateIndex);
+  
+  // Then try to get individual yield:
+  if(m_ws->var(Form("sigYield_%s%s",m_signalType.Data(),currKey.Data()))) {
+    if (m_verbose) std::cout << "SigParam: point yield" << std::endl;
+    return m_ws->var(Form("sigYield_%s%s",m_signalType.Data(),
+			  currKey.Data()))->getError();
+  }
+  // Then try to get directly from dataset normalization:
+  else if ((m_ws->data(Form("data_%s",currKey.Data())))) {
+    if (m_verbose) std::cout << "SigParam: data yield" << std::endl;
+    return normalizationError(m_ws->data(Form("data_%s",currKey.Data())));
+  }
+  // Or return error message:
+  else {
+    std::cout << "SigParam: requested yield error not found. NOTE: You cannot "
+	      << "access the interpolated yield error at the current time."
+	      << std::endl;
+    exit(0);
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get the signal yield error for a particular resonance mass in all categories.
+   @param resonanceMass - The truth mass of the resonance.
+   @return - The signal yield in all categories for the specified mass.
+*/
+double SigParam::getYieldErrorTotal(double resonanceMass) {
+  std::cout << "SigParam: Get error on total yield at mass = " 
+	    << resonanceMass << std::endl;
+  // Loop through names of datasets, add components:
+  double sum = 0.0;
+  for (int i_c = 0; i_c < getNCategories(); i_c++) {
+    sum += getYieldErrorInCategory(resonanceMass, i_c);
+  }
+  return sum;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Get the signal yield for a particular mass in a particular category.
    @param resonanceMass - The truth mass of the resonance.
    @param cateIndex - The index of the category for which we want the PDF.
@@ -1665,7 +1756,7 @@ double SigParam::getYieldInCategory(double resonanceMass, int cateIndex) {
   // Or return error message:
   else {
     std::cout << "SigParam: requested yield not found." << std::endl;
-    exit(0);//return 0.0;
+    exit(0);
   }
 }
 
@@ -1733,24 +1824,6 @@ double SigParam::getYieldInWindow(double resonanceMass, int cateIndex,
 
 /**
    -----------------------------------------------------------------------------
-   Get the total inclusive signal yield for a signal at a specified mass in the
-   specified observable window.
-   @param resonanceMass - The truth mass of the resonance.
-   @param obsMin - The minimum of the observable range.
-   @param obsMax - The maximum of the observable range. 
-*/
-double SigParam::getYieldInWindow(double resonanceMass, double obsMin,	
-				  double obsMax) {
-  // Loop through names of datasets, add components:
-  double sum = 0.0;
-  for (int i_c = 0; i_c < getNCategories(); i_c++) {
-    sum += getYieldInWindow(resonanceMass, i_c, obsMin, obsMax);
-  }
-  return sum;
-}
-
-/**
-   -----------------------------------------------------------------------------
    Get the signal yield for a particular resonance mass in all categories.
    @param resonanceMass - The truth mass of the resonance.
    @return - The signal yield in all categories for the specified mass.
@@ -1762,6 +1835,24 @@ double SigParam::getYieldTotal(double resonanceMass) {
   double sum = 0.0;
   for (int i_c = 0; i_c < getNCategories(); i_c++) {
     sum += getYieldInCategory(resonanceMass, i_c);
+  }
+  return sum;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Get the total inclusive signal yield for a signal at a specified mass in the
+   specified observable window.
+   @param resonanceMass - The truth mass of the resonance.
+   @param obsMin - The minimum of the observable range.
+   @param obsMax - The maximum of the observable range. 
+*/
+double SigParam::getYieldTotalInWindow(double resonanceMass, double obsMin,	
+				       double obsMax) {
+  // Loop through names of datasets, add components:
+  double sum = 0.0;
+  for (int i_c = 0; i_c < getNCategories(); i_c++) {
+    sum += getYieldInWindow(resonanceMass, i_c, obsMin, obsMax);
   }
   return sum;
 }
@@ -1913,17 +2004,19 @@ bool SigParam::makeCategoryParameterization(int cateIndex, TString function) {
     currDataMap[((std::string)currKey)]
       = (RooDataSet*)m_ws->data(Form("data_%s",currKey.Data()));
     
-    // Reduce the dataset to within (rounded) +/-5 sigma of the mean
-    double windowPercent = 0.1;
-    double dataMin = round((1.0-windowPercent) * currMassPoints[i_m]);
-    double dataMax = round((1.0+windowPercent) * currMassPoints[i_m]);
-    //currDataMap[((std::string)currKey)]
-    //->reduce(Form("m_yy_%s>%f && m_yy_%s<%f",
-    //		    currKey.Data(), dataMin, currKey.Data(), dataMax));
+    // Reduce the dataset to within (rounded) fraction of the mean
     if (!m_verbose) {
       RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING);
     }
-    m_ws->var(Form("m_yy_%s",currKey.Data()))->setRange(dataMin, dataMax);
+    if (m_fixWindow) {
+      m_ws->var(Form("m_yy_%s",currKey.Data()))
+	->setRange(m_windowMin, m_windowMax);
+    }
+    else {
+      m_ws->var(Form("m_yy_%s",currKey.Data()))
+	->setRange(round((1.0-m_windowFraction) * currMassPoints[i_m]),
+		   round((1.0+m_windowFraction) * currMassPoints[i_m]));
+    }
     
     // Add the current observable to the set:
     args->add(*m_ws->var(Form("m_yy_%s",currKey.Data())));
@@ -2017,16 +2110,18 @@ bool SigParam::makeSingleResonance(double resonanceMass, int cateIndex,
   
   // Reduce the dataset to within (rounded) +/-5 sigma of the mean
   TString dataName = Form("data_%s",currKey.Data());
-  double windowPercent = 0.1;
-  double dataMin = round((1.0-windowPercent) * resonanceMass);
-  double dataMax = round((1.0+windowPercent) * resonanceMass);
-  //m_ws->data(dataName)->reduce(Form("m_yy_%s>%f && m_yy_%s<%f",currKey.Data(),
-  //				    dataMin, currKey.Data(), dataMax));
-  
   if (!m_verbose) {
     RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING);
   }
-  m_ws->var(Form("m_yy_%s",currKey.Data()))->setRange(dataMin, dataMax);
+  if (m_fixWindow) {
+    m_ws->var(Form("m_yy_%s",currKey.Data()))
+      ->setRange(m_windowMin, m_windowMax);
+  }
+  else {
+    m_ws->var(Form("m_yy_%s",currKey.Data()))
+      ->setRange(round((1.0-m_windowFraction) * resonanceMass),
+		 round((1.0+m_windowFraction) * resonanceMass));
+  }
   
   // Then fit single PDF to single dataset:
   RooFitResult *result = fitResult(resonanceMass, cateIndex);
@@ -2104,7 +2199,7 @@ double SigParam::massIntToDouble(int massInteger) {
 /**
    -----------------------------------------------------------------------------
    Convert the resonance mass value to an integer representation. 
-   @param resonanceMass - The value of the mass.
+   @param resonanceMass - The value of the resonance mass.
    @return - The integer representation of the mass.
 */
 int SigParam::massDoubleToInt(double resonanceMass) {
@@ -2138,7 +2233,8 @@ std::vector<double> SigParam::massPointsForCategory(int cateIndex) {
 */
 void SigParam::nameTheCategories(std::vector<TString> cateNames) {
   if ((int)cateNames.size() != m_nCategories && m_verbose) {
-    std::cout << "SigParam: WARNING! Number of defined categories different from number of category names provided." << std::endl;
+    std::cout << "SigParam: WARNING! Number of defined categories different from number of category names provided." 
+	      << std::endl;
   }
   m_cateNames = cateNames;
 }
@@ -2233,9 +2329,10 @@ void SigParam::parameterizeVar(TString varName, double mRegularized,
 /**
    -----------------------------------------------------------------------------
    Create a RooDataSet with a new RooRealVar. 
+   @param data - The RooAbsData set for comparison.
+   @param observable - The mass observable for data and pdf. 
 */
-RooDataSet* SigParam::plotData(RooAbsData *data, RooRealVar *observable,
-			       double xBins, double resonanceMass) {
+RooDataSet* SigParam::plotData(RooAbsData *data, RooRealVar *observable) {
   // Clone the dataset:
   TString cloneName = data->GetName();
   RooDataSet *dataClone 
@@ -2257,10 +2354,13 @@ RooDataSet* SigParam::plotData(RooAbsData *data, RooRealVar *observable,
 */
 TGraphErrors* SigParam::plotSubtraction(RooAbsData *data, RooAbsPdf *pdf, 
 					RooRealVar *observable, double xBins,
-					double &chi2Prob){
+					double &chi2Prob) {
   double minOrigin = observable->getMin();
   double maxOrigin = observable->getMax();
-  double nEvents = data->sumEntries();
+  //double nEvents = data->sumEntries();
+  double nEvents = data->sumEntries(Form("%s>%f&&%s<%f",
+					 observable->GetName(), minOrigin,
+					 observable->GetName(), maxOrigin));
   TH1F *originHist
     = (TH1F*)data->createHistogram("dataSub", *observable,
 				   RooFit::Binning(xBins,minOrigin,maxOrigin));
@@ -2315,18 +2415,20 @@ TGraphErrors* SigParam::plotSubtraction(RooAbsData *data, RooAbsPdf *pdf,
 */
 TGraphErrors* SigParam::plotDivision(RooAbsData *data, RooAbsPdf *pdf, 
 				     RooRealVar *observable, double xBins,
-				     double &chi2Prob){
+				     double &chi2Prob) {
   // Store the original variable range:
   double minOrigin = observable->getMin();
   double maxOrigin = observable->getMax();
-  
-  double nEvents = data->sumEntries();
+  //double nEvents = data->sumEntries();
+  double nEvents = data->sumEntries(Form("%s>%f&&%s<%f",
+					 observable->GetName(), minOrigin,
+					 observable->GetName(), maxOrigin));
   TH1F *originHist
     = (TH1F*)data->createHistogram("dataSub", *observable,
 				   RooFit::Binning(xBins,minOrigin,maxOrigin));
   TGraphErrors *result = new TGraphErrors();
   double increment = ((maxOrigin - minOrigin) / ((double)xBins));
-  
+  observable->setRange("fullRange", minOrigin, maxOrigin);
   RooAbsReal* intTot
     = (RooAbsReal*)pdf->createIntegral(RooArgSet(*observable),
 				       RooFit::NormSet(*observable), 
@@ -2413,7 +2515,7 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     else if (currObs->getMin() < xMin) xMin = currObs->getMin();
     else if (currObs->getMax() > xMax) xMax = currObs->getMax();
   }
-  int xBins = (int)(m_nBinsPerGeV * (xMax - xMin));
+  int xBins = (int)((xMax - xMin)/(double)m_geVPerBin);
   // Set this new limited range for the RooRealVar observable:
   if (!m_verbose) {
     RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING);
@@ -2423,8 +2525,8 @@ void SigParam::plotCategoryResonances(int cateIndex) {
   // Create a RooPlot for the fit and data:
   RooPlot* frame
     = m_ws->var("m_yy")->frame(RooFit::Bins(xBins), RooFit::Range(xMin, xMax));
-  frame->SetYTitle(Form("Events/%2.2f GeV", (1.0/((double)m_nBinsPerGeV))));
-  frame->SetXTitle("Mass [GeV]");
+  frame->SetYTitle(Form("Events/%d GeV", m_geVPerBin));
+  frame->SetXTitle(m_xAxisTitle);
   
   TH1F *medianHist = NULL;
   
@@ -2440,7 +2542,7 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     if ((m_ws->data(Form("data_%s",currKey.Data())))) {
       currData = (m_ws->data(Form("data_%s",currKey.Data())));
       currObs = m_ws->var(Form("m_yy_%s",currKey.Data()));
-      currData = plotData(currData, currObs, xBins, currMassPoints[i_m]);
+      currData = plotData(currData, currObs);
       currData->plotOn(frame);
     }
     else {
@@ -2466,22 +2568,22 @@ void SigParam::plotCategoryResonances(int cateIndex) {
       
       // Print ATLAS text on the plot:    
       TLatex l; l.SetNDC(); l.SetTextColor(kBlack);
-      l.SetTextFont(72); l.SetTextSize(0.05); l.DrawLatex(0.7,0.88,"ATLAS");
-      //l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.82,0.88,"Simulation");
-      l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.82,0.88,"Internal");
-      //l.DrawLatex(0.7, 0.81, Form("#scale[0.8]{#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %2.1f fb^{-1}}",analysis_luminosity));
-      l.DrawLatex(0.7, 0.82, "#sqrt{s} = 13 TeV");
-      
-      TLatex text; text.SetNDC(); text.SetTextColor(1);
+      l.SetTextFont(72); l.SetTextSize(0.05);
+      l.DrawLatex(0.55, 0.88, "ATLAS");
+      l.SetTextFont(42); l.SetTextSize(0.05);
+      l.DrawLatex(0.67, 0.88, m_atlasLabel);
+      //l.SetTextSize(0.04);
+      l.DrawLatex(0.55, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
+      //l.DrawLatex(0.55, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
       if ((int)m_cateNames.size() == m_nCategories) {
-	text.DrawLatex(0.7, 0.76, m_cateNames[cateIndex]);
+	l.DrawLatex(0.55, 0.76, m_cateNames[cateIndex]);
       }
       else {
-	text.DrawLatex(0.7, 0.76, Form("category %d", cateIndex));
+	l.DrawLatex(0.55, 0.76, Form("category %d", cateIndex));
       }
     }
     else frame->Draw("SAME");
-
+    
     // Switch to sub-plot:
     pad2->cd();
     if (i_m == 0) {
@@ -2489,7 +2591,7 @@ void SigParam::plotCategoryResonances(int cateIndex) {
       for (int i_b = 1; i_b <= xBins; i_b++) medianHist->SetBinContent(i_b,1.0);
       medianHist->SetLineColor(kRed);
       medianHist->SetLineWidth(2);
-      medianHist->GetXaxis()->SetTitle("Mass [GeV]");
+      medianHist->GetXaxis()->SetTitle(m_xAxisTitle);
       if (m_doRatioPlot) {
 	medianHist->GetYaxis()->SetTitle("Data / Fit");
       }
@@ -2519,8 +2621,8 @@ void SigParam::plotCategoryResonances(int cateIndex) {
     
     double currChi2Prob = 0.0;
     TGraphErrors* subData = (m_doRatioPlot) ? 
-      plotDivision(currData,currPdf,m_ws->var("m_yy"),xBins,currChi2Prob) :
-      plotSubtraction(currData,currPdf,m_ws->var("m_yy"),xBins,currChi2Prob);
+      plotDivision(currData, currPdf, m_ws->var("m_yy"), xBins, currChi2Prob) :
+      plotSubtraction(currData, currPdf, m_ws->var("m_yy"), xBins,currChi2Prob);
     subData->Draw("EPSAME");
   }
   // Print the canvas:
@@ -2533,7 +2635,7 @@ void SigParam::plotCategoryResonances(int cateIndex) {
 /**
    -----------------------------------------------------------------------------
    Plot a resonance PDF for one value of the resonance mass in one category.
-   @param resonanceMass - The mass value in GeV.
+   @param resonanceMass - The resonance mass value in GeV.
    @param cateIndex - The index of the category.
    @param dataType - "asimov", "mctoy", "pdftoy".
 */
@@ -2594,9 +2696,7 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
     if (m_ws->pdf(pdfName)) {
       setResMassConstant(true, resonanceMass);
       // Clone the dataset with a different observable:
-      int rBins = (int)(m_nBinsPerGeV*(m_ws->var(obsName)->getMax() - 
-				       m_ws->var(obsName)->getMin()));
-      plotData(m_ws->data(dataName), m_ws->var(obsName), rBins, resonanceMass);
+      plotData(m_ws->data(dataName), m_ws->var(obsName));
       dataName = Form("%s_copy", dataName.Data());
       parameterized = true;
     }
@@ -2612,14 +2712,14 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
   // Load the appropriate observable and define the plot binning:
   double rMin = m_ws->var(obsName)->getMin();
   double rMax = m_ws->var(obsName)->getMax();
-  int rBins = (int)(m_nBinsPerGeV*(rMax - rMin));
+  int rBins = (int)((rMax - rMin)/(double)m_geVPerBin);
   
   // Create the RooPlot object using the observable, and set axis titles:
   RooPlot *frame 
     = m_ws->var(obsName)->frame(RooFit::Bins(rBins),RooFit::Range(rMin,rMax));
-  frame->SetYTitle(Form("Events/%2.2f GeV", (1.0/((double)m_nBinsPerGeV))));
-  frame->SetXTitle("Mass [GeV]");
-    
+  frame->SetYTitle(Form("Events/%d GeV", m_geVPerBin));
+  frame->SetXTitle(m_xAxisTitle);
+  
   // Then add the data and PDF to the RooPlot:
   m_ws->data(dataName)->plotOn(frame);
   m_ws->pdf(pdfName)->plotOn(frame, RooFit::LineColor(2));
@@ -2635,39 +2735,46 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
   }
     
   TLatex l; l.SetNDC(); l.SetTextColor(kBlack);
-  l.SetTextFont(72); l.SetTextSize(0.05); l.DrawLatex(0.20,0.88,"ATLAS");
-  //l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.32,0.88,"Simulation");
-  l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.32,0.88,"Internal");
-  //l.DrawLatex(0.2, 0.81, Form("#scale[0.8]{#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %2.1f fb^{-1}}",analysis_luminosity));
-  l.DrawLatex(0.2, 0.82, "#sqrt{s} = 13 TeV");
-  
-  TLatex text; text.SetNDC(); text.SetTextColor(1);
+  l.SetTextFont(72); l.SetTextSize(0.05); 
+  l.DrawLatex(0.20, 0.88, "ATLAS");
+  l.SetTextFont(42); l.SetTextSize(0.05); 
+  l.DrawLatex(0.32, 0.88, m_atlasLabel);
+  //l.SetTextSize(0.04);
+  l.DrawLatex(0.2, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
+  //l.DrawLatex(0.2, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
   if ((int)m_cateNames.size() == m_nCategories && m_nCategories > 0) {
-    text.DrawLatex(0.2, 0.76, m_cateNames[cateIndex]);
+    l.DrawLatex(0.2, 0.76, m_cateNames[cateIndex]);
   }
   else {
-    text.DrawLatex(0.2, 0.76, Form("category %d", cateIndex));
+    l.DrawLatex(0.2, 0.76, Form("category %d", cateIndex));
   }
   
   double yVal = 0.88;
   TLatex varText; varText.SetNDC(); varText.SetTextColor(1);
   varText.SetTextSize(0.04);
   std::vector<TString> currVars = variablesForFunction(m_currFunction);
-  for (int i_v = 0; i_v < (int)currVars.size(); i_v++) {
-    TString currName = currVars[i_v];
+  for (int i_v = 0; i_v < (int)currVars.size()+1; i_v++) {
+    TString currName = "";
     double currVal = 0.0;
-    if (parameterized) {
-      currVal = getParameterizedValue(currName, resonanceMass, cateIndex);
+    if (i_v < (int) currVars.size()) {
+      currName = currVars[i_v];
+      if (parameterized) {
+	currVal = getParameterizedValue(currName, resonanceMass, cateIndex);
+      }
+      else currVal = getParameterValue(currName, resonanceMass, cateIndex);
+      currName.ReplaceAll("frac", "fraction_{");
+      currName.ReplaceAll("Nom","");
+      currName.ReplaceAll("nCB","n_{CB");
+      currName.ReplaceAll("width","w_{");
+      currName.ReplaceAll("sigma","#sigma_{");
+      currName.ReplaceAll("alpha","#alpha_{");
+      currName.ReplaceAll("mu", "#mu_{");
+      currName += "}";
     }
-    else currVal = getParameterValue(currName, resonanceMass, cateIndex);
-    currName.ReplaceAll("frac", "fraction_{");
-    currName.ReplaceAll("Nom","");
-    currName.ReplaceAll("nCB","n_{CB");
-    currName.ReplaceAll("width","w_{");
-    currName.ReplaceAll("sigma","#sigma_{");
-    currName.ReplaceAll("alpha","#alpha_{");
-    currName.ReplaceAll("mu", "#mu_{");
-    currName += "}";
+    else {
+      currName = "Yield";
+      currVal = getYieldInCategory(resonanceMass, cateIndex);
+    }
     varText.DrawLatex(0.7, yVal, Form("%s\t = %2.2f",currName.Data(),currVal));
     yVal -= 0.06;
   }
@@ -2678,7 +2785,7 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
   TH1F *medianHist = new TH1F("median", "median", rBins, rMin, rMax);
   medianHist->SetLineColor(kRed);
   medianHist->SetLineWidth(2);
-  medianHist->GetXaxis()->SetTitle("Mass [GeV]");
+  medianHist->GetXaxis()->SetTitle(m_xAxisTitle);
   if (m_doRatioPlot) {
     for (int i_b = 1; i_b <= rBins; i_b++) medianHist->SetBinContent(i_b,1.0);
     medianHist->GetYaxis()->SetTitle("Data / Fit");
@@ -2703,7 +2810,7 @@ void SigParam::plotSingleResonance(double resonanceMass, int cateIndex,
 		 rBins, currChi2Prob) : 
     plotSubtraction(m_ws->data(dataName), m_ws->pdf(pdfName), 
 		    m_ws->var(obsName), rBins, currChi2Prob);
-  subData->GetXaxis()->SetTitle("Mass [GeV]");
+  subData->GetXaxis()->SetTitle(m_xAxisTitle);
   
   // Draw lines showing ratio of 1.0 +/-0.5
   TLine *line = new TLine();
@@ -2758,22 +2865,21 @@ void SigParam::plotYields(int cateIndex) {
   TString formattedSignal = m_signalType.Data();
   formattedSignal.ReplaceAll("_","");
 
-  TLatex text; text.SetNDC(); text.SetTextColor(1);
-  text.DrawLatex(0.7, 0.76, Form("%s signal",formattedSignal.Data()));
-  if ((int)m_cateNames.size() == m_nCategories) {
-    text.DrawLatex(0.7, 0.70, m_cateNames[cateIndex]);
-  }
-  else {
-    text.DrawLatex(0.7, 0.70, Form("Category %d", cateIndex));
-  }
-  
   // Print ATLAS text on the plot:    
   TLatex l; l.SetNDC(); l.SetTextColor(kBlack);
-  l.SetTextFont(72); l.SetTextSize(0.05); l.DrawLatex(0.7,0.88,"ATLAS");
-  //l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.82,0.88,"Simulation");
-  l.SetTextFont(42); l.SetTextSize(0.05); l.DrawLatex(0.82,0.88,"Internal");
-  //l.DrawLatex(0.7, 0.81, Form("#scale[0.8]{#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %2.1f fb^{-1}}",analysis_luminosity));
-  l.DrawLatex(0.7, 0.82, "#sqrt{s} = 13 TeV");
+  l.SetTextFont(72); l.SetTextSize(0.05);
+  l.DrawLatex(0.55, 0.88, "ATLAS");
+  l.SetTextFont(42); l.SetTextSize(0.05);
+  l.DrawLatex(0.67,0.88, m_atlasLabel);
+  //l.SetTextSize(0.04);
+  l.DrawLatex(0.55, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
+  //l.DrawLatex(0.55, 0.82, Form("#sqrt{s} = 13 TeV: #scale[0.7]{#int}Ldt = %s", m_lumiLabel.Data()));
+  if ((int)m_cateNames.size() == m_nCategories) {
+    l.DrawLatex(0.55, 0.76, m_cateNames[cateIndex]);
+  }
+  else {
+    l.DrawLatex(0.55, 0.76, Form("Category %d", cateIndex));
+  }
   
   pad2->cd();
   
@@ -2897,9 +3003,40 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
     Form("%s%s", m_signalType.Data(), currKey.Data());
   TString obsName = (function.Contains("Parameterized")) ? 
     "m_yy" : Form("m_yy_%s",currKey.Data());
-  
+    
+  // Define the Double Crystal Ball + Landau shape:
+  if (function.Contains("DoubleCBLA")) {
+    // Double-CB component:
+    m_ws->factory(Form("HggTwoSidedCBPdf::pdfDCB_%s(%s, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCBLo_%s, nCBLo_%sc%d, alphaCBHi_%s, nCBHi_%sc%d)", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), m_signalType.Data(), cateIndex));
+    // Landau component:
+    m_ws->factory(Form("RooLandau::pdfLA_%s(%s, prod::muLA_%s(muLANom_%s%s), prod::sigmaLA_%s(sigmaLANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Double Crystal Ball + Landau:
+    m_ws->factory(Form("SUM::sigPdf_%s(fracCB_%sc%d*pdfDCB_%s,pdfLA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
+  }
+  // Define the Bifurcated Gaussian + Landau shape:
+  else if (function.Contains("BifurGALA")) {
+    // Bifurcated Gaussian component:
+    m_ws->factory(Form("RooBifurGauss::pdfBGA_%s(%s, prod::muGA_%s(muGANom_%s%s), prod::sigmaGALow_%s(sigmaGALowNom_%s%s), prod::sigmaGAHi_%s(sigmaGAHiNom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Landau component:
+    m_ws->factory(Form("RooLandau::pdfLA_%s(%s, prod::muLA_%s(muLANom_%s%s), prod::sigmaLA_%s(sigmaLANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Gaussian + Landau:
+    m_ws->factory(Form("SUM::sigPdf_%s(fracGA_%sc%d*pdfBGA_%s,pdfLA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
+  }
+  // Define the Gaussian + Landau shape:
+  else if (function.Contains("GALA")) {
+    // Gaussian component:
+    m_ws->factory(Form("RooGaussian::pdfGA_%s(%s, prod::muGA_%s(muGANom_%s%s), prod::sigmaGA_%s(sigmaGANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Landau component:
+    m_ws->factory(Form("RooLandau::pdfLA_%s(%s, prod::muLA_%s(muLANom_%s%s), prod::sigmaLA_%s(sigmaLANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Gaussian + Landau:
+    m_ws->factory(Form("SUM::sigPdf_%s(fracGA_%sc%d*pdfGA_%s,pdfLA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
+  }
+  // Define the Modified Landau shape:
+  else if (function.Contains("LandauMod")) {
+    m_ws->factory(Form("RooLandau::sigPdf_%s(%s, prod::muLA_%s(muLANom_%s%s), sum::sigmaLA_%s(prod::a_sigmaLA_%s(sigmaLANom_%s%s),prod::b_sigmaLA_%s(alphaLA_%s,%s)))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), suffix.Data(), obsName.Data()));
+  }
   // Define the Crystal Ball + Gaussian shape:
-  if (function.Contains("CBGA")) {
+  else if (function.Contains("CBGA")) {
     // Cystal Ball component:
     m_ws->factory(Form("RooCBShape::pdfCB_%s(%s, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCB_%s, nCB_%sc%d)", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex));
     // Gaussian component:
@@ -2909,11 +3046,9 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
     else {
       m_ws->factory(Form("RooGaussian::pdfGA_%s(%s, prod::muGA_%s(muGANom_%s%s), prod::sigmaGA_%s(sigmaGANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
     }
-    
     // Crystal Ball + Gaussian:
     m_ws->factory(Form("SUM::sigPdf_%s(fracCB_%sc%d*pdfCB_%s,pdfGA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
   }
-  
   // Define double-sided Crystal Ball shape:
   else if (function.Contains("DoubleCB")) {
     m_ws->factory(Form("HggTwoSidedCBPdf::sigPdf_%s(%s, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCBLo_%s, nCBLo_%sc%d, alphaCBHi_%s, nCBHi_%sc%d)", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), m_signalType.Data(), cateIndex));
@@ -2933,6 +3068,25 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
   else if (function.Contains("Landau")) {
     m_ws->factory(Form("RooLandau::sigPdf_%s(%s, prod::muLA_%s(muLANom_%s%s), prod::sigmaLA_%s(sigmaLANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
   }
+  // Double Landau shape:
+  else if (function.Contains("LAx2")) {
+    // Landau #1:
+    m_ws->factory(Form("RooLandau::pdfLA1_%s(%s, prod::muLA1_%s(muLA1Nom_%s%s), prod::sigmaLA1_%s(sigmaLA1Nom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Landau #2:
+    m_ws->factory(Form("RooLandau::pdfLA2_%s(%s, prod::muLA2_%s(muLA2Nom_%s%s), prod::sigmaLA2_%s(sigmaLA2Nom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Add the two Landaus:
+    m_ws->factory(Form("SUM::sigPdf_%s(fracLA1_%sc%d*pdfLA1_%s,pdfLA2_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
+  }
+  // Crystal Ball + Landau:
+  else if (function.Contains("CBLA")) {
+    // Cystal Ball component:
+    m_ws->factory(Form("RooCBShape::pdfCB_%s(%s, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCB_%s, nCB_%sc%d)", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex));
+    // Landau component:
+    m_ws->factory(Form("RooLandau::pdfLA_%s(%s, prod::muLA_%s(muLANom_%s%s), prod::sigmaLA_%s(sigmaLANom_%s%s))", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data()));
+    // Add the Crystal Ball and Landau:
+    m_ws->factory(Form("SUM::sigPdf_%s(fracCB_%sc%d*pdfCB_%s,pdfLA_%s)", suffix.Data(), m_signalType.Data(), cateIndex, suffix.Data(), suffix.Data()));
+  }
+  // Crystal-ball plus Voigt:
   else if (function.Contains("CBPlusVoigt")) {
     // Cystal Ball component:
     m_ws->factory(Form("RooCBShape::pdfCB_%s(%s, prod::muCB_%s(muCBNom_%s%s), prod::sigmaCB_%s(sigmaCBNom_%s%s), alphaCB_%s, nCB_%sc%d)", suffix.Data(), obsName.Data(), suffix.Data(), suffix.Data(), m_listMSS.Data(), suffix.Data(), suffix.Data(), m_listMRS.Data(), suffix.Data(), m_signalType.Data(), cateIndex));
@@ -2950,7 +3104,12 @@ void SigParam::resonanceCreator(double resonanceMass, int cateIndex,
   if (!function.Contains("Parameterized")) {
     double yieldValue
       = (*m_ws->data(Form("data_%s",currKey.Data()))).sumEntries();
-    m_ws->factory(Form("sigYield_%s%s[%f]",m_signalType.Data(),currKey.Data(),yieldValue));
+    double yieldError 
+      = normalizationError(m_ws->data(Form("data_%s",currKey.Data())));
+    m_ws->factory(Form("sigYield_%s%s[%f]", m_signalType.Data(), currKey.Data(),
+		       yieldValue));
+    m_ws->var(Form("sigYield_%s%s", m_signalType.Data(), currKey.Data()))
+      ->setError(yieldError);
   }
   
   if (m_verbose) {
@@ -2975,6 +3134,8 @@ void SigParam::saveAll() {
 void SigParam::saveParameterization() {
   TString workspaceName = Form("%s/res_%sworkspace.root", m_directory.Data(),
 			       m_signalType.Data());
+  m_ws->addClassDeclImportDir(Form("%s/../HGamTools/",
+				   gSystem->Getenv("ROOTCOREBIN")));
   m_ws->importClassCode();// Import the PDF classes (HggTwoSidedCBPdf, etc.)
   m_ws->writeToFile(workspaceName);
   if (m_verbose) {
@@ -3056,6 +3217,31 @@ void SigParam::setLogYAxis(bool useLogYAxis) {
 
 /**
    -----------------------------------------------------------------------------
+   Set the size of the mass window for fitting and plotting. Specify the minimum
+   and maximum of the window. 
+   @param fixWindow - True iff you want to use a fixed mass window for all fits.
+   @param windowMin - The minimum mass of the fit window.
+   @param windowMax - The maximum mass of the fit window.
+*/
+void SigParam::setMassWindowFixed(bool fixWindow, double windowMin,
+				  double windowMax) {
+  m_fixWindow = fixWindow;
+  m_windowMin = windowMin;
+  m_windowMax = windowMax;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the size of the mass window for fitting and plotting. Specify a fraction 
+   so that the window will be [(1-frac)*mass, (1+frac)*mass].
+   @param fraction - The fractional size of the mass window for fits and plots.
+*/
+void SigParam::setMassWindowSize(double fraction) {
+  m_windowFraction = fraction;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Make the parameters of a PDF free or fixed.
    @param pdf - The PDF containing the parameters to be freed/fixed.
    @param isConstant - True iff setting the parameters constant.
@@ -3081,11 +3267,40 @@ void SigParam::setParamState(TString paramName, TString valueAndRange) {
 
 /**
    -----------------------------------------------------------------------------
+   Set the ATLAS label to be applied to the plots.
+   @param atlasLabel - The plot label to be applied next to ATLAS. For example,
+   "Internal", or "Simulation Internal", or "Simulation Preliminary"...
+*/
+void SigParam::setPlotATLASLabel(TString atlasLabel) {
+  m_atlasLabel = atlasLabel;
+}
+
+/**
+   -----------------------------------------------------------------------------
    Set the format for plots. Examples are ".eps", ".pdf", ".png", etc. Standard
    ROOT file extensions.
 */
 void SigParam::setPlotFormat(TString fileFormat) {
   m_fileFormat = fileFormat;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the luminosity magnitude and units to be drawn in plots
+   @param lumiLabel - The luminosity label to appear in plots. For example,
+   "1.0 fb^{-1}" for 1fb-1 of data. Use LaTex formatting.
+*/
+void SigParam::setPlotLuminosity(TString lumiLabel) {
+  m_lumiLabel = lumiLabel;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the x-axis title (name of the observable over which the fit is performed.
+   @param xAxisTitle - The title of the x-axis (observable name and unit).
+*/
+void SigParam::setPlotXAxisTitle(TString xAxisTitle) {
+  m_xAxisTitle = xAxisTitle;
 }
 
 /**
@@ -3183,17 +3398,51 @@ std::vector<TString> SigParam::variablesForFunction(TString function) {
     exit(0);
   }
   std::vector<TString> result; result.clear();
+  
+  // Double Crystal Ball-plus Landau specific parameters:
+  if (function.Contains("DoubleCBLA")) {
+    result.push_back("muCBNom");
+    result.push_back("sigmaCBNom");
+    result.push_back("alphaCBLo");
+    result.push_back("alphaCBHi");
+    result.push_back("nCBLo");
+    result.push_back("nCBHi");
+    result.push_back("fracCB");
+    result.push_back("muLANom");
+    result.push_back("sigmaLANom");
+  }
+  // Bifurcated Gaussian plus Landau specific parameters:
+  else if (function.Contains("BifurGALA")) {
+    result.push_back("muGANom");
+    result.push_back("sigmaGALowNom");
+    result.push_back("sigmaGAHiNom");
+    result.push_back("fracGA");
+    result.push_back("muLANom");
+    result.push_back("sigmaLANom");
+  }
+  // Gaussian plus Landau-specific parameters:
+  else if (function.Contains("GALA")) {
+    result.push_back("muGANom");
+    result.push_back("sigmaGANom");
+    result.push_back("fracGA");
+    result.push_back("muLANom");
+    result.push_back("sigmaLANom");
+  }
+  // Modified Landau parameters:
+  else if (function.Contains("LandauMod")) {
+    result.push_back("muLANom");
+    result.push_back("sigmaLANom");
+    result.push_back("alphaLA");
+  }
   // Crystal Ball + Gaussian-specific parameters:
-  if (function.Contains("CBGA")) {
+  else if (function.Contains("CBGA")) {
     result.push_back("muCBNom");
     result.push_back("sigmaCBNom");
     result.push_back("alphaCB");
-    result.push_back("sigmaGANom");
     result.push_back("nCB");
     result.push_back("fracCB");
-    if (!m_sameCBGAMean) {
-      result.push_back("muGANom");
-    }
+    if (!m_sameCBGAMean) result.push_back("muGANom");
+    result.push_back("sigmaGANom");
   }
   // Double Crystal Ball-specific parameters:
   else if (function.Contains("DoubleCB")) {
@@ -3223,6 +3472,24 @@ std::vector<TString> SigParam::variablesForFunction(TString function) {
   }
   // Landau-specific parameters:
   else if (function.Contains("Landau")) {
+    result.push_back("muLANom");
+    result.push_back("sigmaLANom");
+  }
+  // Double Landau-specific parameters:
+  else if (function.Contains("LAx2")) {
+    result.push_back("muLA1Nom");
+    result.push_back("muLA2Nom");
+    result.push_back("sigmaLA1Nom");
+    result.push_back("sigmaLA2Nom");
+    result.push_back("fracLA1");
+  }
+  // Crystal Ball + Landau-specific parameters:
+  else if (function.Contains("CBLA")) {
+    result.push_back("muCBNom");
+    result.push_back("sigmaCBNom");
+    result.push_back("alphaCB");
+    result.push_back("nCB");
+    result.push_back("fracCB");
     result.push_back("muLANom");
     result.push_back("sigmaLANom");
   }

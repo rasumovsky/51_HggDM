@@ -108,6 +108,12 @@ bool SigParamInterface::createNew(TString signalType) {
   bool signalConverged = true;
   SigParam *sp = new SigParam(signalType, m_outputDir);
   sp->setLogYAxis(m_config->getBool("useLogYScale"));
+  
+  sp->setPlotATLASLabel(m_config->getStr("ATLASLabel"));
+  sp->setPlotFormat(m_config->getStr("PlotFileFormat"));
+  //sp->setPlotLuminosity("1.0 fb^{-1}");
+  sp->setPlotXAxisTitle(m_config->getStr("XAxisTitle"));
+  
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     RooDataSet *currDataSet = getData(signalType, i_c);
     sp->addDataSet(m_config->getNum("higgsMass"), i_c, currDataSet, "m_yy");

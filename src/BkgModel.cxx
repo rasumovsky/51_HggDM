@@ -18,7 +18,7 @@
    Initialize the BkgModel class and make a new RooCategory.
    @param newOptions - The job options ("New", "FromFile")
    @param newObservable - The RooRealVar to be used in fits (m_obs).
-   @returns void.
+   @return void.
 */
 BkgModel::BkgModel(RooRealVar *newObs) {
   std::cout << "\nBkgModel::Initializing..." << std::endl;
@@ -67,7 +67,7 @@ void BkgModel::addBkgToCateWS(RooWorkspace *&workspace, RooArgSet *&nuisParams,
    -----------------------------------------------------------------------------
    Get the background PDF using name of function.
    @param function - the functional form (PDF) for the model.
-   @returns The corresponding background PDF for the analysis.
+   @return The corresponding background PDF for the analysis.
 */
 RooAbsPdf* BkgModel::getBkgPDF(TString function) {
   std::cout << "BkgModel: Constructing " << function << std::endl;
@@ -152,7 +152,7 @@ RooAbsPdf* BkgModel::getBkgPDF(TString function) {
 /**
    -----------------------------------------------------------------------------
    Returns a pointer to the mass observable used in the dataset.
-   @returns pointer to the observable (m_obs).
+   @return pointer to the observable (m_obs).
 */
 RooRealVar* BkgModel::getMassObservable() {
   return m_obs;
@@ -162,7 +162,7 @@ RooRealVar* BkgModel::getMassObservable() {
    -----------------------------------------------------------------------------
    Set the pointer to the observable. 
    @param newObs - The new RooRealVar observable to use for datasets. 
-   @returns void.
+   @return void.
 */
 void BkgModel::setObservable(RooRealVar *newObs) {
   m_obs = newObs;
@@ -177,7 +177,7 @@ void BkgModel::setObservable(RooRealVar *newObs) {
    -----------------------------------------------------------------------------
    Get the order of the function from the name.
    @param function - the name of the function.
-   @returns - the order of the function.
+   @return - the order of the function.
 */
 int BkgModel::getOrderFromFunc(TString function) {
   if (function.EqualTo("Landau")) return 1;

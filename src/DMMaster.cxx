@@ -19,6 +19,7 @@
 //    - Cleanup                                                               //
 //    - MassPoints                                                            //
 //    - GetSystematics                                                        //
+//    - RankSystematics                                                       //
 //    - PlotVariables                                                         //
 //    - SigParam                                                              //
 //    - BkgModel                                                              //
@@ -96,7 +97,7 @@ void recursiveOptimizer(TString exeConfigOrigin, TString exeOption,
     inputConfig.open(exeConfigOrigin);
     TString exeConfigNew = Form("exeConfig%d.cfg", m_jobIndex);
     ofstream outputConfig; outputConfig.open(exeConfigNew);
-    string key;
+    std::string key;
     // Loop over each line of the config file:
     while (!inputConfig.eof()) {
       std::getline(inputConfig, key);
@@ -556,7 +557,7 @@ int main (int argc, char **argv) {
   //--------------------------------------//
   // Step 1.2: Make cutflows with experimental systematics:
   if (masterOption.Contains("GetSystematics")) {
-    std::cout << "DMMaster: Step 1.2 - Make kinematic variable plots."
+    std::cout << "DMMaster: Step 1.2 - Make cutflows w/ systematic variations."
 	      << std::endl;
     // Load MxAODs with systematic uncertainties:
     std::vector<TString> sysSamples = m_config->getStrV("SystematicsSamples");
@@ -568,11 +569,21 @@ int main (int argc, char **argv) {
       delete mp;
     }
   }
-  
+
   //--------------------------------------//
-  // Step 1.3: Make variable plots:
+  // Step 1.3: Rank the systematic uncertainties:
+  /*
+  if (masterOption.Contains("RankSystematics")) {
+    std::cout << "DMMaster: Step 1.3 - Rank systematic variations by impact."
+	      << std::endl;
+    SystematicsTool *sh = new SystematicsTool(configFileName, sysSamples[i_s]);
+    
+  }
+  */  
+  //--------------------------------------//
+  // Step 1.4: Make variable plots:
   if (masterOption.Contains("PlotVariables")) {
-    std::cout << "DMMaster: Step 1.3 - Make kinematic variable plots."
+    std::cout << "DMMaster: Step 1.4 - Make kinematic variable plots."
 	      << std::endl;
     std::vector<TString> plotVariables = m_config->getStrV("PlotVariables");
     for (int i_v = 0; i_v < (int)plotVariables.size(); i_v++) {

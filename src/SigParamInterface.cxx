@@ -99,7 +99,7 @@ bool SigParamInterface::allSignalsReady() {
    -----------------------------------------------------------------------------
    Create a new signal parameterization.
    @param signalType - The type of signal for parameterization.
-   @returns - True iff successfully created.
+   @return - True iff successfully created.
 */
 bool SigParamInterface::createNew(TString signalType) {
   std::cout << "SigParamInterface: Creating new signal for "
@@ -138,7 +138,7 @@ bool SigParamInterface::createNew(TString signalType) {
    Retrieve the relevant datasets for the signal and category of interest.
    @param signalType - The type of signal for parameterization.
    @param cateIndex - The category index.
-   @returns - A RooDataSet with all data points necessary for fitting.
+   @return - A RooDataSet with all data points necessary for fitting.
 */
 RooDataSet* SigParamInterface::getData(TString signalType, int cateIndex) {
   if (signalType.EqualTo("SM")) {
@@ -172,7 +172,7 @@ SigParam* SigParamInterface::getSigParam(TString signalType) {
    -----------------------------------------------------------------------------
    Load signal parameterization from file. If that fails, create new.
    @param signalType - The type of signal for parameterization.
-   @returns - True iff successfully loaded or created.
+   @return - True iff successfully loaded or created.
 */
 bool SigParamInterface::loadFile(TString signalType) {
   SigParam *sp = new SigParam(signalType, m_outputDir);

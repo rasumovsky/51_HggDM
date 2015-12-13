@@ -43,8 +43,12 @@ class SystematicsTool {
   virtual ~SystematicsTool() {};
   
   // Accessors:
+  double calculateMigrSys(TString sysName, TString sampleName, int cateIndex);
+  double calculateNormSys(TString sysName, TString sampleName);
   double getNormSys(TString sysName, TString sampleName);
   double getMigrSys(TString sysName, TString sampleName, int cateIndex);
+  double getYield(TString sysName, TString sampleName);
+  double getYield(TString sysName, TString sampleName, int cateIndex);
   std::vector<TString> listAllSys();
   
   // Mutators:
@@ -54,6 +58,12 @@ class SystematicsTool {
   std::vector<TString> rankNormSysForSample(TString sampleName);
   //void saveRankedMigrSys(TString sampleName);
   void saveRankedNormSys(TString sampleName);
+  void setNormSys(TString sysName, TString sampleName, double sysValue);
+  void setMigrSys(TString sysName, TString sampleName, int cateIndex,
+		  double sysValue);
+  void setYield(TString sysName, TString sampleName, double yieldValue);
+  void setYield(TString sysName, TString sampleName, int cateIndex,
+		double yieldValue);
   
  private:
   

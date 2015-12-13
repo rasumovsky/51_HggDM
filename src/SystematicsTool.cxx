@@ -4,10 +4,12 @@
 //                                                                            //
 //  Created: Andrew Hard                                                      //
 //  Email: ahard@cern.ch                                                      //
-//  Date: 12/12/2015                                                          //
+//  Date: 13/12/2015                                                          //
 //                                                                            //
-//  WARNING!!!!!! THIS PROGRAM HAS YET TO IMPLEMENT THE CALCULATION OF SYST   //
-//  FROM THE LOADED YIELD VALUES. THIS IS ESSENTIAL!!!
+//  WARNING! The approach to migration systematics must be updated ASAP. Right//
+//  now, normalization effects are combined with migration effects. There     //
+//  should probably be a normalization of the nominal with sys. before a      //
+//  comparison of the yields in each category.                                //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -42,10 +44,68 @@ SystematicsTool::SystematicsTool(TString newConfigFile) {
 
 /**
    -----------------------------------------------------------------------------
+   Calculate the size of a migration systematic uncertainty.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param cateIndex - The index of the category.
+   @return - The fractional size of a systematic effect.
+*/
+double SystematicsTool::calculateMigrSys(TString sysName, TString sampleName,
+					 int cateIndex) {
+  double sysValue = ((getYield(sysName, sampleName, cateIndex) -
+		      getYield("Nominal", sampleName, cateIndex)) / 
+		     getYield("Nominal", sampleName, cateIndex));
+
+  // Store the result and return it:
+  setMigrSys(sysName, sampleName, cateIndex, sysValue);
+  return sysValue;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Calculate the size of a normalization systematic uncertainty.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @return - The fractional size of a systematic effect.
+*/
+double SystematicsTool::calculateNormSys(TString sysName, TString sampleName) {
+  double sysValue
+    = ((getYield(sysName,sampleName) - getYield("Nominal",sampleName)) / 
+       getYield("Nominal", sampleName));
+  // Store the result and return it:
+  setNormSys(sysName, sampleName, sysValue);
+  return sysValue;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Retieve the migration systematic uncertainty from a given systematic source 
+   for a given sample in a specified category.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param cateIndex - The index of the category.
+   @return - The fractional size of the systematic effect.
+*/
+double SystematicsTool::getMigrSys(TString sysName, TString sampleName,
+				 int cateIndex) {
+  if (m_sysStorage.count(sysKey(sysName, sampleName, cateIndex)) > 0) {
+    return m_sysStorage[sysKey(sysName, sampleName, cateIndex)];
+  }
+  else {
+    std::cout << "SystematicsTool: ERROR! migration systematic " << sysName 
+	      << " not defined for sample " << sampleName 
+	      << " in category " << cateIndex << std::endl;
+    exit(0);
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
    Retrieve the normalization systematic uncertainty from a given systematic
    source for a given sample.
    @param sysName - The name of the systematic uncertainty. 
    @param sampleName - The name of the sample for which sys. will be loaded.
+   @return - The fractional size of the systematic effect.
 */
 double SystematicsTool::getNormSys(TString sysName, TString sampleName) {
   if (m_sysStorage.count(sysKey(sysName, sampleName)) > 0) {
@@ -60,21 +120,40 @@ double SystematicsTool::getNormSys(TString sysName, TString sampleName) {
 
 /**
    -----------------------------------------------------------------------------
-   Retieve the migration systematic uncertainty from a given systematic source 
-   for a given sample in a specified category.
+   Retieve the total yield for a given sample in a specified category with a 
+   specified systematic variation.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @return - The event yield.
+*/
+double SystematicsTool::getYield(TString sysName, TString sampleName) {
+  if (m_yieldStorage.count(sysKey(sysName, sampleName)) > 0) {
+    return m_yieldStorage[sysKey(sysName, sampleName)];
+  }
+  else {
+    std::cout << "SystematicsTool: ERROR! yield undefined for sys. " << sysName 
+	      << " and sample " << sampleName << std::endl;
+    exit(0);
+  }
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Retieve the yield in a given category for a given sample with a specified 
+   systematic variation.
    @param sysName - The name of the systematic uncertainty. 
    @param sampleName - The name of the sample for which sys. will be loaded.
    @param cateIndex - The index of the category.
+   @return - The event yield.
 */
-double SystematicsTool::getMigrSys(TString sysName, TString sampleName,
+double SystematicsTool::getYield(TString sysName, TString sampleName,
 				 int cateIndex) {
-  if (m_sysStorage.count(sysKey(sysName, sampleName, cateIndex)) > 0) {
-    return m_sysStorage[sysKey(sysName, sampleName, cateIndex)];
+  if (m_yieldStorage.count(sysKey(sysName, sampleName, cateIndex)) > 0) {
+    return m_yieldStorage[sysKey(sysName, sampleName, cateIndex)];
   }
   else {
-    std::cout << "SystematicsTool: ERROR! migration systematic " << sysName 
-	      << " not defined for sample " << sampleName 
-	      << " in category " << cateIndex << std::endl;
+    std::cout << "SystematicsTool: ERROR! yield undefined for sys. " << sysName 
+	      << " and sample " << sampleName << std::endl;
     exit(0);
   }
 }
@@ -111,24 +190,34 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
   TString inputDir = Form("%s/%s/DMMassPoints/Systematics", 
 			  (m_config->getStr("masterOutput")).Data(),
 			  (m_config->getStr("jobName")).Data());
+  TString normFileName = Form("%s/cutflow_%s_%s.txt",inputDir.Data(), 
+			      sysName.Data(), sampleName.Data());
   
   // First load cutflow to get yield:
-  std::ifstream sysInput(Form("%s/cutflow_%s_%s.txt",inputDir.Data(), 
-			      sysName.Data(), sampleName.Data()));
+  std::ifstream normSysInput(normFileName);
+  if (!normSysInput.is_open()) {
+    std::cout << "SystematicsTool: ERROR opening norm sys. file: "
+	      << normFileName << std::endl;
+    exit(0);
+  }
+  
+  // Load the event yield after all cuts:
   TString str1; TString str2; double passYield; double totalYield;
-  while (!sysInput.eof()) {
-    sysInput >> str1 >> passYield >> str2 >> totalYield;
+  while (!normSysInput.eof()) {
+    normSysInput >> str1 >> passYield >> str2 >> totalYield;
     if (str1.EqualTo("AllCuts")) {
-      m_yieldStorage[sysKey(sysName, sampleName)] = passYield;
+      setYield(sysName, sampleName, passYield);
     }
   }
   
-  // Then calculate systematic. If nominal has not already been created, create:
-  if (m_yieldStorage.count(sysKey(sysName, sampleName)) == 0 &&
+  // If nominal has not already been created, create:
+  if (m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0 &&
       !sysName.EqualTo("Nominal")) {
     loadSingleSys("Nominal", sampleName);
   }
   
+  // Calculate the systematic effect:
+  calculateNormSys(sysName, sampleName);
   
   // Then load categorization (WARNING! improper output in DMMassPoints)
 }
@@ -203,6 +292,55 @@ void SystematicsTool::saveRankedNormSys(TString sampleName) {
 		  << std::endl;
   }
   outputRanking.close();
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the value of the systematic uncertainty on normalization.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sysValue - The new value of the systematic uncertainty.
+*/
+void SystematicsTool::setNormSys(TString sysName, TString sampleName, 
+				 double sysValue) {
+  m_sysStorage[sysKey(sysName, sampleName)] = sysValue;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the value of the systematic uncertainty on migration.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param cateIndex - The index of the category.
+   @param sysValue - The new value of the systematic uncertainty.
+*/
+void SystematicsTool::setMigrSys(TString sysName, TString sampleName,
+				 int cateIndex, double sysValue) {
+  m_sysStorage[sysKey(sysName, sampleName, cateIndex)] = sysValue;
+}
+/**
+   -----------------------------------------------------------------------------
+   Set the value of the yield.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param yieldValue - The new value of the yield.
+*/
+void SystematicsTool::setYield(TString sysName, TString sampleName, 
+				 double yieldValue) {
+  m_yieldStorage[sysKey(sysName, sampleName)] = yieldValue;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Set the value of the yield.
+   @param sysName - The name of the systematic uncertainty. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param cateIndex - The index of the category.
+   @param yieldValue - The new value of the yield.
+*/
+void SystematicsTool::setYield(TString sysName, TString sampleName,
+				 int cateIndex, double yieldValue) {
+  m_yieldStorage[sysKey(sysName, sampleName, cateIndex)] = yieldValue;
 }
 
 /**

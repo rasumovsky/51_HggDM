@@ -71,17 +71,17 @@ class DMEvtSelect
   
   // Member objects:
   Config *m_config;
-  DMTree *evtTree;
-  std::vector<TString> cutList;
+  DMTree *m_evtTree;
+  std::vector<TString> m_cutList;
   
-  std::map<TString,int> evtCountPass;
-  std::map<TString,double> evtCountPassWt;
-  std::map<TString,int> evtCountTot;
-  std::map<TString,double> evtCountTotWt;
+  std::map<TString,int> m_evtCountPass;
+  std::map<TString,double> m_evtCountPassWt;
+  std::map<TString,int> m_evtCountTot;
+  std::map<TString,double> m_evtCountTotWt;
   
-  std::map<TString,int> cateSchemesAndSizes;
-  std::map<TString,int> cateCount;
-  std::map<TString,double> cateCountWt;
+  std::map<TString,int> m_cateSchemesAndSizes;
+  std::map<TString,int> m_cateCount;
+  std::map<TString,double> m_cateCountWt;
   
   // Cutflow histogram:
   TH1F *m_cutFlowHist_weighted;

@@ -6,10 +6,11 @@
 //  Email: ahard@cern.ch                                                      //
 //  Date: 13/12/2015                                                          //
 //                                                                            //
-//  WARNING! The approach to migration systematics must be updated ASAP. Right//
-//  now, normalization effects are combined with migration effects. There     //
-//  should probably be a normalization of the nominal with sys. before a      //
-//  comparison of the yields in each category.                                //
+//  This class loads and stores information on systematic uncertainties. For  //
+//  the moment, these include normalization and migration systematics that    //
+//  are calculated using the output of DMMassPoints.cxx. Eventually, the      //
+//  framework can be extended to include resolution and mass scale systematic //
+//  uncertainties, if useful.                                                 //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 

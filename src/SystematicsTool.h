@@ -29,6 +29,7 @@
 #include "TString.h"
 
 // Package includes:
+#include "Config.h"
 #include "CommonHead.h"
 #include "RooFitHead.h"
 #include "RooBernsteinM.h"
@@ -42,14 +43,17 @@ class SystematicsTool {
   virtual ~SystematicsTool() {};
   
   // Accessors:
-  void getNormSys(TString sysName, TString sampleName);
-  void getMigrSys(TString sysName, TString sampleName, int cateIndex);
+  double getNormSys(TString sysName, TString sampleName);
+  double getMigrSys(TString sysName, TString sampleName, int cateIndex);
   std::vector<TString> listAllSys();
   
   // Mutators:
   void loadAllSys(TString sampleName); 
   void loadSingleSys(TString sysName, TString sampleName);
-  std::vector<TString> rankSysForSample(TString sampleName);
+  //std::vector<TString> rankMigrSysForSample(TString sampleName);
+  std::vector<TString> rankNormSysForSample(TString sampleName);
+  //void saveRankedMigrSys(TString sampleName);
+  void saveRankedNormSys(TString sampleName);
   
  private:
   

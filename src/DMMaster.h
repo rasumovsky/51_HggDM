@@ -21,6 +21,7 @@
 #include "DMTestStat.h"
 #include "DMToyAnalysis.h"
 #include "SigParamInterface.h"
+#include "SystematicsTool.h"
 
 // Analysis configuration file:
 Config *m_config;

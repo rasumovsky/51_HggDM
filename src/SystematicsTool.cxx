@@ -6,7 +6,8 @@
 //  Email: ahard@cern.ch                                                      //
 //  Date: 12/12/2015                                                          //
 //                                                                            //
-//  
+//  WARNING!!!!!! THIS PROGRAM HAS YET TO IMPLEMENT THE CALCULATION OF SYST   //
+//  FROM THE LOADED YIELD VALUES. THIS IS ESSENTIAL!!!
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -31,6 +32,10 @@ SystematicsTool::SystematicsTool(TString newConfigFile) {
 		     (m_config->getStr("masterOutput")).Data(),
 		     (m_config->getStr("jobName")).Data());
   system(Form("mkdir -vp %s", m_outputDir.Data()));
+  
+  // Also clear the class data:
+  m_yieldStorage.clear();
+  m_sysStorage.clear();
   
   std::cout << "\nSystematicsTool::Initialized!" << std::endl;
 }
@@ -103,9 +108,9 @@ void SystematicsTool::loadAllSys(TString sampleName) {
    @param sampleName - The name of the sample for which sys. will be loaded.
 */
 void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
-  inputDir = Form("%s/%s/DMMassPoints/Systematics", 
-		  (m_config->getStr("masterOutput")).Data(),
-		  (m_config->getStr("jobName")).Data());
+  TString inputDir = Form("%s/%s/DMMassPoints/Systematics", 
+			  (m_config->getStr("masterOutput")).Data(),
+			  (m_config->getStr("jobName")).Data());
   
   // First load cutflow to get yield:
   std::ifstream sysInput(Form("%s/cutflow_%s_%s.txt",inputDir.Data(), 
@@ -131,7 +136,73 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
 /**
    -----------------------------------------------------------------------------
 */
-std::vector<TString> SystematicsTool::rankSysForSample(TString sampleName) {
+//std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
+//}
+
+/**
+   -----------------------------------------------------------------------------
+   Get a list of systematic uncertainties ordered from largest effect to 
+   smallest effect for the specified sample.
+   @param sampleName - The name of the sample for which sys. will be loaded.
+   @return - An ordered vector of systematic uncertainty names. 
+*/
+std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
+  
+  // An unordered vector of all systematics:
+  std::vector<TString> unorderedSys = listAllSys();
+  
+  // A vector ordered from largest to smallest systematic effect:
+  std::vector<TString> orderedSys; orderedSys.clear();
+  
+  // Loop over all the unordered systematics:
+  for (int i_s = 0; i_s < (int)unorderedSys.size(); i_s++) {
+    
+    bool wasInserted = false;
+    
+    // Iterate over the ordered systematics:
+    for (std::vector<TString>::iterator orderIter = orderedSys.begin();
+	 orderIter != orderedSys.end(); orderIter++) {
+      
+      // Insert unordered val if the value of orderIter is lower:
+      double currUnorderedVal = getNormSys(unorderedSys[i_s], sampleName);
+      double currOrderedVal = getNormSys(*orderIter, sampleName);
+      if (currUnorderedVal > currOrderedVal) {
+	orderedSys.insert(orderIter, unorderedSys[i_s]);
+	wasInserted = true;
+      }
+      // else continue iteration.
+    }
+    
+    // if it was not inserted during iteration, push back on end:
+    if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
+    
+  }
+  
+  // Check that output list makes sense:
+  if ((int)orderedSys.size() != (int)unorderedSys.size()) {
+    std::cout << "SystematicsTool: ERROR! Something went wrong in ordering algo"
+	      << std::endl;
+    exit(0);
+  }
+  
+  return orderedSys;
+}
+
+/**
+   -----------------------------------------------------------------------------
+   Prints a ranked list of the normalization systematics and their values. 
+   @param sampleName - The name of the sample for which sys. will be loaded.
+*/
+void SystematicsTool::saveRankedNormSys(TString sampleName) {
+  std::ofstream outputRanking(Form("%s/normSysRank_%s.txt", 
+				   m_outputDir.Data(), sampleName.Data()));
+  std::vector<TString> rankedSysNames = rankNormSysForSample(sampleName);
+  for (std::vector<TString>::iterator iterSys = rankedSysNames.begin(); 
+       iterSys != rankedSysNames.end(); iterSys++) {
+    outputRanking << *iterSys << " \t" << getNormSys(*iterSys,sampleName)
+		  << std::endl;
+  }
+  outputRanking.close();
 }
 
 /**

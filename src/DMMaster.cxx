@@ -571,15 +571,20 @@ int main (int argc, char **argv) {
   }
 
   //--------------------------------------//
-  // Step 1.3: Rank the systematic uncertainties:
-  /*
+  // Step 1.3: Rank the systematic uncertainties for each sample:
   if (masterOption.Contains("RankSystematics")) {
     std::cout << "DMMaster: Step 1.3 - Rank systematic variations by impact."
 	      << std::endl;
-    SystematicsTool *sh = new SystematicsTool(configFileName, sysSamples[i_s]);
-    
+    SystematicsTool *sh = new SystematicsTool(configFileName);
+    std::vector<TString> sysSamples = m_config->getStrV("SystematicsSamples");
+    for (int i_s = 0; i_s < (int)sysSamples.size(); i_s++) {
+      sh->loadAllSys(sysSamples[i_s]);
+      sh->saveRankedNormSys(sysSamples[i_s]);
+      //sh->saveRankedMigrSys(sysSamples[i_s]);
+    }
+    delete sh;
   }
-  */  
+  
   //--------------------------------------//
   // Step 1.4: Make variable plots:
   if (masterOption.Contains("PlotVariables")) {

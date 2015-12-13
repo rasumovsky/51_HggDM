@@ -52,7 +52,11 @@ SystematicsTool::SystematicsTool(TString newConfigFile) {
 */
 double SystematicsTool::calculateMigrSys(TString sysName, TString sampleName,
 					 int cateIndex) {
-  double sysValue = ((getYield(sysName, sampleName, cateIndex) -
+  // Normalize by the total event yield when calculating migration effect.
+  double normFactor = (getYield("Nominal", sampleName) / 
+		       getYield(sysName, sampleName));
+  
+  double sysValue = ((normFactor * getYield(sysName, sampleName, cateIndex) -
 		      getYield("Nominal", sampleName, cateIndex)) / 
 		     getYield("Nominal", sampleName, cateIndex));
 
@@ -187,13 +191,20 @@ void SystematicsTool::loadAllSys(TString sampleName) {
    @param sampleName - The name of the sample for which sys. will be loaded.
 */
 void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
+  
   TString inputDir = Form("%s/%s/DMMassPoints/Systematics", 
 			  (m_config->getStr("masterOutput")).Data(),
 			  (m_config->getStr("jobName")).Data());
+  
+  // If nominal has not already been created, create (necessary for sys. calc):
+  if (m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0 &&
+      !sysName.EqualTo("Nominal")) {
+    loadSingleSys("Nominal", sampleName);
+  }
+  
+  // Step 1: load cutflow to get normalization systematic:
   TString normFileName = Form("%s/cutflow_%s_%s.txt",inputDir.Data(), 
 			      sysName.Data(), sampleName.Data());
-  
-  // First load cutflow to get yield:
   std::ifstream normSysInput(normFileName);
   if (!normSysInput.is_open()) {
     std::cout << "SystematicsTool: ERROR opening norm sys. file: "
@@ -209,31 +220,108 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
       setYield(sysName, sampleName, passYield);
     }
   }
+  normSysInput.close();
   
-  // If nominal has not already been created, create:
-  if (m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0 &&
-      !sysName.EqualTo("Nominal")) {
-    loadSingleSys("Nominal", sampleName);
-  }
-  
-  // Calculate the systematic effect:
+  // Calculate the systematic effect on normalization:
   calculateNormSys(sysName, sampleName);
   
-  // Then load categorization (WARNING! improper output in DMMassPoints)
+  // Step 2: load categorization to get migration systematic:
+  TString migrFileName = Form("%s/categorization_%s_%s.txt",inputDir.Data(), 
+			      sysName.Data(), sampleName.Data());
+  std::ifstream migrSysInput(migrFileName);
+  if (!migrSysInput.is_open()) {
+    std::cout << "SystematicsTool: ERROR opening migration sys. file: "
+	      << migrFileName << std::endl;
+    exit(0);
+  }
+  
+  // Load the event categorization after all cuts:
+  std::string line;
+  while (!migrSysInput.eof()) {
+    std::getline(migrSysInput, line);
+    TString currLine = TString(line);
+    TObjArray *tokenizedLine = currLine.Tokenize(" ");
+    for (int i_e = 1; i_e < tokenizedLine->GetEntries(); i_e++) {
+      TString *currValue = (TString*)(tokenizedLine->At(i_e));
+      setYield(sysName, sampleName, i_e-1, currValue->Atof());
+      delete currValue;
+    }
+    delete tokenizedLine;
+  }
+  migrSysInput.close();
+  
+  // Calculate the systematic effect of migration:
+  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+    calculateMigrSys(sysName, sampleName, i_c);
+  }
 }
 
 /**
    -----------------------------------------------------------------------------
+   Get a list of migration systematic uncertainties ordered from largest to 
+   smallest effect for the specified sample.
+   @param sampleName - The name of the sample.
+   @return - An ordered vector of migration systematic uncertainty names. 
 */
-//std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
-//}
+std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
+  
+  // An unordered vector of all systematics:
+  std::vector<TString> unorderedSys = listAllSys();
+  
+  // A vector ordered from largest to smallest systematic effect:
+  std::vector<TString> orderedSys; orderedSys.clear();
+  
+  // Loop over all the unordered systematics:
+  for (int i_s = 0; i_s < (int)unorderedSys.size(); i_s++) {
+    
+    bool wasInserted = false;
+    
+    // Iterate over the ordered systematics:
+    for (std::vector<TString>::iterator orderIter = orderedSys.begin();
+	 orderIter != orderedSys.end(); orderIter++) {
+      
+      // Find the maximum shift:
+      double maxUnorderedVal = getMigrSys(unorderedSys[i_s], sampleName, 0); 
+      double maxOrderedVal = getMigrSys(*orderIter, sampleName, 0);
+      for (int i_c = 1; i_c < m_config->getInt("nCategories"); i_c++) {
+	double currUnorderedVal = getMigrSys(unorderedSys[i_s], sampleName,i_c);
+	double currOrderedVal = getMigrSys(*orderIter, sampleName, i_c);
+	if (currUnorderedVal > maxUnorderedVal) {
+	  maxUnorderedVal = currUnorderedVal;
+	}
+	if (currOrderedVal > maxOrderedVal) {
+	  maxOrderedVal = currOrderedVal;
+	}
+      }
+      
+      // Insert unordered val if the value of orderIter is lower:
+      if (maxUnorderedVal > maxOrderedVal) {
+	orderedSys.insert(orderIter, unorderedSys[i_s]);
+	wasInserted = true;
+      }
+      // else continue iteration.
+    }
+    
+    // if it was not inserted during iteration, push back on end:
+    if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
+  }
+  
+  // Check that output list makes sense:
+  if ((int)orderedSys.size() != (int)unorderedSys.size()) {
+    std::cout << "SystematicsTool: ERROR! Something went wrong in ordering algo"
+	      << std::endl;
+    exit(0);
+  }
+  
+  return orderedSys;
+}
 
 /**
    -----------------------------------------------------------------------------
    Get a list of systematic uncertainties ordered from largest effect to 
    smallest effect for the specified sample.
-   @param sampleName - The name of the sample for which sys. will be loaded.
-   @return - An ordered vector of systematic uncertainty names. 
+   @param sampleName - The name of the sample.
+   @return - An ordered vector of normalization systematic uncertainty names. 
 */
 std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
   
@@ -279,8 +367,28 @@ std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
 
 /**
    -----------------------------------------------------------------------------
+   Prints a ranked list of the migration systematics and their values. 
+   @param sampleName - The name of the sample.
+*/
+void SystematicsTool::saveRankedMigrSys(TString sampleName) {
+  std::ofstream outputRanking(Form("%s/migrSysRank_%s.txt", 
+				   m_outputDir.Data(), sampleName.Data()));
+  std::vector<TString> rankedSysNames = rankMigrSysForSample(sampleName);
+  for (std::vector<TString>::iterator iterSys = rankedSysNames.begin(); 
+       iterSys != rankedSysNames.end(); iterSys++) {
+    outputRanking << *iterSys;
+    for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+      outputRanking << " " << getMigrSys(*iterSys, sampleName, i_c);
+    }
+    outputRanking << std::endl;
+  }
+  outputRanking.close();
+}
+
+/**
+   -----------------------------------------------------------------------------
    Prints a ranked list of the normalization systematics and their values. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
 */
 void SystematicsTool::saveRankedNormSys(TString sampleName) {
   std::ofstream outputRanking(Form("%s/normSysRank_%s.txt", 
@@ -288,7 +396,7 @@ void SystematicsTool::saveRankedNormSys(TString sampleName) {
   std::vector<TString> rankedSysNames = rankNormSysForSample(sampleName);
   for (std::vector<TString>::iterator iterSys = rankedSysNames.begin(); 
        iterSys != rankedSysNames.end(); iterSys++) {
-    outputRanking << *iterSys << " \t" << getNormSys(*iterSys,sampleName)
+    outputRanking << *iterSys << " " << getNormSys(*iterSys, sampleName)
 		  << std::endl;
   }
   outputRanking.close();
@@ -298,7 +406,7 @@ void SystematicsTool::saveRankedNormSys(TString sampleName) {
    -----------------------------------------------------------------------------
    Set the value of the systematic uncertainty on normalization.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
    @param sysValue - The new value of the systematic uncertainty.
 */
 void SystematicsTool::setNormSys(TString sysName, TString sampleName, 
@@ -310,7 +418,7 @@ void SystematicsTool::setNormSys(TString sysName, TString sampleName,
    -----------------------------------------------------------------------------
    Set the value of the systematic uncertainty on migration.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
    @param cateIndex - The index of the category.
    @param sysValue - The new value of the systematic uncertainty.
 */
@@ -322,7 +430,7 @@ void SystematicsTool::setMigrSys(TString sysName, TString sampleName,
    -----------------------------------------------------------------------------
    Set the value of the yield.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
    @param yieldValue - The new value of the yield.
 */
 void SystematicsTool::setYield(TString sysName, TString sampleName, 
@@ -334,7 +442,7 @@ void SystematicsTool::setYield(TString sysName, TString sampleName,
    -----------------------------------------------------------------------------
    Set the value of the yield.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
    @param cateIndex - The index of the category.
    @param yieldValue - The new value of the yield.
 */
@@ -347,7 +455,7 @@ void SystematicsTool::setYield(TString sysName, TString sampleName,
    -----------------------------------------------------------------------------
    A private method for accessing map data.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
    @param cateIndex - The index of the category.
 */
 TString SystematicsTool::sysKey(TString sysName, TString sampleName,
@@ -359,7 +467,7 @@ TString SystematicsTool::sysKey(TString sysName, TString sampleName,
    -----------------------------------------------------------------------------
    A private method for accessing map data.
    @param sysName - The name of the systematic uncertainty. 
-   @param sampleName - The name of the sample for which sys. will be loaded.
+   @param sampleName - The name of the sample.
 */
 TString SystematicsTool::sysKey(TString sysName, TString sampleName) {
   return Form("%s_%s", sysName.Data(), sampleName.Data());

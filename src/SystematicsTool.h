@@ -54,9 +54,9 @@ class SystematicsTool {
   // Mutators:
   void loadAllSys(TString sampleName); 
   void loadSingleSys(TString sysName, TString sampleName);
-  //std::vector<TString> rankMigrSysForSample(TString sampleName);
+  std::vector<TString> rankMigrSysForSample(TString sampleName);
   std::vector<TString> rankNormSysForSample(TString sampleName);
-  //void saveRankedMigrSys(TString sampleName);
+  void saveRankedMigrSys(TString sampleName);
   void saveRankedNormSys(TString sampleName);
   void setNormSys(TString sysName, TString sampleName, double sysValue);
   void setMigrSys(TString sysName, TString sampleName, int cateIndex,

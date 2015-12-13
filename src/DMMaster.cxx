@@ -580,7 +580,7 @@ int main (int argc, char **argv) {
     for (int i_s = 0; i_s < (int)sysSamples.size(); i_s++) {
       sh->loadAllSys(sysSamples[i_s]);
       sh->saveRankedNormSys(sysSamples[i_s]);
-      //sh->saveRankedMigrSys(sysSamples[i_s]);
+      sh->saveRankedMigrSys(sysSamples[i_s]);
     }
     delete sh;
   }

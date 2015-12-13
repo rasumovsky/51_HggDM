@@ -463,7 +463,7 @@ void DMEvtSelect::saveCategorization(TString fileName, bool weighted) {
   // iterate over category names:
   std::map<TString,int>::iterator it;
   for (it = cateSchemesAndSizes.begin(); it != cateSchemesAndSizes.end(); it++){
-    outFile << "\t" << it->first << " ";
+    outFile << it->first << " ";
     for (int j = 0; j < it->second; j++) {
       if (weighted) {
 	outFile << cateCount[Form("%s_%d",(it->first).Data(), j)] << " ";

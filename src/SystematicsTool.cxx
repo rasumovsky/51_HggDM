@@ -243,8 +243,8 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
     TString currLine = TString(line);
     TObjArray *tokenizedLine = currLine.Tokenize(" ");
     for (int i_e = 1; i_e < tokenizedLine->GetEntries(); i_e++) {
-      TString *currValue = (TString*)(tokenizedLine->At(i_e));
-      setYield(sysName, sampleName, i_e-1, currValue->Atof());
+      TString currValue = ((TObjString*)tokenizedLine->At(i_e))->GetString();
+      setYield(sysName, sampleName, i_e-1, currValue.Atof());
       delete currValue;
     }
     delete tokenizedLine;

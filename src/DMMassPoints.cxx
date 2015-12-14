@@ -168,22 +168,29 @@ TString DMMassPoints::createLocalFilesAndList(TString originListName) {
   std::ofstream outputFile(outputListName);
   while (!originFile.eof()) {
     originFile >> currLine;
-    if (currLine.Contains("eos/atlas")) {
-      TString newLine = currLine;
-      TString directory = currLine.Contains("data") ? 
-	Form("%s/", (m_config->getStr("MxAODDirectoryData")).Data()) :
-	Form("%s/", (m_config->getStr("MxAODDirectoryMC")).Data());
-      newLine.ReplaceAll(directory, "");
-      system(Form("xrdcp %s %s", currLine.Data(), newLine.Data()));
+    
+    // Check that the line is not empty to prevent segfault:
+    if (!currLine.IsWhitespace()) {
+      
+      // Get the name of the file and add it to local file list:
+      TObjArray *tokenizedLine = currLine.Tokenize("/");
+      TString newLine = ((TObjString*)tokenizedLine->Last())->GetString();
       outputFile << newLine << std::endl;
-    }
-    else {
-      outputFile << currLine << std::endl;
+      
+      // Copy the file locally:
+      if (currLine.Contains("eos/atlas") && currLine.Contains(".root")) {
+	system(Form("xrdcp %s .", currLine.Data()));
+      }
+      else if (currLine.Contains(".root")) {
+	system(Form("cp %s .", currLine.Data()));
+      }
+      delete tokenizedLine;
     }
   }
+
+  std::cout << "DMMassPoints: Finished copying files." << std::endl;
   originFile.close();
   outputFile.close();
-  std::cout << "DMMassPoints: Finished copying files." << std::endl;
   return outputListName;
 }
 

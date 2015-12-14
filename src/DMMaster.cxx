@@ -6,11 +6,11 @@
 //  Email: ahard@cern.ch                                                      //
 //  Date: 03/08/2015                                                          //
 //                                                                            //
-//  This program is useful as an interface to the H->diphoton + DM analysis   //
-//  tools. It centralizes the commands for creating inputs, plots, workspaces,//
-//  and statistical results. Some of the commands will rely on accessing      //
-//  classes (mass points, signal parameterization), while others will use     //
-//  system commands to submit jobs to various clusters.                       //
+//  The main() method is an interface to the H->diphoton + DM analysis tools. //
+//  It centralizes the commands for creating inputs, plots, workspaces, and   //
+//  statistical results. Some of the commands will rely on accessing classes  //
+//  (mass points, signal parameterization), while others will use system      //
+//  commands to submit jobs to various clusters.                              //
 //                                                                            //
 //  To run:                                                                   //
 //    ./bin/DMMaster <MasterOption> <configFileName>                          //
@@ -363,7 +363,7 @@ void submitTSViaBsub(TString exeConfigFile, TString exeOption,
    @param exeOption - the job options for the executable.
    @param exeSignal - the signal to process in the executable.
 */
-void SubmitMuLimitViaBsub(TString exeConfigFile, TString exeOption,
+void submitMuLimitViaBsub(TString exeConfigFile, TString exeOption,
 			  TString exeSignal) {
   
   // Make directories for job info:
@@ -488,11 +488,7 @@ int main (int argc, char **argv) {
   // The job name and options (which analysis steps to perform):
   TString masterOption = argv[1];
   TString configFileName = argv[2];
-  
-  // Submit jobs to bsub or grid, etc.:
-  bool runInParallel = false;
-  m_isFirstJob = true;
-    
+      
   // Load the config class and file:
   std::cout << "DMMaster: Loading the global config file." << std::endl;
   m_config = new Config(configFileName);
@@ -500,6 +496,10 @@ int main (int argc, char **argv) {
   TString fullConfigPath = Form("%s/%s",
 				(m_config->getStr("packageLocation")).Data(),
 				configFileName.Data());
+  
+  // Submit jobs to bsub or grid, etc.:
+  bool runInParallel = m_config->getStr("RunInParallel");
+  m_isFirstJob = true;
   
   // Options for each analysis step:
   TString massPointOptions = m_config->getStr("massPointOptions");
@@ -524,34 +524,27 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("MassPoints")) {
     std::cout << "DMMaster: Step 1.1 - Make mass points." << std::endl;
     
-    // Load SM signal MxAODs:
     std::vector<TString> sigSMModes = m_config->getStrV("sigSMModes");
-    for (int i_SM = 0; i_SM < (int)sigSMModes.size(); i_SM++) {
-      DMMassPoints *mp = new DMMassPoints(configFileName, sigSMModes[i_SM],
-					  massPointOptions, NULL);
-      delete mp;
-    }
-    
-    // Load DM signal MxAODs:
     std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
-    for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
-      DMMassPoints *mp = new DMMassPoints(configFileName, sigDMModes[i_DM],
-					  massPointOptions, NULL);
-      delete mp;
-    }
+    std::vector<TString> bkgProcesses = m_config->getStrV("BkgProcesses");
+    std::vector<TString> allSamples; allSamples.clear();
+    allSamples.push_back("Data");
+    allSamples.insert(allSamples.end(),sigSMModes.begin(),sigSMModes.end());
+    allSamples.insert(allSamples.end(),sigDMModes.begin(),sigDMModes.end());
+    allSamples.insert(allSamples.end(),bkgProcesses.begin(),bkgProcesses.end());
     
-    // Load background MxAODs:
-    std::vector<TString> BkgProcesses = m_config->getStrV("BkgProcesses");
-    for (int i_Bkg = 0; i_Bkg < (int)BkgProcesses.size(); i_Bkg++) {
-      DMMassPoints *mp = new DMMassPoints(configFileName, BkgProcesses[i_Bkg],
-					  massPointOptions, NULL);
-      delete mp;
+    // Loop over all samples:
+    for (int i_s = 0; i_s < (int)allSamples.size(); i_s++) {
+      // Option to submit remote jobs:
+      if (runInParallel) {
+      }
+      // Otherwise run locally:
+      else {
+	DMMassPoints *mp = new DMMassPoints(configFileName, allSamples[i_s],
+					    massPointOptions, NULL);
+	delete mp;
+      }
     }
-    
-    // Load data MxAODs:
-    DMMassPoints *mp = new DMMassPoints(configFileName, "Data",	
-    					massPointOptions, NULL);
-    delete mp;
   }
   
   //--------------------------------------//
@@ -576,6 +569,7 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 1.3 - Rank systematic variations by impact."
 	      << std::endl;
     SystematicsTool *sh = new SystematicsTool(configFileName);
+    
     std::vector<TString> sysSamples = m_config->getStrV("SystematicsSamples");
     for (int i_s = 0; i_s < (int)sysSamples.size(); i_s++) {
       sh->loadAllSys(sysSamples[i_s]);
@@ -797,7 +791,7 @@ int main (int argc, char **argv) {
       TString currSignal = sigDMModes[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(fullConfigPath, muLimitOptions, currSignal);
+	//submitMuLimitViaBsub(fullConfigPath, muLimitOptions, currSignal);
 	m_isFirstJob = false;
       }
       else {
@@ -839,7 +833,7 @@ int main (int argc, char **argv) {
       TString currSignal = resubmitSignals[i_DM];
       
       if (runInParallel) {
-	submitMLViaBsub(fullConfigPath, muLimitOptions, currSignal);
+	submitMuLimitViaBsub(fullConfigPath, muLimitOptions, currSignal);
 	m_isFirstJob = false;
       }
       else {

@@ -545,9 +545,11 @@ void DMMassPoints::createNewMassPoints() {
     if (getSystematics) {
       for (int i_s = 0; i_s < (int)systList.size(); i_s++) {
 	sysSelectors[systList[i_s]]->passesCut("AllCuts", evtWeight);
+	sysSelectors[systList[i_s]]
+	  ->getCategoryNumber(m_config->getStr("cateScheme"), evtWeight);
       }
     }
-        
+    
     // Make sure events pass the selection:
     if (!selector->passesCut("AllCuts", evtWeight)) continue;
     

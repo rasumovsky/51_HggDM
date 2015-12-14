@@ -40,7 +40,7 @@ SystematicsTool::SystematicsTool(TString newConfigFile) {
   m_yieldStorage.clear();
   m_sysStorage.clear();
   
-  std::cout << "\nSystematicsTool::Initialized!" << std::endl;
+  std::cout << "SystematicsTool::Initialized!" << std::endl;
 }
 
 /**
@@ -53,14 +53,16 @@ SystematicsTool::SystematicsTool(TString newConfigFile) {
 */
 double SystematicsTool::calculateMigrSys(TString sysName, TString sampleName,
 					 int cateIndex) {
+  double normFactor = 1.0;
+  double sysValue = 0.0;
   // Normalize by the total event yield when calculating migration effect.
-  double normFactor = (getYield("Nominal", sampleName) / 
-		       getYield(sysName, sampleName));
+  if (!sysName.EqualTo("Nominal")) {
+    normFactor = (getYield("Nominal",sampleName)/getYield(sysName,sampleName));
+    sysValue = ((normFactor * getYield(sysName, sampleName, cateIndex) -
+		 getYield("Nominal", sampleName, cateIndex)) / 
+		getYield("Nominal", sampleName, cateIndex));
+  }
   
-  double sysValue = ((normFactor * getYield(sysName, sampleName, cateIndex) -
-		      getYield("Nominal", sampleName, cateIndex)) / 
-		     getYield("Nominal", sampleName, cateIndex));
-
   // Store the result and return it:
   setMigrSys(sysName, sampleName, cateIndex, sysValue);
   return sysValue;
@@ -74,9 +76,12 @@ double SystematicsTool::calculateMigrSys(TString sysName, TString sampleName,
    @return - The fractional size of a systematic effect.
 */
 double SystematicsTool::calculateNormSys(TString sysName, TString sampleName) {
-  double sysValue
-    = ((getYield(sysName,sampleName) - getYield("Nominal",sampleName)) / 
-       getYield("Nominal", sampleName));
+  double sysValue = 0.0;
+  if (!sysName.EqualTo("Nominal")) {
+    sysValue = ((getYield(sysName,sampleName) - 
+		 getYield("Nominal",sampleName)) / 
+		getYield("Nominal", sampleName));
+  }
   // Store the result and return it:
   setNormSys(sysName, sampleName, sysValue);
   return sysValue;
@@ -169,7 +174,16 @@ double SystematicsTool::getYield(TString sysName, TString sampleName,
    @return - A list of systematic variations.
 */
 std::vector<TString> SystematicsTool::listAllSys() {
-  return m_config->getStrV("SystematicsList");
+  std::vector<TString> sysList = m_config->getStrV("SystematicsList");
+  for (std::vector<TString>::iterator sysIter = sysList.begin(); 
+       sysIter != sysList.end(); sysIter++) {
+    TString currSys = *sysIter;
+    if (currSys.EqualTo("Nominal")) {
+      sysList.erase(sysIter);
+      break;
+    }
+  }
+  return sysList;
 }
 
 /**
@@ -178,6 +192,8 @@ std::vector<TString> SystematicsTool::listAllSys() {
    @param sampleName - The name of the sample for which sys. will be loaded.
 */
 void SystematicsTool::loadAllSys(TString sampleName) {
+  std::cout << "SystematicsTool: Loading all systematics for " << sampleName 
+	    << std::endl;
   // loop over systematics:
   std::vector<TString> sysList = listAllSys(); 
   for (int i_s = 0; i_s < (int)sysList.size(); i_s++) {
@@ -192,14 +208,14 @@ void SystematicsTool::loadAllSys(TString sampleName) {
    @param sampleName - The name of the sample for which sys. will be loaded.
 */
 void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
-  
+  std::cout << "SystematicsTool: Loading systematic " << sysName << " for " 
+	    << sampleName << std::endl;
   TString inputDir = Form("%s/%s/DMMassPoints/Systematics", 
 			  (m_config->getStr("masterOutput")).Data(),
 			  (m_config->getStr("jobName")).Data());
   
   // If nominal has not already been created, create (necessary for sys. calc):
-  if (m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0 &&
-      !sysName.EqualTo("Nominal")) {
+  if (!sysName.EqualTo("Nominal") && m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0) {
     loadSingleSys("Nominal", sampleName);
   }
   
@@ -227,20 +243,26 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
   calculateNormSys(sysName, sampleName);
   
   // Step 2: load categorization to get migration systematic:
-  TString migrFileName = Form("%s/categorization_%s_%s.txt",inputDir.Data(), 
-			      sysName.Data(), sampleName.Data());
+  TString categorizationName = m_config->getStr("cateScheme");
+  TString migrFileName = Form("%s/categorization_%s_%s_%s.txt",inputDir.Data(), 
+			      sysName.Data(), categorizationName.Data(),
+			      sampleName.Data());
   std::ifstream migrSysInput(migrFileName);
   if (!migrSysInput.is_open()) {
     std::cout << "SystematicsTool: ERROR opening migration sys. file: "
 	      << migrFileName << std::endl;
     exit(0);
   }
-  
+    
   // Load the event categorization after all cuts:
   std::string line;
   while (!migrSysInput.eof()) {
     std::getline(migrSysInput, line);
     TString currLine = TString(line);
+    std::cout << "line = " << line << std::endl;
+    
+    // THERE WAS A PROBLEM HERE... 
+
     TObjArray *tokenizedLine = currLine.Tokenize(" ");
     for (int i_e = 1; i_e < tokenizedLine->GetEntries(); i_e++) {
       TString currValue = ((TObjString*)tokenizedLine->At(i_e))->GetString();
@@ -250,7 +272,7 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
     delete tokenizedLine;
   }
   migrSysInput.close();
-  
+    
   // Calculate the systematic effect of migration:
   for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
     calculateMigrSys(sysName, sampleName, i_c);

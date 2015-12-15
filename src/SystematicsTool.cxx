@@ -122,7 +122,7 @@ double SystematicsTool::getNormSys(TString sysName, TString sampleName) {
     return m_sysStorage[sysKey(sysName, sampleName)];
   }
   else {
-    std::cout << "SystematicsTool: ERROR! normalization systematic " << sysName 
+    std::cout << "SystematicsTool: ERROR! Normalization systematic " << sysName 
 	      << " not defined for sample " << sampleName << std::endl;
     exit(0);
   }
@@ -215,7 +215,8 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
 			  (m_config->getStr("jobName")).Data());
   
   // If nominal has not already been created, create (necessary for sys. calc):
-  if (!sysName.EqualTo("Nominal") && m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0) {
+  if (!sysName.EqualTo("Nominal") &&
+      m_yieldStorage.count(sysKey("Nominal", sampleName)) == 0) {
     loadSingleSys("Nominal", sampleName);
   }
   
@@ -235,6 +236,7 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
     normSysInput >> str1 >> passYield >> str2 >> totalYield;
     if (str1.EqualTo("AllCuts")) {
       setYield(sysName, sampleName, passYield);
+      std::cout << "Setting yield1 = " << passYield << std::endl;
     }
   }
   normSysInput.close();
@@ -259,23 +261,21 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
   while (!migrSysInput.eof()) {
     std::getline(migrSysInput, line);
     TString currLine = TString(line);
-    std::cout << "line = " << line << std::endl;
-    
-    // THERE WAS A PROBLEM HERE... 
-
-    TObjArray *tokenizedLine = currLine.Tokenize(" ");
-    for (int i_e = 1; i_e < tokenizedLine->GetEntries(); i_e++) {
-      TString currValue = ((TObjString*)tokenizedLine->At(i_e))->GetString();
-      setYield(sysName, sampleName, i_e-1, currValue.Atof());
-      delete currValue;
+    if (!currLine.IsWhitespace()) {
+      TObjArray *tokenizedLine = currLine.Tokenize(" ");
+      for (int i_e = 1; i_e < tokenizedLine->GetEntries(); i_e++) {
+	TString currValue = ((TObjString*)tokenizedLine->At(i_e))->GetString();
+	setYield(sysName, sampleName, i_e-1, currValue.Atof());
+	std::cout << "Setting yield2 = " << currValue.Atof() << std::endl;
+      }
+      delete tokenizedLine;
     }
-    delete tokenizedLine;
-  }
-  migrSysInput.close();
+    migrSysInput.close();
     
-  // Calculate the systematic effect of migration:
-  for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
-    calculateMigrSys(sysName, sampleName, i_c);
+    // Calculate the systematic effect of migration:
+    for (int i_c = 0; i_c < m_config->getInt("nCategories"); i_c++) {
+      calculateMigrSys(sysName, sampleName, i_c);
+    }
   }
 }
 
@@ -287,6 +287,8 @@ void SystematicsTool::loadSingleSys(TString sysName, TString sampleName) {
    @return - An ordered vector of migration systematic uncertainty names. 
 */
 std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
+  std::cout << "SystematicsTool: Ranking migration systematics for sample "
+	    << sampleName << std::endl;
   
   // An unordered vector of all systematics:
   std::vector<TString> unorderedSys = listAllSys();
@@ -296,37 +298,43 @@ std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
   
   // Loop over all the unordered systematics:
   for (int i_s = 0; i_s < (int)unorderedSys.size(); i_s++) {
-    
-    bool wasInserted = false;
-    
-    // Iterate over the ordered systematics:
-    for (std::vector<TString>::iterator orderIter = orderedSys.begin();
-	 orderIter != orderedSys.end(); orderIter++) {
-      
-      // Find the maximum shift:
-      double maxUnorderedVal = getMigrSys(unorderedSys[i_s], sampleName, 0); 
-      double maxOrderedVal = getMigrSys(*orderIter, sampleName, 0);
-      for (int i_c = 1; i_c < m_config->getInt("nCategories"); i_c++) {
-	double currUnorderedVal = getMigrSys(unorderedSys[i_s], sampleName,i_c);
-	double currOrderedVal = getMigrSys(*orderIter, sampleName, i_c);
-	if (currUnorderedVal > maxUnorderedVal) {
-	  maxUnorderedVal = currUnorderedVal;
-	}
-	if (currOrderedVal > maxOrderedVal) {
-	  maxOrderedVal = currOrderedVal;
-	}
-      }
-      
-      // Insert unordered val if the value of orderIter is lower:
-      if (maxUnorderedVal > maxOrderedVal) {
-	orderedSys.insert(orderIter, unorderedSys[i_s]);
-	wasInserted = true;
-      }
-      // else continue iteration.
+    // First entry goes directly into ordered list:
+    if (i_s == 0) {
+      orderedSys.push_back(unorderedSys[i_s]);
     }
-    
-    // if it was not inserted during iteration, push back on end:
-    if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
+    else {
+      bool wasInserted = false;
+      
+      // Iterate over the ordered systematics:
+      for (std::vector<TString>::iterator orderIter = orderedSys.begin();
+	   orderIter != orderedSys.end(); orderIter++) {
+	
+	// Find the maximum shift:
+	double maxUnorderedVal = getMigrSys(unorderedSys[i_s], sampleName, 0); 
+	double maxOrderedVal = getMigrSys(*orderIter, sampleName, 0);
+	for (int i_c = 1; i_c < m_config->getInt("nCategories"); i_c++) {
+	  double currUnorderedVal
+	    = getMigrSys(unorderedSys[i_s], sampleName, i_c);
+	  double currOrderedVal = getMigrSys(*orderIter, sampleName, i_c);
+	  if (currUnorderedVal > maxUnorderedVal) {
+	    maxUnorderedVal = currUnorderedVal;
+	  }
+	  if (currOrderedVal > maxOrderedVal) {
+	    maxOrderedVal = currOrderedVal;
+	  }
+	}
+	
+	// Insert unordered val if the value of orderIter is lower:
+	if (maxUnorderedVal > maxOrderedVal) {
+	  orderedSys.insert(orderIter, unorderedSys[i_s]);
+	  wasInserted = true;
+	  break;
+	}
+      }
+      
+      // Smallest value will be added to end of the ordered list:
+      if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
+    }
   }
   
   // Check that output list makes sense:
@@ -347,6 +355,8 @@ std::vector<TString> SystematicsTool::rankMigrSysForSample(TString sampleName) {
    @return - An ordered vector of normalization systematic uncertainty names. 
 */
 std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
+  std::cout << "SystematicsTool: Ranking normalization systematics for sample "
+	    << sampleName << std::endl;
   
   // An unordered vector of all systematics:
   std::vector<TString> unorderedSys = listAllSys();
@@ -356,26 +366,30 @@ std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
   
   // Loop over all the unordered systematics:
   for (int i_s = 0; i_s < (int)unorderedSys.size(); i_s++) {
-    
-    bool wasInserted = false;
-    
-    // Iterate over the ordered systematics:
-    for (std::vector<TString>::iterator orderIter = orderedSys.begin();
-	 orderIter != orderedSys.end(); orderIter++) {
-      
-      // Insert unordered val if the value of orderIter is lower:
-      double currUnorderedVal = getNormSys(unorderedSys[i_s], sampleName);
-      double currOrderedVal = getNormSys(*orderIter, sampleName);
-      if (currUnorderedVal > currOrderedVal) {
-	orderedSys.insert(orderIter, unorderedSys[i_s]);
-	wasInserted = true;
-      }
-      // else continue iteration.
+    // First entry goes directly into ordered list:
+    if (i_s == 0) {
+      orderedSys.push_back(unorderedSys[i_s]);
     }
-    
-    // if it was not inserted during iteration, push back on end:
-    if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
-    
+    // Other entries must be sorted:
+    else {
+      bool wasInserted = false;
+      
+      // Iterate over the ordered systematics:
+      for (std::vector<TString>::iterator orderIter = orderedSys.begin();
+	   orderIter != orderedSys.end(); orderIter++) {
+	// Insert unordered val if the value of orderIter is lower:
+	double currUnorderedVal = getNormSys(unorderedSys[i_s], sampleName);
+	double currOrderedVal = getNormSys(*orderIter, sampleName);
+	if (fabs(currUnorderedVal) > fabs(currOrderedVal)) {
+	  orderedSys.insert(orderIter, unorderedSys[i_s]);
+	  wasInserted = true;
+	  break;
+	}
+      }
+      
+      // Smallest value will be added to end of the ordered list:
+      if (!wasInserted) orderedSys.push_back(unorderedSys[i_s]);
+    }
   }
   
   // Check that output list makes sense:
@@ -394,8 +408,9 @@ std::vector<TString> SystematicsTool::rankNormSysForSample(TString sampleName) {
    @param sampleName - The name of the sample.
 */
 void SystematicsTool::saveRankedMigrSys(TString sampleName) {
-  std::ofstream outputRanking(Form("%s/migrSysRank_%s.txt", 
-				   m_outputDir.Data(), sampleName.Data()));
+  TString fileName = Form("%s/migrSysRank_%s.txt", m_outputDir.Data(),
+			  sampleName.Data());
+  std::ofstream outputRanking(fileName);
   std::vector<TString> rankedSysNames = rankMigrSysForSample(sampleName);
   for (std::vector<TString>::iterator iterSys = rankedSysNames.begin(); 
        iterSys != rankedSysNames.end(); iterSys++) {
@@ -406,6 +421,8 @@ void SystematicsTool::saveRankedMigrSys(TString sampleName) {
     outputRanking << std::endl;
   }
   outputRanking.close();
+  std::cout << "SystematicsTool: Created ranked migration sys. file: "
+	    << fileName << std::endl;
 }
 
 /**
@@ -414,8 +431,9 @@ void SystematicsTool::saveRankedMigrSys(TString sampleName) {
    @param sampleName - The name of the sample.
 */
 void SystematicsTool::saveRankedNormSys(TString sampleName) {
-  std::ofstream outputRanking(Form("%s/normSysRank_%s.txt", 
-				   m_outputDir.Data(), sampleName.Data()));
+  TString fileName = Form("%s/normSysRank_%s.txt", m_outputDir.Data(),
+			  sampleName.Data());
+  std::ofstream outputRanking(fileName);
   std::vector<TString> rankedSysNames = rankNormSysForSample(sampleName);
   for (std::vector<TString>::iterator iterSys = rankedSysNames.begin(); 
        iterSys != rankedSysNames.end(); iterSys++) {
@@ -423,6 +441,8 @@ void SystematicsTool::saveRankedNormSys(TString sampleName) {
 		  << std::endl;
   }
   outputRanking.close();
+  std::cout << "SystematicsTool: Created ranked normalization sys. file: "
+	    << fileName << std::endl;
 }
 
 /**

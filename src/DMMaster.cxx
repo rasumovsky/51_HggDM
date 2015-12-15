@@ -498,7 +498,7 @@ int main (int argc, char **argv) {
 				configFileName.Data());
   
   // Submit jobs to bsub or grid, etc.:
-  bool runInParallel = m_config->getStr("RunInParallel");
+  bool runInParallel = m_config->getBool("RunInParallel");
   m_isFirstJob = true;
   
   // Options for each analysis step:
@@ -537,6 +537,9 @@ int main (int argc, char **argv) {
     for (int i_s = 0; i_s < (int)allSamples.size(); i_s++) {
       // Option to submit remote jobs:
       if (runInParallel) {
+	std::cout << "DMMaster: ERROR! Parallelization not yet implemented." 
+		  << std::endl;
+	exit(0);
       }
       // Otherwise run locally:
       else {

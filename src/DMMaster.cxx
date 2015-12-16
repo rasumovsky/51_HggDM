@@ -587,6 +587,8 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("PlotVariables")) {
     std::cout << "DMMaster: Step 1.4 - Make kinematic variable plots."
 	      << std::endl;
+    // Compile the PlotVariables macro:
+    system("make bin/PlotVariables");
     std::vector<TString> plotVariables = m_config->getStrV("PlotVariables");
     for (int i_v = 0; i_v < (int)plotVariables.size(); i_v++) {
       system(Form("./bin/PlotVariables %s %s %s", configFileName.Data(), 
@@ -787,7 +789,10 @@ int main (int argc, char **argv) {
   if (masterOption.Contains("MuLimit") &&
       !masterOption.Contains("ResubmitMuLimit")) {
     std::cout << "DMMaster: Step 7.1 - Calculate 95%CL mu value." << std::endl;
-
+    
+    // Compile the PlotVariables macro:
+    system("make bin/DMMuLimit");
+    
     int jobCounterML = 0;
     std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
@@ -822,6 +827,9 @@ int main (int argc, char **argv) {
   // Step 7.2: Resubmit any failed mu limit jobs:
   if (masterOption.Contains("ResubmitMuLimit")) {
     std::cout << "DMMaster: Step 7.2 - Resubmit failed mu limits." << std::endl;
+    
+    // Compile the PlotVariables macro:
+    system("make bin/DMMuLimit");
     
     int jobCounterML = 0;
     // Get the points to resubmit:

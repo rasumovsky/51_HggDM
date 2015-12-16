@@ -1,4 +1,4 @@
-# A search for dark matter produced in association with a Higgs boson
+# An ATLAS search for dark matter produced in association with a Higgs boson
 
 ### Introduction
 This package implements an analysis of ATLAS Experiment data designed to look
@@ -8,19 +8,66 @@ would manifest as missing transverse energy in the detector.
 
 The code has been structured so that all of the general analysis settings are 
 stored in the configuration file in the data/ directory. *A typical user should 
-only need to adjust the config file. Changes to cutflows are temporary 
+only need to adjust the config file. Changes to categorizations are temporary 
 exceptions, and should be added to the DMEvtSelect class. The code is designed 
 to be as automatic as possible. Each class looks to see if all of the necessary 
 inputs have been produced previously before generating them from scratch.
 
-### General analysis strategy:
-1)  mini-MxAODs from xAODs using the tools provided by Hgamma WG.
-2)  mass points for data, backgrounds, and signal.
-3)  parameterization of the SM and DM signals.
-4)  background modeling.
-5)  workspace to store models and PDFs.
-6)  pseudoexperiment ensemble generation and analysis 
-7)  CLs and p0 calculators
+The DMMaster.cxx program is the user interface for the analysis. All other 
+classes and macros can be run through this program by specifying the proper
+job option and config file settings. A full list of the job options is given
+below in the "Running the code" section.
+
+### Setting up the package. 
+
+##### User modifications
+New users will need to modify data/settingsHDM_sys.cfg and lxbatch scripts in 
+order to run the code with full functionality. All input and output file 
+locations for the programs are specified in the settings (masterInput, 
+masterOutput, packageLocation, clusterFileLocation, and fileName*). Sub-
+directories will be created as necessary by the program.
+
+##### Input files.
+The only input files currently required are centrally-produced HGamma group 
+MxAODs (h008 tag or later). From these, the entire analysis can be generated.
+
+### Running the code
+First compile the master program, which executes the analysis code:
+
+     > make bin/DMMaster
+
+Then to run,
+
+     > ./bin/DMMaster <Program> <SettingsFile>
+
+The program can be any of the following options: 
+  - Cleanup (clean old files from previous analysis runs)
+  - MassPoints (make mass files as inputs for and model)
+  - GetSystematics (make cutflows and categorizations for all syst. variations)
+  - RankSystematics (make a ranking of systematic uncertainties for each sample)
+  - PlotVariables (plot interesting kinematic variables)
+  - SigParam (build the signal PDF from MC)
+  - BkgModel (build the background model)
+  - Workspace (build the statistical model)
+  - ResubmitWorkspace (submit failed Workspace jobs again)
+  - TossPseudoExp (toss pseudo experiment ensemble)
+  - PlotPseudoExp (plot the results of pseudo experiments)
+  - TestStat (calculate p0 and CLs)
+  - ResubmitTestStat (submit failed TestStat jobs again)
+  - MuLimit (get the 95% CL limit on the parameter of interest)
+  - Optimizer (optimize the analysis selection with meta job)
+  - OptAnalysis (analyze the results of Optimizer)
+
+The code will automatically run any required upstream programs in order to 
+ensure that it has all required inputs. For instance, if you want to create a 
+workspace from scratch, just run,
+
+     ./bin/DMMaster Workspace data/settingsHDM.cfg
+
+This is true for every program EXCEPT PlotVariables and MuLimit, which are 
+separate executables. 
+
+Make sure that you are running in a directory from which EOS is accesssible. 
 
 ### Package contents:
 
@@ -95,63 +142,6 @@ inputs have been produced previously before generating them from scratch.
 
 ##### DMTree
  This class is automatically generated based on the MxAOD structure. It provides
- a useful interface for code to the TTrees. 
-
-##### PESReader
- This is a simple class for loading and accessing energy scale systematics based
- on an input file. 
-
-##### PERReader
- This is a simple class for loading and accessing energy resolution systematics
- based on an input file. 
-
-### Setting up the package. 
-
-##### User modifications
-New users will need to modify data/settingsHDM.cfg and possibly the makefile in 
-order to run the code. All input and output file locations for the programs
-are built around the locations provided in the settings (masterInput, 
-masterOutput, packageLocation, clusterFileLocation, and fileName*). Sub-
-directories will be created as necessary by the program.
-
-##### Input files.
-To be uploaded shortly. For the moment, they are located in the following lxplus
-directory: ~ahard/public/GlobalInputs. The masterInput directory should point to
-these files.
-
-### Running the code
-First compile the master program, which executes the analysis code:
-     > make bin/DMMaster
-
-Then to run,
-
-     ./bin/DMMaster <Program> <SettingsFile>
-
-The program can be any of the following options: 
-  - Cleanup (clean old files from previous analysis runs)
-  - MassPoints (make mass files as inputs for and model)
-  - GetSystematics (make cutflows and categorizations for all syst. variations)
-  - PlotVariables (plot interesting kinematic variables)
-  - SigParam (build the signal PDF from MC)
-  - BkgModel (build the background model)
-  - Workspace (build the statistical model)
-  - ResubmitWorkspace (submit failed Workspace jobs again)
-  - TossPseudoExp (toss pseudo experiment ensemble)
-  - PlotPseudoExp (plot the results of pseudo experiments)
-  - TestStat (calculate p0 and CLs)
-  - ResubmitTestStat (submit failed TestStat jobs again)
-  - MuLimit (get the 95% CL limit on the parameter of interest)
-  - Optimizer (optimize the analysis selection with meta job)
-  - OptAnalysis (analyze the results of Optimizer)
-
-The code will automatically run any required upstream programs in order to 
-ensure that it has all required inputs. For instance, if you want to create a 
-workspace from scratch, just run,
-
-     ./bin/DMMaster Workspace data/settingsHDM.cfg
-
-Make sure that you are running in a directory from which EOS is accesssible. 
-
-At the moment, the bash scripts for grid or lxbatch submission in scripts/ have
-lots of hard-coded user-specific information. These will be udpated in the 
-future. In any case, they do not influence local jobs in any way.
+ a useful interface for code to the TTrees. It has been modified from the class
+ which is automatically spit out from the TTree::MakeClass method in order to
+ simplify the systematic uncertainties implementation. 

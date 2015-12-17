@@ -42,6 +42,14 @@
 
 /**
    -----------------------------------------------------------------------------
+*/
+void compileMacro(TString macroName) {
+  std::cout << "DMMaster: compiling external macro " << macroName << std::endl;
+  system(Form("make bin/%s",macroName.Data()));  
+}
+
+/**
+   -----------------------------------------------------------------------------
    Recursive method to alter selection cuts and submit jobs. The recursive case
    is when the current cut index is less than the total number of cuts to be 
    varied. The base case is reached when the cutIndex = # cuts - 1 (all cuts 
@@ -588,7 +596,9 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 1.4 - Make kinematic variable plots."
 	      << std::endl;
     // Compile the PlotVariables macro:
-    system("make bin/PlotVariables");
+    compileMacro("PlotVariables");
+    
+    // Loop over the variables to plot:
     std::vector<TString> plotVariables = m_config->getStrV("PlotVariables");
     for (int i_v = 0; i_v < (int)plotVariables.size(); i_v++) {
       system(Form("./bin/PlotVariables %s %s %s", configFileName.Data(), 
@@ -791,8 +801,9 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 7.1 - Calculate 95%CL mu value." << std::endl;
     
     // Compile the PlotVariables macro:
-    system("make bin/DMMuLimit");
+    compileMacro("DMMuLimit");
     
+    // Loop over signals for jobs:
     int jobCounterML = 0;
     std::vector<TString> sigDMModes = m_config->getStrV("sigDMModes");
     for (int i_DM = 0; i_DM < (int)sigDMModes.size(); i_DM++) {
@@ -829,10 +840,10 @@ int main (int argc, char **argv) {
     std::cout << "DMMaster: Step 7.2 - Resubmit failed mu limits." << std::endl;
     
     // Compile the PlotVariables macro:
-    system("make bin/DMMuLimit");
+    compileMacro("DMMuLimit");
     
-    int jobCounterML = 0;
     // Get the points to resubmit:
+    int jobCounterML = 0;
     DMCheckJobs *dmc = new DMCheckJobs(configFileName);
     vector<TString> resubmitSignals = dmc->getResubmitList("DMMuLimit");
     dmc->printResubmitList("DMMuLimit");

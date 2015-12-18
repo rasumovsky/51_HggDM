@@ -110,7 +110,7 @@ DMTestStat::DMTestStat(TString newConfigFile, TString newDMSignal,
    @param testStat - the test stat. name (p0, CL, CLs).
    @param observed - true iff observed, false if expected. 
    @param N - the standard deviation (-2, -1, 0, +1, +2). 
-   @returns - the test statistic value.
+   @return - the test statistic value.
 */
 double DMTestStat::accessValue(TString testStat, bool observed, int N) {
   TString currMapKey = getKey(testStat, observed, N);
@@ -325,7 +325,7 @@ void DMTestStat::createAsimovData(int valMuDM, int valMuSM) {
    -----------------------------------------------------------------------------
    Create an Asimov dataset using the name.
    @param datasetName - the name of the Asimov data set.
-   @returns - A RooDataSet with Asimov data, also imports in workspace.
+   @return - A RooDataSet with Asimov data, also imports in workspace.
 
 void DMTestStat::createAsimovData(TString datasetName) {
   if (datasetName.Contains("Mu1")) createAsimovData(1, 1);
@@ -344,7 +344,7 @@ void DMTestStat::createAsimovData(TString datasetName) {
    @param seed - the random seed for dataset generation.
    @param valMuDM - the value of the DM signal strength.
    @param valMuSM - the value of the SM signal strength.
-   @returns - a pseudo-dataset.
+   @return - a pseudo-dataset.
 */
 RooDataSet* DMTestStat::createPseudoData(int seed, int valMuDM, int valMuSM,
 					 bool fixMu) {
@@ -448,7 +448,7 @@ RooDataSet* DMTestStat::createPseudoData(int seed, int valMuDM, int valMuSM,
 /**
    -----------------------------------------------------------------------------
    Check if all of the fits done by this class have converged.
-   @returns - true iff. all of the fits have been successfully convergent.
+   @return - true iff. all of the fits have been successfully convergent.
 */
 bool DMTestStat::fitsAllConverged() { 
   return m_allGoodFits;
@@ -458,7 +458,7 @@ bool DMTestStat::fitsAllConverged() {
    -----------------------------------------------------------------------------
    Implements the functional form of qMu.
    @param x - the value of the test statistic.
-   @returns - the value of the asymptotic test statistic distribution.
+   @return - the value of the asymptotic test statistic distribution.
 */
 double DMTestStat::functionQMu(double x) {
   // This corresponds to the "special case" of mu=mu'
@@ -472,7 +472,7 @@ double DMTestStat::functionQMu(double x) {
    @param x - the value of the test statistic.
    @param asimovTestStat - the test stat value on Asimov data with mu=0 but
                            fitting under mu=1 hypothesis.
-   @returns - the value of the asymptotic test statistic distribution.
+   @return - the value of the asymptotic test statistic distribution.
 */
 double DMTestStat::functionQMuTilde(double x, double asimovTestStat) {
   // This corresponds to the "special case" of mu=mu'
@@ -493,7 +493,7 @@ double DMTestStat::functionQMuTilde(double x, double asimovTestStat) {
    -----------------------------------------------------------------------------
    Get the CL value from CLs.
    @param CLs - the CLs value to convert to CL.
-   @returns - the corresponding CL value.
+   @return - the corresponding CL value.
 */
 double DMTestStat::getCLFromCLs(double CLs) {
   return (1.0 - CLs);
@@ -503,7 +503,7 @@ double DMTestStat::getCLFromCLs(double CLs) {
    -----------------------------------------------------------------------------
    Get the CLs value from CL.
    @param CL - the CL value to convert to CLs.
-   @returns - the corresponding CLs value.
+   @return - the corresponding CLs value.
 */
 double DMTestStat::getCLsFromCL(double CL) {
   return (1.0 - CL);
@@ -515,7 +515,7 @@ double DMTestStat::getCLsFromCL(double CL) {
    @param qMu - the value of the test statistic.
    @param observed - true of observed stat., false if expected result.
    @param N - the sigma value (-2,-1,0,1,2). Use 0 for median.
-   @returns - the CLs value.
+   @return - the CLs value.
 */
 double DMTestStat::getCLFromQMu(double qMu, bool observed, double N) {
   double CL = getCLFromCLs(getCLsFromQMu(qMu, observed, N));
@@ -528,7 +528,7 @@ double DMTestStat::getCLFromQMu(double qMu, bool observed, double N) {
    @param qMu - the value of the test statistic.
    @param observed - true of observed stat., false if expected result.
    @param N - the sigma value (-2,-1,0,1,2). Use 0 for median.
-   @returns - the CLs value.
+   @return - the CLs value.
 */
 double DMTestStat::getCLsFromQMu(double qMu, bool observed, double N) {
   // N = 0 for exp and obs
@@ -546,7 +546,7 @@ double DMTestStat::getCLsFromQMu(double qMu, bool observed, double N) {
    @param muVal - the mu value to fix.
    @param fixMu - true if mu should be fixed to the specified value.
    @param &profiledMu - the profiled value of mu (passed by reference)
-   @returns - the nll value.
+   @return - the nll value.
 */
 double DMTestStat::getFitNLL(TString datasetName, double muVal, bool fixMu,
 			     double &profiledMu) { 
@@ -709,7 +709,7 @@ std::vector<double> DMTestStat::getNPValues() {
    -----------------------------------------------------------------------------
    Calculate the value of p0 based on the test statistic q0.
    @param q0 - the test statistic q0.
-   @returns - the value of p0.
+   @return - the value of p0.
 */
 double DMTestStat::getP0FromQ0(double q0) {
   double p0 = 1 - ROOT::Math::gaussian_cdf(sqrt(fabs(q0)));
@@ -720,7 +720,7 @@ double DMTestStat::getP0FromQ0(double q0) {
    -----------------------------------------------------------------------------
    Calculate pB based on the standard deviation.
    @param N - the standard deviation.
-   @returns - the value of pB.
+   @return - the value of pB.
 */
 double DMTestStat::getPbFromN(double N) {
   double pB = 1 - ROOT::Math::gaussian_cdf(N);
@@ -733,7 +733,7 @@ double DMTestStat::getPbFromN(double N) {
    @param qMu - the test statistic qMu.
    @param sigma - the sigma value...
    @param mu - the mu value... 
-   @returns - the value of pB.
+   @return - the value of pB.
 */
 double DMTestStat::getPbFromQMu(double qMu, double sigma, double mu) {
   double pB = 1 - ROOT::Math::gaussian_cdf(fabs(mu/sigma) - sqrt(qMu));
@@ -744,7 +744,7 @@ double DMTestStat::getPbFromQMu(double qMu, double sigma, double mu) {
    -----------------------------------------------------------------------------
    Calculate the value of pMu.
    @param qMu - the test statistic qMu.
-   @returns - the value of pMu.
+   @return - the value of pMu.
 */
 double DMTestStat::getPMuFromQMu(double qMu) {
   double pMu = 1 - ROOT::Math::gaussian_cdf(sqrt(fabs(qMu)));
@@ -757,7 +757,7 @@ double DMTestStat::getPMuFromQMu(double qMu) {
    @param nllMu0 - nll of a fit with signal strength 0;
    @param nllMuHat - nll of a fit with profiled signal strength.
    @param muHat - profiled signal strength.
-   @returns - the value of q0.
+   @return - the value of q0.
 */
 double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuHat, double muHat) {
   double q0 = (muHat < 0) ? 0 : (2 * (nllMu0 - nllMuHat));
@@ -771,7 +771,7 @@ double DMTestStat::getQ0FromNLL(double nllMu0, double nllMuHat, double muHat) {
    @param nllMuHat - nll of a fit with profiled signal strength.
    @param muHat - profiled signal strength.
    @param muTest - tested value of signal strength.
-   @returns - the value of qMu.
+   @return - the value of qMu.
 */
 double DMTestStat::getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
 				 double muTest) {
@@ -789,7 +789,7 @@ double DMTestStat::getQMuFromNLL(double nllMu, double nllMuHat, double muHat,
    @param nllMuHat - nll of a fit with profiled signal strength.
    @param muHat - profiled signal strength.
    @param muTest - tested value of signal strength.
-   @returns - the value of qMuTilde.
+   @return - the value of qMuTilde.
 */
 double DMTestStat::getQMuTildeFromNLL(double nllMu, double nllMu0,
 				      double nllMuHat, double muHat,
@@ -862,7 +862,7 @@ void DMTestStat::loadStatsFromFile() {
    -----------------------------------------------------------------------------
    Check whether the specified value has been stored in the value map.
    @param mapKey - the key for the map of values.
-   @returns - true iff the categorization has been defined. 
+   @return - true iff the categorization has been defined. 
 */
 bool DMTestStat::mapValueExists(TString mapKey) {
 
@@ -999,7 +999,7 @@ void DMTestStat::plotFits(TString fitType, TString datasetName) {
    @param xMin - The minimum value of the observable range.
    @param xMax - The maximum value of the observable range.
    @param xBins - The number of bins for the observable.
-   @returns - A TGraphErrors to plot.
+   @return - A TGraphErrors to plot.
 */
 TGraphErrors* DMTestStat::plotDivision(RooAbsData *data, RooAbsPdf *pdf, 
 				       TString cateName, double xMin,

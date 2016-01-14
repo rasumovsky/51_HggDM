@@ -73,7 +73,7 @@ DMOptAnalysis::DMOptAnalysis(TString newConfigFile) {
    if it is not found.
    @param currVector - The current vector of doubles.
    @param newDouble - The double to check for membership in the list.
-   @return - A list of unique doubles.
+   @returns - A list of unique doubles.
 */
 std::vector<double> DMOptAnalysis::checkDoubleList(std::vector<double> currList,
 						   double newDouble) {
@@ -91,7 +91,7 @@ std::vector<double> DMOptAnalysis::checkDoubleList(std::vector<double> currList,
    @param bins - The number of bins.
    @param min - The minimum of the variable.
    @param max - The maximum of the variable.
-   @return - Updated values for bins, min, max passed by reference.
+   @returns - Updated values for bins, min, max passed by reference.
 */
 void DMOptAnalysis::getHistBinsAndRange(TString cutName, int &bins, double &min,
 					double &max) {
@@ -116,7 +116,7 @@ void DMOptAnalysis::getHistBinsAndRange(TString cutName, int &bins, double &min,
    -----------------------------------------------------------------------------
    List the contents of a directory.
    @param directory - The input directory.
-   @return - A vector containing the directory contents.
+   @returns - A vector containing the directory contents.
 */
 std::vector<TString> DMOptAnalysis::listDirectoryContents(TString directory) {
   std::vector<TString> result; result.clear();
@@ -228,7 +228,7 @@ void DMOptAnalysis::loadOptimizationData(TString directory) {
    -----------------------------------------------------------------------------
    Returns the maximum entry in a vector of doubles.
    @param currList - The vector of doubles.
-   @return - The maximum entry in the vector.
+   @returns - The maximum entry in the vector.
 */
 double DMOptAnalysis::maxEntry(std::vector<double> currList) {
   double maximum = -999999.9;
@@ -243,7 +243,7 @@ double DMOptAnalysis::maxEntry(std::vector<double> currList) {
    -----------------------------------------------------------------------------
    Returns the minimum entry in a vector of doubles.
    @param currList - The vector of doubles.
-   @return - The minimum entry in the vector.
+   @returns - The minimum entry in the vector.
 */
 double DMOptAnalysis::minEntry(std::vector<double> currList) {
   double minimum = 999999.9;

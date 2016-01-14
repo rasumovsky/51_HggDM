@@ -36,7 +36,7 @@ Config::Config(TString fileName) {
 */
 void Config::ensureDefined(TString key) {
   if (!isDefined(key)) {
-    std::cout << "Config: ERROR! No value found for " << key << std::endl;
+    std::cout << "HG::Config no value found for " << key << std::endl;
     exit(0);
   }
 }
@@ -51,9 +51,10 @@ bool Config::isDefined(TString key) {
 /**
    Access a string value from the config database. Exception thrown if no entry exist.
 */
-TString Config::getStr(TString key) {
+TString Config::getStr(TString key, bool expand) {
   ensureDefined(key);
-  return gSystem->ExpandPathName(m_env.GetValue(key,""));
+  if (!expand) return m_env.GetValue(key,"");
+  else return gSystem->ExpandPathName(m_env.GetValue(key,""));
 }
 
 /**
@@ -136,7 +137,7 @@ void Config::printDB() {
 void Config::addFile(TString fileName) {
   TString path(fileName);
   if (!fileExist(path) || path == "") {
-    std::cout << "Config: ERROR! Cannot find settings file " << fileName
+    std::cout << "Cannot find settings file " << fileName
 	      << "\n  also searched in " << path << std::endl;
     exit(0);
   }
@@ -144,8 +145,7 @@ void Config::addFile(TString fileName) {
   TEnv env;
   int status = env.ReadFile(path.Data(),EEnvLevel(0));
   if (status != 0) {
-    std::cout << "Config: ERROR! Cannot read settings file " << fileName
-	      << std::endl;
+    std::cout << "Cannot read settings file " << fileName << std::endl;
     exit(0);
   }
   TIter next(env.GetTable());
@@ -166,14 +166,11 @@ void Config::setValue(TString key, TString value) {
 std::vector<TString> Config::vectorize(TString str, TString sep) {
   std::vector<TString> result;
     TObjArray *strings = str.Tokenize(sep.Data());
-    if (strings->GetEntries() == 0) {
-      delete strings;
-      return result;
-    }
+    if (strings->GetEntries()==0) { delete strings; return result; }
     TIter istr(strings);
     while (TObjString* os=(TObjString*)istr()) {
       // the number sign and everything after is treated as a comment
-      if (os->GetString()[0] == '#') break;
+      if (os->GetString()[0]=='#') break;
       result.push_back(os->GetString());
     }
     delete strings;
@@ -182,13 +179,11 @@ std::vector<TString> Config::vectorize(TString str, TString sep) {
   
   // convert a text line containing a list of numbers to a vector<double>
 std::vector<double> Config::vectorizeNum(TString str, TString sep) {
-  std::vector<double> result; 
-  std::vector<TString> vecS = vectorize(str,sep);
-  for (uint i = 0; i < vecS.size(); ++i) {
-    result.push_back(atof(vecS[i]));
+  std::vector<double> result; std::vector<TString> vecS = vectorize(str,sep);
+    for (uint i=0;i<vecS.size();++i)
+      result.push_back(atof(vecS[i]));
+    return result;
   }
-  return result;
-}
 
 // checks if a given file or directory exist
 bool Config::fileExist(TString fn) {

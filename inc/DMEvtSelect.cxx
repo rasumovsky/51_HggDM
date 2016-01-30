@@ -216,7 +216,33 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
     else if (currRatio >= ratioCut1 && currRatio < ratioCut2) currCate = 1; 
     else if (currRatio >= ratioCut2) currCate = 2;
   }
-  
+  else if (cateScheme.EqualTo("combined")) {
+    // ADD SELECTION HERE
+
+    // High-MET region (ETMiss > 100 GeV):
+    if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
+	m_config->getNum("ETMissCut2")) {
+      // Combine with high-PT to get mono-H category:
+      if (m_evtTree->HGamEventInfoAuxDyn_pT_yy[m_sysVariation] > 
+	  m_config->getNum("DiphotonPTCut2")) {
+	currCate = 3;
+      }
+      else {
+	currCate = 2;
+      }
+    }
+    // Intermediate ETMiss and pTHard region (DEFINE pTHard!!):
+    else if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
+	     m_config->getNum("ETMissCut1") &&
+	     m_evtTree->HGamEventInfoAuxDyn_pTHard[m_sysVariation] >
+	     m_config->getNum("PTHardCut")) {
+      currCate = 1;
+    }
+    // Rest category (everything else with pTyy > 15 GeV:
+    else {
+      currCate = 0;
+    }
+  }
   if (currCate == -1) {
     std::cout << "DMEvtSelect: Categorization error for " << cateScheme
 	      << std::endl;

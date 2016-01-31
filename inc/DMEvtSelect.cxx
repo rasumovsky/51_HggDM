@@ -52,8 +52,12 @@ DMEvtSelect::DMEvtSelect(DMTree* newTree, TString newConfigFile) {
   if (m_config->getBool("LeptonVeto")) {
     m_cutList.push_back("LeptonVeto");
   }
-  m_cutList.push_back("DiphotonPT");
-  m_cutList.push_back("DiphotonETMiss");
+  if (m_config->isDefined("AnaCutDiphotonPT")) {
+    m_cutList.push_back("DiphotonPT");
+  }
+  if (m_config->isDefined("AnaCutETMiss")) {
+    m_cutList.push_back("DiphotonETMiss");
+  }
   m_cutList.push_back("AllCuts");
   
   // Load the category information:
@@ -217,28 +221,35 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
     else if (currRatio >= ratioCut2) currCate = 2;
   }
   else if (cateScheme.EqualTo("combined")) {
-    // ADD SELECTION HERE
-
+    
     // High-MET region (ETMiss > 100 GeV):
     if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
 	m_config->getNum("ETMissCut2")) {
       // Combine with high-PT to get mono-H category:
       if (m_evtTree->HGamEventInfoAuxDyn_pT_yy[m_sysVariation] > 
 	  m_config->getNum("DiphotonPTCut2")) {
-	currCate = 3;
+	currCate = 4;
       }
       else {
-	currCate = 2;
+	currCate = 3;
       }
     }
+    
     // Intermediate ETMiss and pTHard region (DEFINE pTHard!!):
     else if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
 	     m_config->getNum("ETMissCut1") &&
 	     m_evtTree->HGamEventInfoAuxDyn_pTHard[m_sysVariation] >
 	     m_config->getNum("PTHardCut")) {
+      currCate = 2;
+    }
+    
+    // Rest category (everything else with pTyy > 15 GeV).
+    else if (m_evtTree->HGamEventInfoAuxDyn_pT_yy[m_sysVariation] > 
+	     m_config->getNum("DiphotonPTCut1")) {
       currCate = 1;
     }
-    // Rest category (everything else with pTyy > 15 GeV:
+    
+    // Need to have a category for all other events.
     else {
       currCate = 0;
     }
@@ -249,7 +260,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
     exit(0);
   }
   
-    // Add to category counters:
+  // Add to category counters:
   m_cateCount[Form("%s_%d",cateScheme.Data(),currCate)]++;
   m_cateCountWt[Form("%s_%d",cateScheme.Data(),currCate)] += weight;
   return currCate;

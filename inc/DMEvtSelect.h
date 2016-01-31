@@ -24,6 +24,7 @@
 // ROOT includes:
 #include "TString.h"
 #include "TH1F.h"
+#include "TLorentzVector.h"
 
 // Package includes:
 #include "Config.h"

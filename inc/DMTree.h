@@ -42,6 +42,16 @@ class DMTree {
   std::vector<float> *HGamMuonsAuxDyn_pt;
   std::vector<float> *HGamTruthHiggsBosonsAuxDyn_m;
   
+  std::vector<float> *HGamPhotonsAuxDyn_pt;
+  std::vector<float> *HGamPhotonsAuxDyn_eta;
+  std::vector<float> *HGamPhotonsAuxDyn_phi;
+  std::vector<float> *HGamPhotonsAuxDyn_m;
+  
+  std::vector<float> *HGamAntiKt4EMTopoJetsAuxDyn_pt;
+  std::vector<float> *HGamAntiKt4EMTopoJetsAuxDyn_eta;
+  std::vector<float> *HGamAntiKt4EMTopoJetsAuxDyn_phi;
+  std::vector<float> *HGamAntiKt4EMTopoJetsAuxDyn_m;
+  
   // List of branches
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_m_yy;
   std::map<TString, TBranch*> b_HGamEventInfoAuxDyn_pT_yy;
@@ -56,6 +66,16 @@ class DMTree {
   TBranch *b_HGamElectronsAuxDyn_pt;
   TBranch *b_HGamMuonsAuxDyn_pt;
   TBranch *b_HGamTruthHiggsBosonsAuxDyn_m;
+  
+  TBranch *b_HGamPhotonsAuxDyn_pt;
+  TBranch *b_HGamPhotonsAuxDyn_eta;
+  TBranch *b_HGamPhotonsAuxDyn_phi;
+  TBranch *b_HGamPhotonsAuxDyn_m;
+  
+  TBranch *b_HGamAntiKt4EMTopoJetsAuxDyn_pt;
+  TBranch *b_HGamAntiKt4EMTopoJetsAuxDyn_eta;
+  TBranch *b_HGamAntiKt4EMTopoJetsAuxDyn_phi;
+  TBranch *b_HGamAntiKt4EMTopoJetsAuxDyn_m;
   
   // Methods:
   DMTree(TTree *tree, std::vector<TString> sysNames);
@@ -194,6 +214,28 @@ void DMTree::Init(TTree *tree) {
   fChain->SetBranchAddress("HGamTruthHiggsBosonsAuxDyn.m",
 			   &HGamTruthHiggsBosonsAuxDyn_m,
 			   &b_HGamTruthHiggsBosonsAuxDyn_m);
+  
+  fChain->SetBranchAddress("HGamPhotonsAuxDyn_pt", &HGamPhotonsAuxDyn_pt, 
+			   &b_HGamPhotonsAuxDyn_pt);
+  fChain->SetBranchAddress("HGamPhotonsAuxDyn_eta", &HGamPhotonsAuxDyn_eta,
+			   &b_HGamPhotonsAuxDyn_eta);
+  fChain->SetBranchAddress("HGamPhotonsAuxDyn_phi", &HGamPhotonsAuxDyn_phi,
+			   &b_HGamPhotonsAuxDyn_phi);
+  fChain->SetBranchAddress("HGamPhotonsAuxDyn_m", &HGamPhotonsAuxDyn_m,
+			   &b_HGamPhotonsAuxDyn_m);
+  
+  fChain->SetBranchAddress("HGamAntiKt4EMTopoJetsAuxDyn_pt", 
+			   &HGamAntiKt4EMTopoJetsAuxDyn_pt,
+			   &b_HGamAntiKt4EMTopoJetsAuxDyn_pt);
+  fChain->SetBranchAddress("HGamAntiKt4EMTopoJetsAuxDyn_eta",
+			   &HGamAntiKt4EMTopoJetsAuxDyn_eta,
+			   &b_HGamAntiKt4EMTopoJetsAuxDyn_eta);
+  fChain->SetBranchAddress("HGamAntiKt4EMTopoJetsAuxDyn_phi",
+			   &HGamAntiKt4EMTopoJetsAuxDyn_phi,
+			   &b_HGamAntiKt4EMTopoJetsAuxDyn_phi);
+  fChain->SetBranchAddress("HGamAntiKt4EMTopoJetsAuxDyn_m",
+			   &HGamAntiKt4EMTopoJetsAuxDyn_m,
+			   &b_HGamAntiKt4EMTopoJetsAuxDyn_m);
   
   Notify();
 }

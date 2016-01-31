@@ -222,6 +222,26 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
   }
   else if (cateScheme.EqualTo("combined")) {
     
+    // Calculate pTHard:
+    TLorentzVector sumParticles;
+    for (int i_p = 0; i_p < (int)(*m_evtTree->HGamPhotonsAuxDyn_pt).size(); 
+	 i_p++) {
+      TLorentzVector photon((*m_evtTree->HGamPhotonsAuxDyn_pt)[i_p],
+			    (*m_evtTree->HGamPhotonsAuxDyn_eta)[i_p],
+			    (*m_evtTree->HGamPhotonsAuxDyn_phi)[i_p],
+			    (*m_evtTree->HGamPhotonsAuxDyn_m)[i_p]);
+      sumParticles += photon;
+    }
+    for (int i_j = 0; i_j < 
+	   (int)(*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_pt).size(); i_j++) {
+      TLorentzVector jet((*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_pt)[i_j],
+			 (*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_eta)[i_j],
+			 (*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_phi)[i_j],
+			 (*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_m)[i_j]);
+      sumParticles += jet;
+    }
+    double pTHard = sumParticles.Pt();
+    
     // High-MET region (ETMiss > 100 GeV):
     if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
 	m_config->getNum("ETMissCut2")) {
@@ -238,8 +258,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
     // Intermediate ETMiss and pTHard region (DEFINE pTHard!!):
     else if (m_evtTree->HGamEventInfoAuxDyn_TST_met[m_sysVariation] >
 	     m_config->getNum("ETMissCut1") &&
-	     m_evtTree->HGamEventInfoAuxDyn_pTHard[m_sysVariation] >
-	     m_config->getNum("PTHardCut")) {
+	     pTHard > m_config->getNum("PTHardCut")) {
       currCate = 2;
     }
     

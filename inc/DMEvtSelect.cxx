@@ -224,7 +224,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
     
     // Calculate pTHard:
     TLorentzVector sumParticles;
-    for (int i_p = 0; i_p < (int)(*m_evtTree->HGamPhotonsAuxDyn_pt).size(); 
+    for (int i_p = 0; i_p < (int)(m_evtTree->HGamPhotonsAuxDyn_pt)->size(); 
 	 i_p++) {
       TLorentzVector photon((*m_evtTree->HGamPhotonsAuxDyn_pt)[i_p],
 			    (*m_evtTree->HGamPhotonsAuxDyn_eta)[i_p],
@@ -233,7 +233,7 @@ int DMEvtSelect::getCategoryNumber(TString cateScheme, double weight) {
       sumParticles += photon;
     }
     for (int i_j = 0; i_j < 
-	   (int)(*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_pt).size(); i_j++) {
+	   (int)(m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_pt)->size(); i_j++) {
       TLorentzVector jet((*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_pt)[i_j],
 			 (*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_eta)[i_j],
 			 (*m_evtTree->HGamAntiKt4EMTopoJetsAuxDyn_phi)[i_j],
